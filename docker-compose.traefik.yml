@@ -2,10 +2,8 @@ services:
   traefik:
     image: traefik:3.0
     ports:
-      # Listen on port 80, default for HTTP, necessary to redirect to HTTPS
-      - 80:80
-      # Listen on port 443, default for HTTPS
-      - 443:443
+      - "143.198.117.145:80:80"
+      - "143.198.117.145:443:443"
     restart: always
     labels:
       # Enable Traefik for this service, to make it available in the public network
@@ -35,6 +33,9 @@ services:
       - traefik.http.middlewares.admin-auth.basicauth.users=${USERNAME?Variable not set}:${HASHED_PASSWORD?Variable not set}
       # Enable HTTP Basic auth, using the middleware created above
       - traefik.http.routers.traefik-dashboard-https.middlewares=admin-auth
+      - "traefik.http.middlewares.ip-whitelist.ipallowlist.sourcerange=143.198.117.145"
+      - "traefik.http.routers.traefik-dashboard-http.middlewares=ip-whitelist"
+      - "traefik.http.routers.traefik-dashboard-https.middlewares=ip-whitelist"
     volumes:
       # Add Docker as a mounted volume, so that Traefik can read the labels of other services
       - /var/run/docker.sock:/var/run/docker.sock:ro
