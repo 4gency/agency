@@ -6,6 +6,7 @@ from pydantic import (
     AnyUrl,
     BeforeValidator,
     HttpUrl,
+    MongoDsn,
     PostgresDsn,
     computed_field,
     model_validator,
@@ -63,6 +64,26 @@ class Settings(BaseSettings):
             host=self.POSTGRES_SERVER,
             port=self.POSTGRES_PORT,
             path=self.POSTGRES_DB,
+        )
+        
+    MONGODB_SERVER: str
+    MONGODB_PORT: int = 27017
+    MONGODB_DB: str
+    MONGODB_USER: str
+    MONGODB_PASSWORD: str
+    
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def MONGODB_URI(self) -> MongoDsn:
+        scheme = "mongodb"
+        if "." in self.MONGODB_SERVER:
+            scheme = "mongodb+srv"  # DNS (supports SRV)
+        return MultiHostUrl.build(
+            scheme=scheme,
+            username=self.MONGODB_USER,
+            password=self.MONGODB_PASSWORD,
+            host=self.MONGODB_SERVER,
+            port=self.MONGODB_PORT,
         )
 
     SMTP_TLS: bool = True

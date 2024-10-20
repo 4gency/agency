@@ -1,7 +1,6 @@
-from pydantic import BaseModel
+from odmantic import Field, Model
 
-
-class PersonalInformation(BaseModel):
+class PersonalInformation(Model):
     name: str
     surname: str
     date_of_birth: str
@@ -14,7 +13,7 @@ class PersonalInformation(BaseModel):
     github: str
     linkedin: str
     
-class EducationDetails(BaseModel):
+class EducationDetails(Model):
     education_level: str
     institution: str
     field_of_study: str
@@ -23,7 +22,7 @@ class EducationDetails(BaseModel):
     year_of_completion: str
     exam: list[str]
     
-class ExperienceDetail(BaseModel):
+class ExperienceDetail(Model):
     position: str
     company: str
     employment_period: str
@@ -32,37 +31,37 @@ class ExperienceDetail(BaseModel):
     key_responsibilities: list[str]
     skills_acquired: list[str]
     
-class Project(BaseModel):
+class Project(Model):
     name: str
     description: str
     link: str
     
-class Achievement(BaseModel):
+class Achievement(Model):
     name: str
     description: str
     
-class Certification(BaseModel):
+class Certification(Model):
     name: str
     description: str
     
-class Language(BaseModel):
+class Language(Model):
     language: str
     proficiency: str
     
-class availability(BaseModel):
+class availability(Model):
     notice_period: str
     
-class SalaryExpectations(BaseModel):
+class SalaryExpectations(Model):
     salary_range_usd: str
     
-class SelfIdentification(BaseModel):
+class SelfIdentification(Model):
     gender: str
     pronouns: str
     veteran: bool
     disability: bool
     ethnicity: str
     
-class LegalAuthorization(BaseModel):
+class LegalAuthorization(Model):
     eu_work_authorization: bool
     us_work_authorization: bool
     requires_us_visa: bool
@@ -80,7 +79,7 @@ class LegalAuthorization(BaseModel):
     legally_allowed_to_work_in_uk: bool
     requires_uk_sponsorship: bool
     
-class WorkPreferences(BaseModel):
+class WorkPreferences(Model):
     remote_work: bool
     in_person_work: bool
     open_to_relocation: bool
@@ -88,7 +87,7 @@ class WorkPreferences(BaseModel):
     willing_to_undergo_drug_tests: bool
     willing_to_undergo_background_checks: bool
 
-class PlainTextResume:
+class PlainTextResumePublic(Model, extra="ignore"):
     personal_information: PersonalInformation
     education_details: list[EducationDetails]
     experience_details: list[ExperienceDetail]
@@ -102,3 +101,10 @@ class PlainTextResume:
     self_identification: SelfIdentification
     legal_authorization: LegalAuthorization
     work_preferences: WorkPreferences
+    
+class PlainTextResume(PlainTextResumePublic):
+    user_id: str
+    
+    model_config = {
+        "collection": "resumes",
+    }
