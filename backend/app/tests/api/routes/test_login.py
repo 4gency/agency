@@ -88,6 +88,25 @@ def test_reset_password(
     assert verify_password(data["new_password"], user.hashed_password)
 
 
+def test_back_to_normal_password(
+    client: TestClient, superuser_token_headers: dict[str, str], db: Session
+) -> None:
+    token = generate_password_reset_token(email=settings.FIRST_SUPERUSER)
+    data = {"new_password": settings.FIRST_SUPERUSER_PASSWORD, "token": token}
+    r = client.post(
+        f"{settings.API_V1_STR}/reset-password/",
+        headers=superuser_token_headers,
+        json=data,
+    )
+    assert r.status_code == 200
+    assert r.json() == {"message": "Password updated successfully"}
+
+    user_query = select(User).where(User.email == settings.FIRST_SUPERUSER)
+    user = db.exec(user_query).first()
+    assert user
+    assert verify_password(data["new_password"], user.hashed_password)
+
+
 def test_reset_password_invalid_token(
     client: TestClient, superuser_token_headers: dict[str, str]
 ) -> None:
