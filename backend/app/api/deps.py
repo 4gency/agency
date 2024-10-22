@@ -8,10 +8,14 @@ from jwt.exceptions import InvalidTokenError
 from pydantic import ValidationError
 from sqlmodel import Session
 
+from app.api.utils import update_user_active_subscriptions
 from app.core import security
 from app.core.config import settings
 from app.core.db import engine
 from app.models.core import TokenPayload, User
+
+from app.core.nosql_db import engine as nosql_engine
+from odmantic.session import SyncSession
 
 reusable_oauth2 = OAuth2PasswordBearer(
     tokenUrl=f"{settings.API_V1_STR}/login/access-token"
@@ -21,9 +25,13 @@ reusable_oauth2 = OAuth2PasswordBearer(
 def get_db() -> Generator[Session, None, None]:
     with Session(engine) as session:
         yield session
-
+        
+def get_nosql_db() -> Generator[SyncSession, None, None]:
+    with nosql_engine.session() as session:
+        yield session
 
 SessionDep = Annotated[Session, Depends(get_db)]
+NosqlSessionDep = Annotated[SyncSession, Depends(get_nosql_db)]
 TokenDep = Annotated[str, Depends(reusable_oauth2)]
 
 
@@ -55,3 +63,17 @@ def get_current_active_superuser(current_user: CurrentUser) -> User:
             status_code=403, detail="The user doesn't have enough privileges"
         )
     return current_user
+
+def get_current_active_subscriber(session: SessionDep, current_user: CurrentUser) -> User:
+    update_user_active_subscriptions(session, current_user)
+    subscriptions = current_user.subscriptions
+    
+    for sub in subscriptions:
+        if sub.is_active:
+            return current_user
+    else:
+        raise HTTPException(
+            status_code=403, detail="The user is not a subscriber"
+        )
+
+CurrentSubscriber = Annotated[User, Depends(get_current_active_subscriber)]

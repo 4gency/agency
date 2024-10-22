@@ -25,8 +25,9 @@ bcrypt = "4.0.1"
 pydantic-settings = "^2.2.1"
 sentry-sdk = {extras = ["fastapi"], version = "^1.40.6"}
 pyjwt = "^2.8.0"
-odmantic = "^1.0.2"
-motor = "^3.6.0"
+odmantic = "1.0.2"
+motor = ">=3.1.1"
+pymongo = "4.8.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.3"

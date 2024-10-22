@@ -1,5 +1,7 @@
+from email.policy import default
 import uuid
 from typing import Any
+from venv import create
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import col, delete, func, select
@@ -9,6 +11,7 @@ from app.api.deps import (
     CurrentUser,
     SessionDep,
     get_current_active_superuser,
+    NosqlSessionDep,
 )
 from app.core.config import settings
 from app.core.security import get_password_hash, verify_password
@@ -25,6 +28,9 @@ from app.models.core import (
     UserUpdateMe,
 )
 from app.utils import generate_new_account_email, send_email
+from app.models.preference import Config
+from app.models.resume import PlainTextResume
+from app.crud.config import create_config, create_resume
 
 router = APIRouter()
 
@@ -51,7 +57,7 @@ def read_users(session: SessionDep, skip: int = 0, limit: int = 100) -> Any:
 @router.post(
     "/", dependencies=[Depends(get_current_active_superuser)], response_model=UserPublic
 )
-def create_user(*, session: SessionDep, user_in: UserCreate) -> Any:
+def create_user(*, session: SessionDep, user_in: UserCreate, nosql_session: NosqlSessionDep) -> Any:
     """
     Create new user.
     """
@@ -72,6 +78,14 @@ def create_user(*, session: SessionDep, user_in: UserCreate) -> Any:
             subject=email_data.subject,
             html_content=email_data.html_content,
         )
+    default_config = Config(
+        user_id=str(user.id),
+    )
+    default_resume = PlainTextResume(
+        user_id=str(user.id),
+    )
+    create_config(session=nosql_session, config=default_config)
+    create_resume(session=nosql_session, resume=default_resume)
     return user
 
 

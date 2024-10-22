@@ -20,14 +20,14 @@ services:
       - POSTGRES_DB=${POSTGRES_DB?Variable not set}
 
   mongodb:
-    image: mongo
+    image: mongo:7.0.14
     restart: always
     healthcheck:
-      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+      test: echo "try { rs.status() } catch (err) { rs.initiate({_id:'rs0',members:[{_id:0,host:'mongodb:27017',priority:1},{_id:1,host:'mongodb_secondary:27017',priority:0.5}]}) }" | mongosh --quiet
       interval: 10s
-      retries: 5
-      start_period: 30s
       timeout: 10s
+      retries: 5
+      start_period: 40s
     ports:
       - "27017:27017"
     volumes:
@@ -75,6 +75,9 @@ services:
       db:
         condition: service_healthy
         restart: true
+      mongodb:
+        condition: service_healthy
+        restart: true
     command: bash prestart.sh
     env_file:
       - .env
@@ -105,6 +108,9 @@ services:
       - default
     depends_on:
       db:
+        condition: service_healthy
+        restart: true
+      mongodb:
         condition: service_healthy
         restart: true
       prestart:

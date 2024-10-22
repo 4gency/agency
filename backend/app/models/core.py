@@ -84,12 +84,22 @@ class Subscription(SQLModel, table=True):
     start_date: datetime
     end_date: datetime
     is_active: bool = Field(default=True)
+    metric_type: SubscriptionMetric
     metric_status: int
     
     user: User = Relationship(back_populates="subscriptions")
     subscription_plan: SubscriptionPlan = Relationship(back_populates="subscriptions")
     payment: "Payment" = Relationship(back_populates="subscription")
     
+    def need_to_deactivate(self) -> bool:
+        if self.metric_type == SubscriptionMetric.DAYS:
+            if self.end_date < datetime.now(): # TODO: make it utc
+                return True
+        elif self.metric_type == SubscriptionMetric.APPLIES:
+            if self.metric_status < 1:
+                return True
+        return False
+
 class Payment(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     subscription_id: uuid.UUID = Field(foreign_key="subscription.id")
