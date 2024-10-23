@@ -27,10 +27,7 @@ from app.models.core import (
     UserUpdate,
     UserUpdateMe,
 )
-from app.utils import generate_new_account_email, send_email
-from app.models.preference import Config
-from app.models.resume import PlainTextResume
-from app.crud.config import create_config, create_resume
+from app.utils import create_user_default_configs, generate_new_account_email, send_email
 
 router = APIRouter()
 
@@ -78,14 +75,7 @@ def create_user(*, session: SessionDep, user_in: UserCreate, nosql_session: Nosq
             subject=email_data.subject,
             html_content=email_data.html_content,
         )
-    default_config = Config(
-        user_id=str(user.id),
-    )
-    default_resume = PlainTextResume(
-        user_id=str(user.id),
-    )
-    create_config(session=nosql_session, config=default_config)
-    create_resume(session=nosql_session, resume=default_resume)
+    create_user_default_configs(str(user.id), nosql_session)
     return user
 
 

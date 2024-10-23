@@ -9,18 +9,18 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def init() -> None:
+def init() -> str | None:
     with Session(engine) as session:
-        init_db(session)
+        return init_db(session)
 
 
 def main() -> None:
     logger.info("Creating SQL initial data")
-    init()
+    first_admin_id = init()
     logger.info("Initial SQL data created")
     
     logger.info("Creating NoSQL initial data")
-    nosql_init_db()
+    nosql_init_db(first_admin_id)
     logger.info("Initial NoSQL data created")
 
 
