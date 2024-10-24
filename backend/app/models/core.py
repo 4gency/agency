@@ -2,13 +2,16 @@ import uuid
 from datetime import datetime
 from enum import Enum
 
-from pydantic import EmailStr
+from pydantic import EmailStr, field_validator
 from sqlmodel import Field, Relationship, SQLModel
 
 
 class SubscriptionMetric(Enum):
-    DAYS = 1
-    APPLIES = 2
+    DAY = 1
+    WEEK = 2
+    MONTH = 3
+    YEAR = 4
+    APPLY = 5
 
 
 # Shared properties
@@ -50,6 +53,7 @@ class UpdatePassword(SQLModel):
 class User(UserBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     hashed_password: str
+    stripe_customer_id: str | None = Field(default=None, index=True)
 
     subscriptions: list["Subscription"] = Relationship(back_populates="user")
     payments: list["Payment"] = Relationship(back_populates="user")
@@ -73,7 +77,7 @@ class SubscriptionPlanBase(SQLModel):
     currency: str = Field(default="USD", max_length=10)
     description: str = Field(default="", max_length=10000)
     is_active: bool = Field(default=True)
-    metric_type: SubscriptionMetric = Field(default=SubscriptionMetric.DAYS)
+    metric_type: SubscriptionMetric = Field(default=SubscriptionMetric.DAY)
     metric_value: int = Field(default=30)
 
 
@@ -91,6 +95,12 @@ class SubscriptionPlanUpdate(SQLModel):
     is_active: bool | None = None
     metric_type: SubscriptionMetric | None = None
     metric_value: int | None = None
+    
+    @field_validator('metric_value')
+    def check_metric_value(cls, value):
+        if value is not None and value <= 0:
+            raise ValueError("metric_value must be greater than 0")
+        return value
 
 
 class SubscriptionPlan(SQLModel, table=True):
@@ -104,8 +114,11 @@ class SubscriptionPlan(SQLModel, table=True):
     currency: str = Field(default="USD", max_length=10)
     description: str = Field(default="", max_length=10000)
     is_active: bool = Field(default=True)
-    metric_type: SubscriptionMetric = Field(default=SubscriptionMetric.DAYS)
+    metric_type: SubscriptionMetric = Field(default=SubscriptionMetric.DAY)
     metric_value: int = Field(default=30)
+    
+    stripe_product_id: str | None = Field(default=None, index=True)
+    stripe_price_id: str | None = Field(default=None, index=True)
 
     subscriptions: list["Subscription"] = Relationship(
         back_populates="subscription_plan"
@@ -145,16 +158,18 @@ class Subscription(SQLModel, table=True):
     is_active: bool = Field(default=True)
     metric_type: SubscriptionMetric
     metric_status: int
+    
+    stripe_subscription_id: str | None = Field(default=None, index=True)
 
     user: User = Relationship(back_populates="subscriptions")
     subscription_plan: SubscriptionPlan = Relationship(back_populates="subscriptions")
     payment: "Payment" = Relationship(back_populates="subscription")
 
     def need_to_deactivate(self) -> bool:
-        if self.metric_type == SubscriptionMetric.DAYS:
+        if self.metric_type == SubscriptionMetric.DAY:
             if self.end_date < datetime.now():  # TODO: make it utc
                 return True
-        elif self.metric_type == SubscriptionMetric.APPLIES:
+        elif self.metric_type == SubscriptionMetric.APPLY:
             if self.metric_status < 1:
                 return True
         return False
@@ -188,7 +203,7 @@ class PaymentUpdate(SQLModel):
 
 class Payment(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    subscription_id: uuid.UUID | None = Field(foreign_key="subscription.id")
+    subscription_id: uuid.UUID = Field(foreign_key="subscription.id")
     user_id: uuid.UUID = Field(foreign_key="user.id")
     amount: float
     currency: str = Field(default="USD", max_length=10)
@@ -197,7 +212,8 @@ class Payment(SQLModel, table=True):
     payment_gateway: str = Field(
         default="stripe", max_length=50
     )  # e.g., Stripe, BoaCompra
-    transaction_id: str = Field(max_length=150)
+    transaction_id: str = Field(index=True)
+
 
     subscription: Subscription = Relationship(back_populates="payment")
     user: User = Relationship(back_populates="payments")
@@ -235,8 +251,10 @@ class SubscriptionPlanPublic(SQLModel):
     is_active: bool
     metric_type: SubscriptionMetric
     metric_value: int
+    
+    stripe_product_id: str | None
+    stripe_price_id: str | None
 
 
 class SubscriptionPlansPublic(SQLModel):
     plans: list[SubscriptionPlanPublic]
-    count: int

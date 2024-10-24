@@ -1,5 +1,8 @@
+from datetime import datetime
+from typing import Optional
 import uuid
 
+from app.api.routes import subscription
 from sqlalchemy import func
 from sqlmodel import Session, select
 
@@ -13,6 +16,7 @@ from app.models.core import (
     SubscriptionPlanCreate,
     SubscriptionPlanUpdate,
     SubscriptionUpdate,
+    User,
 )
 
 
@@ -45,12 +49,6 @@ def get_subscription_plan_by_id(
     *, session: Session, id: uuid.UUID
 ) -> SubscriptionPlan | None:
     return session.get(SubscriptionPlan, id)
-
-
-def get_total_subscription_plans_count(*, session: Session) -> int:
-    count_statement = select(func.count()).select_from(SubscriptionPlan)
-    count = session.exec(count_statement).one()
-    return count
 
 
 def get_subscription_plans(*, session: Session) -> list[SubscriptionPlan]:
@@ -99,6 +97,37 @@ def create_payment(*, session: Session, payment_create: PaymentCreate) -> Paymen
     session.refresh(db_obj)
     return db_obj
 
+def create_sub_payment(
+    *, 
+    session: Session,
+    user: User,
+    sub_plan: SubscriptionPlan,
+    payment_status: str,
+    payment_gateway: str,
+    transaction_id: Optional[str] = None,
+) -> tuple[Subscription, Payment]:
+    sub_cr = SubscriptionCreate(
+        user_id=user.id,
+        subscription_plan_id=sub_plan.id,
+        start_date=datetime.now(),
+        end_date=datetime.now(), # TODO: calculate end date
+        is_active=False,
+        metric_type=sub_plan.metric_type,
+        metric_status=sub_plan.metric_value,
+    )
+    subscription = create_subscription(session=session, subscription_create=sub_cr)
+    pmt_cr = PaymentCreate(
+        subscription_id=subscription.id,
+        user_id=user.id,
+        amount=sub_plan.price,
+        currency=sub_plan.currency,
+        payment_date=datetime.now(),
+        payment_status=payment_status,
+        payment_gateway=payment_gateway,
+        transaction_id=transaction_id if transaction_id else str(uuid.uuid4()),
+    )
+    payment = create_payment(session=session, payment_create=pmt_cr)
+    return subscription, payment
 
 def update_payment(
     *, session: Session, db_payment: Payment, payment_in: PaymentUpdate
@@ -126,3 +155,11 @@ def delete_subscription_plan(
 ) -> None:
     session.delete(db_subscription_plan)
     session.commit()
+    
+def deactivate_subscription_plan(
+    *, session: Session, db_subscription_plan: SubscriptionPlan
+):
+    db_subscription_plan.is_active = False
+    session.add(db_subscription_plan)
+    session.commit()
+    session.refresh(db_subscription_plan)

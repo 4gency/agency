@@ -4,7 +4,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.api.deps import SessionDep, get_current_active_superuser
-from app.crud import subscription as crud_subscription
+from app.crud import subscription as crud_subs
 from app.models.core import (
     Message,
     SubscriptionPlanCreate,
@@ -12,6 +12,7 @@ from app.models.core import (
     SubscriptionPlansPublic,
     SubscriptionPlanUpdate,
 )
+from app.integrations import stripe
 
 router = APIRouter()
 
@@ -23,14 +24,13 @@ def read_subscription_plans(
     """
     Retrieve subscription plans (public endpoint).
     """
-    subscription_plans = crud_subscription.get_subscription_plans(
+    subscription_plans = crud_subs.get_subscription_plans(
         session=session,
     )
-    count = crud_subscription.get_total_subscription_plans_count(session=session)
     subscription_plans_public = [
         SubscriptionPlanPublic.model_validate(sp) for sp in subscription_plans
     ]
-    return SubscriptionPlansPublic(plans=subscription_plans_public, count=count)
+    return SubscriptionPlansPublic(plans=subscription_plans_public)
 
 
 @router.get("/plans/{id}", response_model=SubscriptionPlanPublic)
@@ -42,7 +42,7 @@ def read_subscription_plan(
     """
     Get subscription plan by ID (public endpoint).
     """
-    subscription_plan = crud_subscription.get_subscription_plan_by_id(
+    subscription_plan = crud_subs.get_subscription_plan_by_id(
         session=session, id=id
     )
     if not subscription_plan:
@@ -63,16 +63,20 @@ def create_subscription_plan(
     """
     Create new subscription plan (superuser only).
     """
-    subscription_plan = crud_subscription.create_subscription_plan(
+    subscription_plan = crud_subs.create_subscription_plan(
         session=session, subscription_plan_create=subscription_plan_in
     )
-    # TODO: Add webhook to create subscription plan in Stripe
+    if stripe.integration_enabled():
+        stripe.create_subscription_plan(
+            session=session,
+            subscription_plan=subscription_plan,
+        )
     return subscription_plan
 
 
 @router.put(
     "/plans/{id}",
-    response_model=SubscriptionPlanPublic,
+    response_model=Message,
     dependencies=[Depends(get_current_active_superuser)],
 )
 def update_subscription_plan(
@@ -84,20 +88,26 @@ def update_subscription_plan(
     """
     Update a subscription plan (superuser only).
     """
-    subscription_plan = crud_subscription.get_subscription_plan_by_id(
+    subscription_plan = crud_subs.get_subscription_plan_by_id(
         session=session, id=id
     )
     if not subscription_plan:
         raise HTTPException(status_code=404, detail="Subscription plan not found")
-    updated_subscription_plan = crud_subscription.update_subscription_plan(
-        session=session,
-        db_subscription_plan=subscription_plan,
-        subscription_plan_in=subscription_plan_in,
-    )
-    return updated_subscription_plan
+    subscription_plan_data = subscription_plan_in.model_dump(exclude_unset=True)
+    for key, value in subscription_plan_data.items():
+        setattr(subscription_plan, key, value)
+    if stripe.integration_enabled():
+        stripe.update_subscription_plan(
+            session=session,
+            subscription_plan=subscription_plan,
+        )
+    session.add(subscription_plan)
+    session.commit()
+    session.refresh(subscription_plan)
+    return Message(message="Subscription plan updated successfully")
 
 
-@router.delete("/plans/{id}", dependencies=[Depends(get_current_active_superuser)])
+@router.delete("/plans/{id}", dependencies=[Depends(get_current_active_superuser)], response_model=Message)
 def delete_subscription_plan(
     *,
     session: SessionDep,
@@ -106,12 +116,20 @@ def delete_subscription_plan(
     """
     Delete a subscription plan (superuser only).
     """
-    subscription_plan = crud_subscription.get_subscription_plan_by_id(
+    subscription_plan = crud_subs.get_subscription_plan_by_id(
         session=session, id=id
     )
     if not subscription_plan:
         raise HTTPException(status_code=404, detail="Subscription plan not found")
-    crud_subscription.delete_subscription_plan(
-        session=session, db_subscription_plan=subscription_plan
+    
+    crud_subs.deactivate_subscription_plan(
+        session=session,
+        db_subscription_plan=subscription_plan
     )
+    
+    if stripe.integration_enabled():
+        stripe.deactivate_subscription_plan(
+            session=session,
+            subscription_plan=subscription_plan,
+        )
     return Message(message="Subscription plan deleted successfully")

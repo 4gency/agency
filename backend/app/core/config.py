@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     FRONTEND_HOST: str = "http://localhost:5173"
     ENVIRONMENT: Literal["local", "staging", "production"] = "local"
 
-    STRIPE_API_KEY: str | None = None
+    STRIPE_SECRET_KEY: str | None = None
 
     BACKEND_CORS_ORIGINS: Annotated[
         list[AnyUrl] | str, BeforeValidator(parse_cors)
@@ -123,10 +123,10 @@ class Settings(BaseSettings):
                 f'The value of {var_name} is "changethis", '
                 "for security, please change it, at least for deployments."
             )
-            if self.ENVIRONMENT == "local":
-                warnings.warn(message, stacklevel=1)
-            else:
+            if self.ENVIRONMENT == "production":
                 raise ValueError(message)
+            else:
+                warnings.warn(message, stacklevel=1)
 
     @model_validator(mode="after")
     def _enforce_non_default_secrets(self) -> Self:

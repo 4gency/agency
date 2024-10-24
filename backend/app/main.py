@@ -1,4 +1,5 @@
 import sentry_sdk
+import stripe
 from fastapi import FastAPI
 from fastapi.routing import APIRoute
 from starlette.middleware.cors import CORSMiddleware
@@ -13,6 +14,9 @@ def custom_generate_unique_id(route: APIRoute) -> str:
 
 if settings.SENTRY_DSN and settings.ENVIRONMENT != "local":
     sentry_sdk.init(dsn=str(settings.SENTRY_DSN), enable_tracing=True)
+    
+if settings.STRIPE_SECRET_KEY and settings.ENVIRONMENT != "local":
+    stripe.api_key = settings.STRIPE_SECRET_KEY
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
