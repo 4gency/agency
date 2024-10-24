@@ -8,12 +8,12 @@ document.addEventListener("DOMContentLoaded", function () {
             element.style.transform = 'none';
         }
         if (element.getBoundingClientRect().top > 0 && element.getBoundingClientRect().top <= (window.innerHeight * 0.75)) {
-            element.classList.add('monify-lite-animate-init');            
+            element.classList.add('lambdagency-animate-init');            
         }
     }
 
     function prepareAnimation(doc, frame = false) {
-        var elements = doc.getElementsByClassName('monify-lite-animate');
+        var elements = doc.getElementsByClassName('lambdagency-animate');
 
         for (let element of elements) {
             if ( frame ) {
