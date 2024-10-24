@@ -1,5 +1,6 @@
 from datetime import datetime
 from enum import Enum
+from typing import List, Optional
 import uuid
 
 from pydantic import EmailStr
@@ -61,6 +62,32 @@ class UsersPublic(SQLModel):
     data: list[UserPublic]
     count: int
     
+
+class SubscriptionPlanBase(SQLModel):
+    name: str
+    price: float
+    has_discount: bool = Field(default=False)
+    price_with_discount: float = Field(default=0.0)
+    currency: str = Field(default='USD', max_length=10)
+    description: str = Field(default="", max_length=10000)
+    is_active: bool = Field(default=True)
+    metric_type: SubscriptionMetric = Field(default=SubscriptionMetric.DAYS)
+    metric_value: int = Field(default=30)
+
+class SubscriptionPlanCreate(SubscriptionPlanBase):
+    pass
+
+class SubscriptionPlanUpdate(SQLModel):
+    name: Optional[str] = None
+    price: Optional[float] = None
+    has_discount: Optional[bool] = None
+    price_with_discount: Optional[float] = None
+    currency: Optional[str] = None
+    description: Optional[str] = None
+    is_active: Optional[bool] = None
+    metric_type: Optional[SubscriptionMetric] = None
+    metric_value: Optional[int] = None
+    
 class SubscriptionPlan(SQLModel, table=True):
     __tablename__ = "subscription_plan"
     
@@ -76,7 +103,28 @@ class SubscriptionPlan(SQLModel, table=True):
     metric_value: int = Field(default=30)
     
     subscriptions: list["Subscription"] = Relationship(back_populates="subscription_plan")
-    
+
+class SubscriptionBase(SQLModel):
+    user_id: uuid.UUID
+    subscription_plan_id: uuid.UUID
+    start_date: datetime
+    end_date: datetime
+    is_active: bool = Field(default=True)
+    metric_type: SubscriptionMetric
+    metric_status: int
+
+class SubscriptionCreate(SubscriptionBase):
+    pass
+
+class SubscriptionUpdate(SQLModel):
+    user_id: Optional[uuid.UUID] = None
+    subscription_plan_id: Optional[uuid.UUID] = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    is_active: Optional[bool] = None
+    metric_type: Optional[SubscriptionMetric] = None
+    metric_status: Optional[int] = None
+
 class Subscription(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: uuid.UUID = Field(foreign_key="user.id")
@@ -100,15 +148,38 @@ class Subscription(SQLModel, table=True):
                 return True
         return False
 
+class PaymentBase(SQLModel):
+    subscription_id: Optional[uuid.UUID] = None
+    user_id: uuid.UUID
+    amount: float
+    currency: str = Field(default='USD', max_length=10)
+    payment_date: datetime
+    payment_status: str = Field(default="pending", max_length=100)
+    payment_gateway: str = Field(default="stripe", max_length=50)
+    transaction_id: str = Field(max_length=150)
+
+class PaymentCreate(PaymentBase):
+    pass
+
+class PaymentUpdate(SQLModel):
+    subscription_id: Optional[uuid.UUID] = None
+    user_id: Optional[uuid.UUID] = None
+    amount: Optional[float] = None
+    currency: Optional[str] = None
+    payment_date: Optional[datetime] = None
+    payment_status: Optional[str] = None
+    payment_gateway: Optional[str] = None
+    transaction_id: Optional[str] = None
+
 class Payment(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    subscription_id: uuid.UUID = Field(foreign_key="subscription.id")
+    subscription_id: Optional[uuid.UUID] = Field(foreign_key="subscription.id")
     user_id: uuid.UUID = Field(foreign_key="user.id")
     amount: float
     currency: str = Field(default='USD', max_length=10)
     payment_date: datetime
-    payment_status: str = Field(default="success", max_length=100)
-    payment_gateway: str = Field(max_length=50)  # e.g., Stripe, BoaCompra
+    payment_status: str = Field(default="pending", max_length=100)
+    payment_gateway: str = Field(default="stripe", max_length=50)  # e.g., Stripe, BoaCompra
     transaction_id: str = Field(max_length=150)
     
     subscription: Subscription = Relationship(back_populates="payment")
@@ -132,3 +203,33 @@ class TokenPayload(SQLModel):
 class NewPassword(SQLModel):
     token: str
     new_password: str = Field(min_length=8, max_length=40)
+
+class SubscriptionPlanPublic(SQLModel):
+    id: uuid.UUID
+    name: str
+    price: float
+    has_discount: bool
+    price_with_discount: float
+    currency: str
+    description: str
+    is_active: bool
+    metric_type: SubscriptionMetric
+    metric_value: int
+
+class SubscriptionPlansPublic(SQLModel):
+    plans: List[SubscriptionPlanPublic]
+    count: int
+
+class SubscriptionPlanCreate(SubscriptionPlanBase):
+    pass
+
+class SubscriptionPlanUpdate(SQLModel):
+    name: Optional[str] = None
+    price: Optional[float] = None
+    has_discount: Optional[bool] = None
+    price_with_discount: Optional[float] = None
+    currency: Optional[str] = None
+    description: Optional[str] = None
+    is_active: Optional[bool] = None
+    metric_type: Optional[SubscriptionMetric] = None
+    metric_value: Optional[int] = None

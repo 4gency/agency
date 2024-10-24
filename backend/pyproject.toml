@@ -28,6 +28,7 @@ pyjwt = "^2.8.0"
 odmantic = "1.0.2"
 motor = ">=3.1.1"
 pymongo = "4.8.0"
+stripe = "^11.1.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.3"
