@@ -1,8 +1,20 @@
 import uuid
+
 from sqlalchemy import func
 from sqlmodel import Session, select
-from typing import List, Optional
-from app.models.core import Payment, PaymentCreate, PaymentUpdate, SubscriptionCreate, SubscriptionPlan, SubscriptionPlanCreate, SubscriptionPlanUpdate, SubscriptionUpdate, Subscription
+
+from app.models.core import (
+    Payment,
+    PaymentCreate,
+    PaymentUpdate,
+    Subscription,
+    SubscriptionCreate,
+    SubscriptionPlan,
+    SubscriptionPlanCreate,
+    SubscriptionPlanUpdate,
+    SubscriptionUpdate,
+)
+
 
 def create_subscription_plan(
     *, session: Session, subscription_plan_create: SubscriptionPlanCreate
@@ -13,8 +25,12 @@ def create_subscription_plan(
     session.refresh(db_obj)
     return db_obj
 
+
 def update_subscription_plan(
-    *, session: Session, db_subscription_plan: SubscriptionPlan, subscription_plan_in: SubscriptionPlanUpdate
+    *,
+    session: Session,
+    db_subscription_plan: SubscriptionPlan,
+    subscription_plan_in: SubscriptionPlanUpdate,
 ) -> SubscriptionPlan:
     subscription_plan_data = subscription_plan_in.model_dump(exclude_unset=True)
     for key, value in subscription_plan_data.items():
@@ -24,21 +40,23 @@ def update_subscription_plan(
     session.refresh(db_subscription_plan)
     return db_subscription_plan
 
+
 def get_subscription_plan_by_id(
     *, session: Session, id: uuid.UUID
-) -> Optional[SubscriptionPlan]:
+) -> SubscriptionPlan | None:
     return session.get(SubscriptionPlan, id)
+
 
 def get_total_subscription_plans_count(*, session: Session) -> int:
     count_statement = select(func.count()).select_from(SubscriptionPlan)
     count = session.exec(count_statement).one()
     return count
 
-def get_subscription_plans(
-    *, session: Session
-) -> List[SubscriptionPlan]:
+
+def get_subscription_plans(*, session: Session) -> list[SubscriptionPlan]:
     statement = select(SubscriptionPlan)
-    return session.exec(statement).all() # type: ignore
+    return session.exec(statement).all()  # type: ignore
+
 
 def create_subscription(
     *, session: Session, subscription_create: SubscriptionCreate
@@ -49,8 +67,12 @@ def create_subscription(
     session.refresh(db_obj)
     return db_obj
 
+
 def update_subscription(
-    *, session: Session, db_subscription: Subscription, subscription_in: SubscriptionUpdate
+    *,
+    session: Session,
+    db_subscription: Subscription,
+    subscription_in: SubscriptionUpdate,
 ) -> Subscription:
     subscription_data = subscription_in.model_dump(exclude_unset=True)
     for key, value in subscription_data.items():
@@ -60,25 +82,23 @@ def update_subscription(
     session.refresh(db_subscription)
     return db_subscription
 
-def get_subscription_by_id(
-    *, session: Session, id: uuid.UUID
-) -> Optional[Subscription]:
+
+def get_subscription_by_id(*, session: Session, id: uuid.UUID) -> Subscription | None:
     return session.get(Subscription, id)
 
-def get_subscriptions(
-    *, session: Session
-) -> List[Subscription]:
-    statement = select(Subscription)
-    return session.exec(statement).all() # type: ignore
 
-def create_payment(
-    *, session: Session, payment_create: PaymentCreate
-) -> Payment:
+def get_subscriptions(*, session: Session) -> list[Subscription]:
+    statement = select(Subscription)
+    return session.exec(statement).all()  # type: ignore
+
+
+def create_payment(*, session: Session, payment_create: PaymentCreate) -> Payment:
     db_obj = Payment.model_validate(payment_create)
     session.add(db_obj)
     session.commit()
     session.refresh(db_obj)
     return db_obj
+
 
 def update_payment(
     *, session: Session, db_payment: Payment, payment_in: PaymentUpdate
@@ -91,16 +111,15 @@ def update_payment(
     session.refresh(db_payment)
     return db_payment
 
-def get_payment_by_id(
-    *, session: Session, id: uuid.UUID
-) -> Optional[Payment]:
+
+def get_payment_by_id(*, session: Session, id: uuid.UUID) -> Payment | None:
     return session.get(Payment, id)
 
-def get_payments(
-    *, session: Session
-) -> List[Payment]:
+
+def get_payments(*, session: Session) -> list[Payment]:
     statement = select(Payment)
-    return session.exec(statement).all() # type: ignore
+    return session.exec(statement).all()  # type: ignore
+
 
 def delete_subscription_plan(
     *, session: Session, db_subscription_plan: SubscriptionPlan

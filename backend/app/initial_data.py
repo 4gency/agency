@@ -18,7 +18,7 @@ def main() -> None:
     logger.info("Creating SQL initial data")
     first_admin_id = init()
     logger.info("Initial SQL data created")
-    
+
     logger.info("Creating NoSQL initial data")
     nosql_init_db(first_admin_id)
     logger.info("Initial NoSQL data created")

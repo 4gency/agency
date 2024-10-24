@@ -1,52 +1,47 @@
-import uuid
-from typing import Annotated, Any
+from typing import Any
 
-from app.models.resume import PlainTextResume, PlainTextResumePublic
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException
 
-from app.api.deps import CurrentUser, NosqlSessionDep, CurrentSubscriber
-from app.models.core import User
-from app.models.preference import Config, ConfigPublic
+from app.api.deps import CurrentUser, NosqlSessionDep
 from app.crud import config as config_crud
+from app.models.preference import ConfigPublic
+from app.models.resume import PlainTextResumePublic
 
 router = APIRouter()
 
+
 @router.get("/job-preferences", response_model=ConfigPublic)
-def get_config(
-    current_user: CurrentUser, 
-    nosql_session: NosqlSessionDep
-):
+def get_config(current_user: CurrentUser, nosql_session: NosqlSessionDep):
     config = config_crud.get_config(
         session=nosql_session,
         user_id=str(current_user.id),
     )
-    
+
     if not config:
         raise HTTPException(status_code=500, detail="Config not found")
-    
+
     return ConfigPublic(**config.model_dump())
 
+
 @router.get("/resume", response_model=PlainTextResumePublic)
-def get_plain_text_resume(
-    current_user: CurrentUser, 
-    nosql_session: NosqlSessionDep
-):
+def get_plain_text_resume(current_user: CurrentUser, nosql_session: NosqlSessionDep):
     resume = config_crud.get_resume(
         session=nosql_session,
         user_id=str(current_user.id),
     )
-    
+
     if not resume:
         raise HTTPException(status_code=500, detail="Resume not found")
-    
+
     return PlainTextResumePublic(**resume.model_dump())
+
 
 @router.patch("/job-preferences", status_code=200)
 def update_config(
     *,
     current_user: CurrentUser,
     nosql_session: NosqlSessionDep,
-    config_in: ConfigPublic
+    config_in: ConfigPublic,
 ) -> Any:
     """
     Update config.
@@ -55,10 +50,10 @@ def update_config(
         session=nosql_session,
         user_id=str(current_user.id),
     )
-    
+
     if not config:
         raise HTTPException(status_code=500, detail="Config not found")
-    
+
     update_dict = config_in.model_dump(exclude_unset=True)
     config_crud.update_config(
         session=nosql_session,
@@ -66,12 +61,13 @@ def update_config(
         new_config_data=update_dict,
     )
 
+
 @router.patch("/resume", status_code=200)
 def update_plain_text_resume(
     *,
     current_user: CurrentUser,
     nosql_session: NosqlSessionDep,
-    resume_in: PlainTextResumePublic
+    resume_in: PlainTextResumePublic,
 ) -> Any:
     """
     Update plain text resume.
@@ -80,10 +76,10 @@ def update_plain_text_resume(
         session=nosql_session,
         user_id=str(current_user.id),
     )
-    
+
     if not resume:
         raise HTTPException(status_code=500, detail="Resume not found")
-    
+
     update_dict = resume_in.model_dump(exclude_unset=True)
     config_crud.update_resume(
         session=nosql_session,

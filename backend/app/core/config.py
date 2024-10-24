@@ -34,7 +34,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8
     FRONTEND_HOST: str = "http://localhost:5173"
     ENVIRONMENT: Literal["local", "staging", "production"] = "local"
-    
+
     STRIPE_API_KEY: str | None = None
 
     BACKEND_CORS_ORIGINS: Annotated[
@@ -67,13 +67,13 @@ class Settings(BaseSettings):
             port=self.POSTGRES_PORT,
             path=self.POSTGRES_DB,
         )
-        
+
     MONGODB_SERVER: str
     MONGODB_PORT: int = 27017
     MONGODB_DB: str
     MONGODB_USER: str
     MONGODB_PASSWORD: str
-    
+
     @computed_field  # type: ignore[prop-decorator]
     @property
     def MONGODB_URI(self) -> MongoDsn:

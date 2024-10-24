@@ -1,17 +1,15 @@
-from email.policy import default
 import uuid
 from typing import Any
-from venv import create
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import col, delete, func, select
+from sqlmodel import func, select
 
 from app import crud
 from app.api.deps import (
     CurrentUser,
+    NosqlSessionDep,
     SessionDep,
     get_current_active_superuser,
-    NosqlSessionDep,
 )
 from app.core.config import settings
 from app.core.security import get_password_hash, verify_password
@@ -27,7 +25,11 @@ from app.models.core import (
     UserUpdate,
     UserUpdateMe,
 )
-from app.utils import create_user_default_configs, generate_new_account_email, send_email
+from app.utils import (
+    create_user_default_configs,
+    generate_new_account_email,
+    send_email,
+)
 
 router = APIRouter()
 
@@ -54,7 +56,9 @@ def read_users(session: SessionDep, skip: int = 0, limit: int = 100) -> Any:
 @router.post(
     "/", dependencies=[Depends(get_current_active_superuser)], response_model=UserPublic
 )
-def create_user(*, session: SessionDep, user_in: UserCreate, nosql_session: NosqlSessionDep) -> Any:
+def create_user(
+    *, session: SessionDep, user_in: UserCreate, nosql_session: NosqlSessionDep
+) -> Any:
     """
     Create new user.
     """

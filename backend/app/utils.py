@@ -4,15 +4,15 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
-from app.crud.config import create_config, create_resume
-from app.models.preference import Config
-from app.models.resume import PlainTextResume
 import emails  # type: ignore
 import jwt
 from jinja2 import Template
 from jwt.exceptions import InvalidTokenError
 
 from app.core.config import settings
+from app.crud.config import create_config, create_resume
+from app.models.preference import Config
+from app.models.resume import PlainTextResume
 
 
 @dataclass
@@ -119,12 +119,13 @@ def verify_password_reset_token(token: str) -> str | None:
     except InvalidTokenError:
         return None
 
+
 def create_user_default_configs(user_id: str, nosql_session) -> None:
     default_config = Config(
-        user_id=user_id, # type: ignore
+        user_id=user_id,  # type: ignore
     )
     default_resume = PlainTextResume(
-        user_id=user_id, # type: ignore
+        user_id=user_id,  # type: ignore
     )
     create_config(session=nosql_session, config=default_config)
     create_resume(session=nosql_session, resume=default_resume)

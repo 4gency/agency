@@ -4,14 +4,14 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.api.deps import SessionDep, get_current_active_superuser
+from app.crud import subscription as crud_subscription
 from app.models.core import (
     Message,
     SubscriptionPlanCreate,
     SubscriptionPlanPublic,
-    SubscriptionPlanUpdate,
     SubscriptionPlansPublic,
+    SubscriptionPlanUpdate,
 )
-from app.crud import subscription as crud_subscription
 
 router = APIRouter()
 
@@ -27,7 +27,9 @@ def read_subscription_plans(
         session=session,
     )
     count = crud_subscription.get_total_subscription_plans_count(session=session)
-    subscription_plans_public = [SubscriptionPlanPublic.model_validate(sp) for sp in subscription_plans]
+    subscription_plans_public = [
+        SubscriptionPlanPublic.model_validate(sp) for sp in subscription_plans
+    ]
     return SubscriptionPlansPublic(plans=subscription_plans_public, count=count)
 
 
@@ -40,13 +42,19 @@ def read_subscription_plan(
     """
     Get subscription plan by ID (public endpoint).
     """
-    subscription_plan = crud_subscription.get_subscription_plan_by_id(session=session, id=id)
+    subscription_plan = crud_subscription.get_subscription_plan_by_id(
+        session=session, id=id
+    )
     if not subscription_plan:
         raise HTTPException(status_code=404, detail="Subscription plan not found")
     return subscription_plan
 
 
-@router.post("/plans", response_model=SubscriptionPlanPublic, dependencies=[Depends(get_current_active_superuser)])
+@router.post(
+    "/plans",
+    response_model=SubscriptionPlanPublic,
+    dependencies=[Depends(get_current_active_superuser)],
+)
 def create_subscription_plan(
     *,
     session: SessionDep,
@@ -62,7 +70,11 @@ def create_subscription_plan(
     return subscription_plan
 
 
-@router.put("/plans/{id}", response_model=SubscriptionPlanPublic, dependencies=[Depends(get_current_active_superuser)])
+@router.put(
+    "/plans/{id}",
+    response_model=SubscriptionPlanPublic,
+    dependencies=[Depends(get_current_active_superuser)],
+)
 def update_subscription_plan(
     *,
     session: SessionDep,
@@ -72,7 +84,9 @@ def update_subscription_plan(
     """
     Update a subscription plan (superuser only).
     """
-    subscription_plan = crud_subscription.get_subscription_plan_by_id(session=session, id=id)
+    subscription_plan = crud_subscription.get_subscription_plan_by_id(
+        session=session, id=id
+    )
     if not subscription_plan:
         raise HTTPException(status_code=404, detail="Subscription plan not found")
     updated_subscription_plan = crud_subscription.update_subscription_plan(
@@ -92,7 +106,9 @@ def delete_subscription_plan(
     """
     Delete a subscription plan (superuser only).
     """
-    subscription_plan = crud_subscription.get_subscription_plan_by_id(session=session, id=id)
+    subscription_plan = crud_subscription.get_subscription_plan_by_id(
+        session=session, id=id
+    )
     if not subscription_plan:
         raise HTTPException(status_code=404, detail="Subscription plan not found")
     crud_subscription.delete_subscription_plan(
