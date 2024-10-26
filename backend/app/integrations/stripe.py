@@ -1,6 +1,4 @@
-from calendar import c
 from datetime import datetime
-from typing import Literal
 import uuid
 from fastapi import HTTPException
 from sqlmodel import Session, select
@@ -11,21 +9,13 @@ from app.models.core import Payment, Subscription, SubscriptionPlan, User
 valid_currencies = ["usd", "aed", "afn", "all", "amd", "ang", "aoa", "ars", "aud", "awg", "azn", "bam", "bbd", "bdt", "bgn", "bhd", "bif", "bmd", "bnd", "bob", "brl", "bsd", "bwp", "byn", "bzd", "cad", "cdf", "chf", "clp", "cny", "cop", "crc", "cve", "czk", "djf", "dkk", "dop", "dzd", "egp", "etb", "eur", "fjd", "fkp", "gbp", "gel", "gip", "gmd", "gnf", "gtq", "gyd", "hkd", "hnl", "hrk", "htg", "huf", "idr", "ils", "inr", "isk", "jmd", "jod", "jpy", "kes", "kgs", "khr", "kmf", "krw", "kwd", "kyd", "kzt", "lak", "lbp", "lkr", "lrd", "lsl", "mad", "mdl", "mga", "mkd", "mmk", "mnt", "mop", "mur", "mvr", "mwk", "mxn", "myr", "mzn", "nad", "ngn", "nio", "nok", "npr", "nzd", "omr", "pab", "pen", "pgk", "php", "pkr", "pln", "pyg", "qar", "ron", "rsd", "rub", "rwf", "sar", "sbd", "scr", "sek", "sgd", "shp", "sle", "sos", "srd", "std", "szl", "thb", "tjs", "tnd", "top", "try", "ttd", "twd", "tzs", "uah", "ugx", "uyu", "uzs", "vnd", "vuv", "wst", "xaf", "xcd", "xof", "xpf", "yer", "zar", "zmw", "usdc", "btn", "ghs", "eek", "lvl", "svc", "vef", "ltl", "sll", "mro"]
 valid_metric_types = ["day", "week", "month", "year"]
 
-class SubscriptionPlanNotSet(HTTPException):
+class BadRequest(HTTPException):
     def __init__(self, detail: str) -> None:
         super().__init__(status_code=400, detail=detail)
 
-class InvalidMetricType(HTTPException):
+class NotFound(HTTPException):
     def __init__(self, detail: str) -> None:
-        super().__init__(status_code=400, detail=detail)
-
-class InvalidCurrency(HTTPException):
-    def __init__(self, detail: str) -> None:
-        super().__init__(status_code=400, detail=detail)
-
-class InvalidMetricValue(HTTPException):
-    def __init__(self, detail: str) -> None:
-        super().__init__(status_code=400, detail=detail)
+        super().__init__(status_code=404, detail=detail)
 
 def integration_enabled() -> bool:
     return bool(settings.STRIPE_SECRET_KEY)
@@ -36,7 +26,7 @@ def create_checkout_subscription_session(
     user: User,
     payment: Payment,
 ) -> stripe.checkout.Session:
-    # Verificar se o cliente já existe no Stripe
+    # check if the user has a Stripe customer ID
     if not user.stripe_customer_id:
         customer = stripe.Customer.create(
             email=user.email,
@@ -49,11 +39,11 @@ def create_checkout_subscription_session(
     else:
         customer = stripe.Customer.retrieve(user.stripe_customer_id)
 
-    # verificar se o plano de assinatura está configurado no Stripe
+    # check if the subscription plan is set up in Stripe
     if not subscription_plan.stripe_price_id:
-        raise SubscriptionPlanNotSet("Subscription plan is not set up in Stripe.")
+        raise BadRequest("Subscription plan is not set up in Stripe.")
 
-    # Criar a sessão de checkout
+    # create the checkout session
     checkout_session = stripe.checkout.Session.create(
         customer=customer.id,
         payment_method_types=["card"],
@@ -80,7 +70,7 @@ def create_subscription_plan(
     subscription_plan: SubscriptionPlan,
 ) -> tuple[stripe.Product, stripe.Price]:
     if subscription_plan.currency.lower() not in valid_currencies:
-        raise InvalidCurrency("Invalid currency")
+        raise BadRequest("Invalid currency")
 
     product_creation_data = {
         "name": subscription_plan.name,
@@ -92,22 +82,22 @@ def create_subscription_plan(
     if subscription_plan.description:
         product_creation_data["description"] = subscription_plan.description
 
-    # Calcular o valor em centavos
+    # calculate the amount in cents
     amount = int(subscription_plan.price * 100)
 
-    # Obter o intervalo de recorrência
+    # get the interval
     interval = subscription_plan.metric_type.name.lower()
     interval_count = subscription_plan.metric_value
     
     if interval not in valid_metric_types:
-        raise InvalidMetricType("Invalid metric type")
+        raise BadRequest("Invalid metric type")
 
-    # Criar o produto no Stripe
+    # create the product in Stripe
     product = stripe.Product.create(
         **product_creation_data
     )
     
-    # Criar o preço no Stripe
+    # create the price in Stripe
     price = stripe.Price.create(
         unit_amount=amount,
         currency=subscription_plan.currency.lower(),
@@ -119,7 +109,7 @@ def create_subscription_plan(
         active=subscription_plan.is_active,
     )
 
-    # Salvar os IDs do Stripe no plano de assinatura
+    # save the Stripe IDs to the database
     subscription_plan.stripe_product_id = product.id
     subscription_plan.stripe_price_id = price.id
 
@@ -138,12 +128,12 @@ def update_subscription_plan(
         create_subscription_plan(session, subscription_plan)
         
     if subscription_plan.currency.lower() not in valid_currencies:
-        raise InvalidCurrency("Invalid currency")
+        raise BadRequest("Invalid currency")
     
     if subscription_plan.metric_type.name.lower() not in valid_metric_types:
-        raise InvalidMetricType("Invalid metric type")
+        raise BadRequest("Invalid metric type")
 
-    # Atualizar o produto no Stripe
+    # update the product in Stripe
     stripe.Product.modify(
         subscription_plan.stripe_product_id,
         name=subscription_plan.name,
@@ -154,20 +144,20 @@ def update_subscription_plan(
         },
     )
 
-    # Verificar se o preço precisa ser atualizado
+    # now, let's check if the price has changed
     price = stripe.Price.retrieve(subscription_plan.stripe_price_id)
 
-    # Calcular o novo valor e intervalo
+    # calculate the new amount
     new_amount = int(subscription_plan.price * 100)
     new_interval = subscription_plan.metric_type.name.lower()
     new_interval_count = subscription_plan.metric_value
     
     if new_interval_count <= 0:
-        raise InvalidMetricValue("Invalid metric value")
+        raise BadRequest("Invalid metric value")
     
     price_changed = price.unit_amount != new_amount
 
-    # Caso o preço não mudou, verificar se a recorrência mudou
+    # if not changed, check if the recurring interval has changed
     if not price_changed and price.recurring:
         price_changed = (
             price.recurring.get('interval') != new_interval or
@@ -175,7 +165,7 @@ def update_subscription_plan(
         )
 
     if price_changed:
-        # Criar um novo preço
+        # create a new price
         new_price = stripe.Price.create(
             unit_amount=new_amount,
             currency=subscription_plan.currency.lower(),
@@ -197,9 +187,9 @@ def deactivate_subscription_plan(
     subscription_plan: SubscriptionPlan,
 ) -> None:
     if not subscription_plan.stripe_product_id:
-        raise SubscriptionPlanNotSet("Subscription plan is not set up in Stripe.")
+        raise NotFound("Subscription plan is not set up in Stripe.")
 
-    # Desativar o produto no Stripe
+    # deactivate the product in Stripe
     stripe.Product.modify(
         subscription_plan.stripe_product_id,
         active=False,
@@ -212,18 +202,18 @@ def update_subscription_payment(
     payment: Payment,
 ) -> None:
     if not subscription.stripe_subscription_id:
-        raise Exception("Subscription does not have a Stripe Subscription ID.")
+        raise NotFound("Subscription does not have a Stripe Subscription ID.")
 
-    # Obter a assinatura do Stripe
+    # get the subscription from Stripe
     stripe_subscription = stripe.Subscription.retrieve(subscription.stripe_subscription_id)
 
-    # Atualizar a assinatura local
+    # update the subscription locally
     subscription_status = stripe_subscription.status
     subscription.is_active = subscription_status in ['active', 'trialing']
     subscription.start_date = datetime.fromtimestamp(stripe_subscription.current_period_start)
     subscription.end_date = datetime.fromtimestamp(stripe_subscription.current_period_end)
 
-    # Atualizar o pagamento local
+    # update the payment locally
     latest_invoice = stripe_subscription.latest_invoice
     if latest_invoice:
         invoice = stripe.Invoice.retrieve(str(latest_invoice))
@@ -242,12 +232,12 @@ def update_subscription_payment(
 
 def cancel_subscription(session: Session, subscription: Subscription) -> None:
     if not subscription.stripe_subscription_id:
-        raise Exception("Subscription does not have a Stripe Subscription ID.")
+        raise NotFound("Subscription does not have a Stripe Subscription ID.")
 
     stripe_subscription = stripe.Subscription.retrieve(subscription.stripe_subscription_id)
     stripe_subscription.delete()
 
-    # Atualizar a assinatura local
+    # update the subscription locally
     subscription.is_active = False
     subscription.end_date = datetime.fromtimestamp(
         stripe_subscription.ended_at or datetime.now().timestamp()

@@ -1,6 +1,6 @@
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, status
 
 from app.api.deps import CurrentUser, NosqlSessionDep
 from app.crud import config as config_crud
@@ -18,7 +18,7 @@ def get_config(current_user: CurrentUser, nosql_session: NosqlSessionDep):
     )
 
     if not config:
-        raise HTTPException(status_code=500, detail="Config not found")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Config not found")
 
     return ConfigPublic(**config.model_dump())
 
@@ -31,12 +31,12 @@ def get_plain_text_resume(current_user: CurrentUser, nosql_session: NosqlSession
     )
 
     if not resume:
-        raise HTTPException(status_code=500, detail="Resume not found")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Resume not found")
 
     return PlainTextResumePublic(**resume.model_dump())
 
 
-@router.patch("/job-preferences", status_code=200)
+@router.patch("/job-preferences", status_code=status.HTTP_200_OK)
 def update_config(
     *,
     current_user: CurrentUser,
@@ -52,7 +52,7 @@ def update_config(
     )
 
     if not config:
-        raise HTTPException(status_code=500, detail="Config not found")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Config not found")
 
     update_dict = config_in.model_dump(exclude_unset=True)
     config_crud.update_config(
@@ -62,7 +62,7 @@ def update_config(
     )
 
 
-@router.patch("/resume", status_code=200)
+@router.patch("/resume", status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 def update_plain_text_resume(
     *,
     current_user: CurrentUser,
@@ -78,7 +78,10 @@ def update_plain_text_resume(
     )
 
     if not resume:
-        raise HTTPException(status_code=500, detail="Resume not found")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+            detail="Resume not found"
+        )
 
     update_dict = resume_in.model_dump(exclude_unset=True)
     config_crud.update_resume(

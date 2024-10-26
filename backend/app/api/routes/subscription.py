@@ -1,12 +1,14 @@
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.api.deps import SessionDep, get_current_active_superuser
 from app.crud import subscription as crud_subs
 from app.models.core import (
     Message,
+    Subscription,
+    SubscriptionPublic,
     SubscriptionPlanCreate,
     SubscriptionPlanPublic,
     SubscriptionPlansPublic,
@@ -16,19 +18,17 @@ from app.integrations import stripe
 
 router = APIRouter()
 
-
 @router.get("/plans", response_model=SubscriptionPlansPublic)
 def read_subscription_plans(
+    *,
     session: SessionDep,
 ) -> Any:
     """
     Retrieve subscription plans (public endpoint).
     """
-    subscription_plans = crud_subs.get_subscription_plans(
-        session=session,
-    )
+    subscription_plans = crud_subs.get_subscription_plans(session=session,)
     subscription_plans_public = [
-        SubscriptionPlanPublic.model_validate(sp) for sp in subscription_plans
+        SubscriptionPlanPublic.model_validate(sp) for sp in subscription_plans if sp.is_active
     ]
     return SubscriptionPlansPublic(plans=subscription_plans_public)
 
@@ -46,7 +46,7 @@ def read_subscription_plan(
         session=session, id=id
     )
     if not subscription_plan:
-        raise HTTPException(status_code=404, detail="Subscription plan not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription plan not found")
     return subscription_plan
 
 
@@ -92,7 +92,7 @@ def update_subscription_plan(
         session=session, id=id
     )
     if not subscription_plan:
-        raise HTTPException(status_code=404, detail="Subscription plan not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription plan not found")
     subscription_plan_data = subscription_plan_in.model_dump(exclude_unset=True)
     for key, value in subscription_plan_data.items():
         setattr(subscription_plan, key, value)
@@ -120,7 +120,7 @@ def delete_subscription_plan(
         session=session, id=id
     )
     if not subscription_plan:
-        raise HTTPException(status_code=404, detail="Subscription plan not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription plan not found")
     
     crud_subs.deactivate_subscription_plan(
         session=session,

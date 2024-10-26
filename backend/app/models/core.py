@@ -55,8 +55,8 @@ class User(UserBase, table=True):
     hashed_password: str
     stripe_customer_id: str | None = Field(default=None, index=True)
 
-    subscriptions: list["Subscription"] = Relationship(back_populates="user")
-    payments: list["Payment"] = Relationship(back_populates="user")
+    subscriptions: list["Subscription"] = Relationship(back_populates="user", cascade_delete=True)
+    payments: list["Payment"] = Relationship(back_populates="user", cascade_delete=True)
 
 
 # Properties to return via API, id is always required
@@ -133,11 +133,19 @@ class SubscriptionBase(SQLModel):
     is_active: bool = Field(default=True)
     metric_type: SubscriptionMetric
     metric_status: int
-
+    
+class SubscriptionPublic(SQLModel):
+    id: uuid.UUID
+    user_id: uuid.UUID
+    subscription_plan_id: uuid.UUID
+    start_date: datetime
+    end_date: datetime
+    is_active: bool
+    metric_type: SubscriptionMetric
+    metric_status: int
 
 class SubscriptionCreate(SubscriptionBase):
     pass
-
 
 class SubscriptionUpdate(SQLModel):
     user_id: uuid.UUID | None = None

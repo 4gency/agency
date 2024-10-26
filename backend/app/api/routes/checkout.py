@@ -1,6 +1,6 @@
 from uuid import UUID
 from app.integrations import stripe
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, status
 from app.api.deps import CurrentUser, SessionDep
 from app.crud import subscription as crud_subs
 
@@ -20,7 +20,7 @@ def get_stripe_checkout_session(
         id=subscription_plan_id
     )
     if not sub_plan:
-        raise HTTPException(status_code=404, detail="Subscription plan not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription plan not found")
     sub, payment = crud_subs.create_sub_payment(
         session=session,
         user=user,
