@@ -3,7 +3,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, status
 
 from app.api.deps import CurrentUser, NosqlSessionDep
-from app.crud import config as config_crud
+from app.models.crud import config as config_crud
 from app.models.preference import ConfigPublic
 from app.models.resume import PlainTextResumePublic
 

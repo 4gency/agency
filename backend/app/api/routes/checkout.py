@@ -2,7 +2,7 @@ from uuid import UUID
 from app.integrations import stripe
 from fastapi import APIRouter, HTTPException, status
 from app.api.deps import CurrentUser, SessionDep
-from app.crud import subscription as crud_subs
+from app.models.crud import subscription as crud_subs
 
 router = APIRouter()
 

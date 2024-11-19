@@ -1,5 +1,6 @@
 import datetime
 
+from app.api.routes import subscription
 from odmantic import EmbeddedModel, Field, Model
 from pydantic import BaseModel, EmailStr
 
@@ -134,7 +135,7 @@ class PlainTextResumePublic(BaseModel, extra="ignore"):
 
 
 class PlainTextResume(Model):
-    user_id: str = Field(index=True, unique=True)
+    subscription_id: str = Field(index=True, unique=True)
 
     personal_information: PersonalInformation = PersonalInformation()
     education_details: list[EducationDetails] = [

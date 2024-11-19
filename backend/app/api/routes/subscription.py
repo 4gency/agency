@@ -4,7 +4,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.api.deps import SessionDep, get_current_active_superuser
-from app.crud import subscription as crud_subs
+from app.models.crud import subscription as crud_subs
 from app.models.core import (
     Message,
     Subscription,

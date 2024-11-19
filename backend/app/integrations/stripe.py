@@ -263,7 +263,7 @@ def handle_payment_intent(session: Session, event: dict) -> None:
     # Atualizar o status do pagamento
     payment.payment_status = payment_intent['status']
     payment.payment_date = datetime.fromtimestamp(payment_intent['created'])
-    payment.amount = payment_intent['amount_received'] / 100
+    payment.amount = (payment_intent['amount_received'] / 100 if payment_intent.get('amount_received') else 0)
     payment.currency = payment_intent['currency'].upper()
 
     session.add(payment)
@@ -279,7 +279,7 @@ def handle_checkout_session(session: Session, event: dict) -> None:
 
     payment_id = metadata.get('payment_id')
     subscription_id_local = metadata.get('subscription_id')
-    user_id = metadata.get('user_id')
+    # user_id = metadata.get('user_id')
 
     payment = session.get(Payment, uuid.UUID(payment_id))
     subscription = session.get(Subscription, uuid.UUID(subscription_id_local))

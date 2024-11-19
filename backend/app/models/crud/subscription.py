@@ -1,9 +1,6 @@
 from datetime import datetime
 from typing import Optional
 import uuid
-
-from app.api.routes import subscription
-from sqlalchemy import func
 from sqlmodel import Session, select
 
 from app.models.core import (
@@ -16,7 +13,7 @@ from app.models.core import (
     SubscriptionPlanCreate,
     SubscriptionPlanUpdate,
     SubscriptionUpdate,
-    User,
+    User
 )
 
 
