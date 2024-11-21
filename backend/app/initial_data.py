@@ -16,11 +16,11 @@ def init() -> str | None:
 
 def main() -> None:
     logger.info("Creating SQL initial data")
-    first_admin_id = init()
+    init()
     logger.info("Initial SQL data created")
 
     logger.info("Creating NoSQL initial data")
-    nosql_init_db(first_admin_id)
+    nosql_init_db()
     logger.info("Initial NoSQL data created")
 
 

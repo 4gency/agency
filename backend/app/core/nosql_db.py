@@ -7,7 +7,7 @@ client = MongoClient(host=str(settings.MONGODB_URI))
 engine = SyncEngine(client=client, database=settings.MONGODB_DB)
 
 
-def init_db(first_admin_id: str | None) -> None:
+def init_db() -> None:
     from app.models.preference import Config
     from app.models.resume import PlainTextResume
 

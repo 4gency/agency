@@ -63,6 +63,7 @@ class ConfigPublic(BaseModel, extra="ignore"):
 
 class Config(Model):
     subscription_id: str = Field(index=True, unique=True)
+    user_id: str
     
     llm_model_type: str = Field(default="openai")
     llm_model: str = Field(default="gpt-4o-mini")
@@ -87,3 +88,7 @@ class Config(Model):
     title_blacklist: list[str] = []
 
     job_applicants_threshold: JobApplicantsThreshold = JobApplicantsThreshold()
+
+    model_config = {
+        "collection": "configs",
+    }

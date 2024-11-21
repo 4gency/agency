@@ -136,6 +136,7 @@ class PlainTextResumePublic(BaseModel, extra="ignore"):
 
 class PlainTextResume(Model):
     subscription_id: str = Field(index=True, unique=True)
+    user_id: str
 
     personal_information: PersonalInformation = PersonalInformation()
     education_details: list[EducationDetails] = [
@@ -162,3 +163,7 @@ class PlainTextResume(Model):
     self_identification: SelfIdentification = SelfIdentification()
     legal_authorization: LegalAuthorization = LegalAuthorization()
     work_preferences: WorkPreferences = WorkPreferences()
+    
+    model_config = {
+        "collection": "plain_text_resumes",
+    }
