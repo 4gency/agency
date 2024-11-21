@@ -1,0 +1,26 @@
+@font-face {
+    font-family: Inter;
+    font-style: normal;
+    font-weight: regular;
+    font-display: fallback;
+    src: url('/fonts/inter/inter-v18-latin-regular.woff2') format('woff2');
+    font-stretch: normal;
+}
+
+@font-face {
+    font-family: Inter;
+    font-style: normal;
+    font-weight: 500;
+    font-display: fallback;
+    src: url('/fonts/inter/inter-v18-latin-500.woff2') format('woff2');
+    font-stretch: normal;
+}
+
+@font-face {
+    font-family: Inter;
+    font-style: normal;
+    font-weight: 600;
+    font-display: fallback;
+    src: url('/fonts/inter/inter-v18-latin-600.woff2') format('woff2');
+    font-stretch: normal;
+}
