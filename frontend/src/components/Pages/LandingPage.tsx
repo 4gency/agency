@@ -52,8 +52,8 @@ export default function LandingPage() {
 
     return () => {
       clearTimeout(timer);
-      document.documentElement.setAttribute('data-theme', originalTheme || '');
-      document.documentElement.style.colorScheme = originalTheme || '';
+      document.documentElement.setAttribute('data-theme', originalTheme || 'dark');
+      document.documentElement.style.colorScheme = originalTheme || 'dark';
     };
   }, []);
 
