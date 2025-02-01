@@ -1,0 +1,12 @@
+// hooks/useSubscriptions.ts
+import { useQuery } from "@tanstack/react-query"
+import { UsersService, SubscriptionPublic } from "../client"
+import type { AxiosError } from "axios"
+
+export default function useSubscriptions() {
+  const query = useQuery<SubscriptionPublic[], AxiosError>({
+    queryKey: ["subscriptions"],
+    queryFn: () => UsersService.getUserSubscriptions(),
+  })
+  return query
+}

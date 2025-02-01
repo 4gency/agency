@@ -11,7 +11,7 @@ from app.models.resume import PlainTextResumePublic
 router = APIRouter()
 
 
-@router.get("{subscription_id}/job-preferences", response_model=ConfigPublic)
+@router.get("/{subscription_id}/job-preferences", response_model=ConfigPublic)
 def get_config(current_user: CurrentUser, subscription_id: uuid.UUID, nosql_session: NosqlSessionDep):
     config = config_crud.get_config(
         session=nosql_session,
@@ -24,7 +24,7 @@ def get_config(current_user: CurrentUser, subscription_id: uuid.UUID, nosql_sess
     return ConfigPublic(**config.model_dump())
 
 
-@router.get("{subscription_id}/resume", response_model=PlainTextResumePublic)
+@router.get("/{subscription_id}/resume", response_model=PlainTextResumePublic)
 def get_plain_text_resume(current_user: CurrentUser, subscription_id: uuid.UUID, nosql_session: NosqlSessionDep):
     resume = config_crud.get_resume(
         session=nosql_session,
@@ -37,7 +37,7 @@ def get_plain_text_resume(current_user: CurrentUser, subscription_id: uuid.UUID,
     return PlainTextResumePublic(**resume.model_dump())
 
 
-@router.patch("{subscription_id}/job-preferences", status_code=status.HTTP_200_OK)
+@router.put("/{subscription_id}/job-preferences", status_code=status.HTTP_200_OK)
 def update_config(
     *,
     current_user: CurrentUser,
@@ -64,7 +64,7 @@ def update_config(
     )
 
 
-@router.patch("{subscription_id}/resume", status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+@router.put("/{subscription_id}/resume", status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 def update_plain_text_resume(
     *,
     current_user: CurrentUser,

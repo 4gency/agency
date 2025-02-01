@@ -2,9 +2,9 @@ import { useEffect } from "react";
 
 export default function LandingPage() {
   useEffect(() => {
-    const originalTheme = document.documentElement.getAttribute('data-theme');
-    document.documentElement.setAttribute('data-theme', 'light');
-    document.documentElement.style.colorScheme = 'light';
+    const originalTheme = document.documentElement.getAttribute("data-theme");
+    document.documentElement.setAttribute("data-theme", "light");
+    document.documentElement.style.colorScheme = "light";
     function playAnimation(element: any, frame = false) {
       if (frame) {
         element.style.visibility = "visible";
@@ -52,8 +52,11 @@ export default function LandingPage() {
 
     return () => {
       clearTimeout(timer);
-      document.documentElement.setAttribute('data-theme', originalTheme || 'dark');
-      document.documentElement.style.colorScheme = originalTheme || 'dark';
+      document.documentElement.setAttribute(
+        "data-theme",
+        originalTheme || "dark"
+      );
+      document.documentElement.style.colorScheme = originalTheme || "dark";
     };
   }, []);
 
@@ -193,7 +196,43 @@ export default function LandingPage() {
                   />
                 </a>
               </figure>
-              <div className="guten-element guten-nav-menu guten-f9BEGq fast" />
+              <div className="guten-element guten-nav-menu guten-f9BEGq fast">
+                <nav
+                  className="main-nav"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "flex-end",
+                    gap: "20px",
+                  }}
+                >
+                  {/* Login Link */}
+                  <a
+                    href="/login"
+                    className="has-text-color has-link-color has-inter-font-family"
+                    style={{
+                      fontSize: 16,
+                      fontWeight: 600,
+                      color: "#1a202c",
+                      textDecoration: "none",
+                    }}
+                  >
+                    Login
+                  </a>
+                  {/* Register Button */}
+                  <a
+                    href="/signup/"
+                    className="block-button__link element-button"
+                    style={{
+                      borderRadius: 10,
+                      padding: "10px 20px",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Register
+                  </a>
+                </nav>
+              </div>
             </div>
           </div>
         </header>
