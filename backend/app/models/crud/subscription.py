@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 import uuid
 from sqlmodel import Session, select
@@ -10,6 +10,7 @@ from app.models.core import (
     Subscription,
     SubscriptionCreate,
     SubscriptionPlan,
+    SubscriptionPlanBenefit,
     SubscriptionPlanCreate,
     SubscriptionPlanUpdate,
     SubscriptionUpdate,
@@ -20,8 +21,16 @@ from app.models.core import (
 def create_subscription_plan(
     *, session: Session, subscription_plan_create: SubscriptionPlanCreate
 ) -> SubscriptionPlan:
-    db_obj = SubscriptionPlan.model_validate(subscription_plan_create)
+    sp_data = subscription_plan_create.model_dump(exclude={"benefits"})
+    benefits = subscription_plan_create.benefits
+    db_obj = SubscriptionPlan.model_validate(sp_data)
     session.add(db_obj)
+    
+    session.commit()
+    session.refresh(db_obj)
+    for benefit in benefits:
+        db_obj_benefit = SubscriptionPlanBenefit.model_validate(benefit, update={"subscription_plan_id": db_obj.id})
+        session.add(db_obj_benefit)
     session.commit()
     session.refresh(db_obj)
     return db_obj
@@ -106,8 +115,8 @@ def create_sub_payment(
     sub_cr = SubscriptionCreate(
         user_id=user.id,
         subscription_plan_id=sub_plan.id,
-        start_date=datetime.now(),
-        end_date=datetime.now(), # TODO: calculate end date
+        start_date=datetime.now(timezone.utc),
+        end_date=datetime.now(timezone.utc), # TODO: calculate end date
         is_active=False,
         metric_type=sub_plan.metric_type,
         metric_status=sub_plan.metric_value,
@@ -118,7 +127,7 @@ def create_sub_payment(
         user_id=user.id,
         amount=sub_plan.price,
         currency=sub_plan.currency,
-        payment_date=datetime.now(),
+        payment_date=datetime.now(timezone.utc),
         payment_status=payment_status,
         payment_gateway=payment_gateway,
         transaction_id=transaction_id if transaction_id else str(uuid.uuid4()),

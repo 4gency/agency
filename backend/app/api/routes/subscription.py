@@ -1,5 +1,5 @@
 import uuid
-from typing import Any
+from typing import Any, List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
@@ -22,15 +22,22 @@ router = APIRouter()
 def read_subscription_plans(
     *,
     session: SessionDep,
+    only_active: bool = True,
 ) -> Any:
     """
     Retrieve subscription plans (public endpoint).
     """
+    sps_public: list[SubscriptionPlanPublic] = []
     subscription_plans = crud_subs.get_subscription_plans(session=session,)
-    subscription_plans_public = [
-        SubscriptionPlanPublic.model_validate(sp) for sp in subscription_plans if sp.is_active
-    ]
-    return SubscriptionPlansPublic(plans=subscription_plans_public)
+    
+    # Serialize subscription plans
+    for sp in subscription_plans:
+        if only_active and not sp.is_active:
+            continue
+        sp_temp = SubscriptionPlanPublic.model_validate(sp)
+        sps_public.append(sp_temp)
+
+    return SubscriptionPlansPublic(plans=sps_public)
 
 
 @router.get("/plans/{id}", response_model=SubscriptionPlanPublic)
@@ -94,8 +101,7 @@ def update_subscription_plan(
     if not subscription_plan:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription plan not found")
     subscription_plan_data = subscription_plan_in.model_dump(exclude_unset=True)
-    for key, value in subscription_plan_data.items():
-        setattr(subscription_plan, key, value)
+    subscription_plan.sqlmodel_update(subscription_plan_data)
     if stripe.integration_enabled():
         stripe.update_subscription_plan(
             session=session,

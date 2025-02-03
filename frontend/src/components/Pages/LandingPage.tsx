@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import PricingSection from "../Pricing/PricingSection";
 
 export default function LandingPage() {
   useEffect(() => {
@@ -42,7 +43,7 @@ export default function LandingPage() {
       const innerDoc =
         iframe.length > 0
           ? (iframe[0] as HTMLIFrameElement).contentDocument ||
-            (iframe[0] as HTMLIFrameElement).contentWindow?.document
+          (iframe[0] as HTMLIFrameElement).contentWindow?.document
           : null;
 
       if (innerDoc) {
@@ -203,7 +204,7 @@ export default function LandingPage() {
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "flex-end",
-                    gap: "20px",
+                    gap: "40px",
                   }}
                 >
                   {/* Login Link */}
@@ -213,7 +214,7 @@ export default function LandingPage() {
                     style={{
                       fontSize: 16,
                       fontWeight: 600,
-                      color: "#1a202c",
+                      color: "#1a2c2a",
                       textDecoration: "none",
                     }}
                   >
@@ -222,11 +223,12 @@ export default function LandingPage() {
                   {/* Register Button */}
                   <a
                     href="/signup/"
-                    className="block-button__link element-button"
+                    className="has-text-color has-link-color has-inter-font-family"
                     style={{
-                      borderRadius: 10,
-                      padding: "10px 20px",
+                      fontSize: 16,
                       fontWeight: 600,
+                      color: "#1a2c2a",
+                      textDecoration: "none",
                     }}
                   >
                     Register
@@ -358,8 +360,8 @@ export default function LandingPage() {
         <div
           className="block-group has-background is-layout-constrained container-core-group-is-layout-9 block-group-is-layout-constrained"
           style={{
-            background:
-              "linear-gradient(180deg,rgb(255,255,255) 34%,rgb(237,250,255) 100%)",
+            // background:
+            // "linear-gradient(180deg,rgb(255,255,255) 34%,rgb(237,250,255) 100%)",
             paddingTop: 100,
             paddingRight: 20,
             paddingBottom: 0,
@@ -522,9 +524,12 @@ export default function LandingPage() {
                     className="has-theme-2-color has-text-color"
                     style={{ marginBottom: 15 }}
                   >
-                    At λgency, we are pioneering the automation of the
-                    traditional job search process, transforming it with the
-                    power of artificial intelligence.
+                    At λgency, we're rethinking the old-school job search process.
+                    By applying AI to handle the routine tasks that bog you down,
+                    we're making job hunting a bit simpler and more efficient.
+                    We're a young startup—only a few months in—and we're excited to
+                    see how these practical tweaks can really help both job seekers
+                    and recruiters.
                   </p>
                   <p className="has-theme-2-color has-text-color">
                     Our innovative platform enables job seekers to automatically
@@ -554,7 +559,7 @@ export default function LandingPage() {
                         className="has-theme-2-color has-text-color"
                         style={{ fontSize: 16, lineHeight: 1 }}
                       >
-                        Speed
+                        Automatic
                       </p>
                     </div>
                     <div
@@ -573,7 +578,7 @@ export default function LandingPage() {
                         className="has-theme-2-color has-text-color"
                         style={{ fontSize: 16, lineHeight: 1 }}
                       >
-                        Precision
+                        Fast
                       </p>
                     </div>
                     <div
@@ -592,7 +597,7 @@ export default function LandingPage() {
                         className="has-theme-2-color has-text-color"
                         style={{ fontSize: 16, lineHeight: 1 }}
                       >
-                        Personalization
+                        Problem Solver
                       </p>
                     </div>
                   </div>
@@ -659,7 +664,7 @@ export default function LandingPage() {
           </div>
           <div
             className="block-columns has-border-color is-layout-flex container-core-columns-is-layout-4 block-columns-is-layout-flex"
-            style={{ borderColor: "#e0eaff", borderWidth: 1, borderRadius: 20 }}
+            style={{ borderColor: "#d2fae5", borderWidth: 1, borderRadius: 20 }}
           >
             <div
               className="block-column is-vertically-aligned-center is-layout-flow block-column-is-layout-flow"
@@ -788,8 +793,8 @@ export default function LandingPage() {
           id="services"
           className="block-group has-background is-layout-constrained container-core-group-is-layout-31 block-group-is-layout-constrained"
           style={{
-            background:
-              "linear-gradient(180deg,rgb(255,255,255) 0%,rgb(237,250,255) 100%)",
+            // background:
+            //   "linear-gradient(180deg,rgb(255,255,255) 0%,rgb(237,250,255) 100%)",
             paddingTop: 100,
             paddingRight: 20,
             paddingBottom: 0,
@@ -904,7 +909,7 @@ export default function LandingPage() {
                     className="block-group has-background is-vertical is-content-justification-center is-layout-flex container-core-group-is-layout-28 block-group-is-layout-flex"
                     style={{
                       background:
-                        "linear-gradient(180deg,rgb(64,182,253) 0%,rgb(32,104,245) 100%)",
+                        "linear-gradient(180deg,rgb(12, 207, 188) 0%,rgb(0, 118, 108) 100%)",
                       minHeight: 500,
                     }}
                   >
@@ -1098,7 +1103,7 @@ export default function LandingPage() {
                           fontWeight: 700,
                         }}
                       >
-                        130 +
+                        1100 +
                       </h3>
                       <p
                         className="has-theme-2-color has-text-color has-link-color elements-dbf0ef0be94ac7d76e827a73d4e35ab8"
@@ -1144,7 +1149,7 @@ export default function LandingPage() {
         <div
           className="block-group is-layout-flow block-group-is-layout-flow"
           style={{
-            paddingTop: 120,
+            paddingTop: 70,
             paddingRight: "5vw",
             paddingBottom: 0,
             paddingLeft: "5vw",
@@ -1227,11 +1232,15 @@ export default function LandingPage() {
                         Engineer
                       </p>
                     </div>
-                    <figure className="block-image size-full is-resized duotone-rgb224234255-rgb255255255-7">
+                    <figure className="block-image size-full is-resized">
                       <img
                         src="/landing-page/img/icon-quote.svg"
                         className="image-584"
-                        style={{ width: 50 }}
+                        style={{
+                          width: 50,
+                          filter:
+                            'invert(42%) sepia(68%) saturate(450%) hue-rotate(145deg) brightness(93%) contrast(88%) opacity(20%)'
+                        }}
                       />
                     </figure>
                   </div>
@@ -1281,11 +1290,15 @@ export default function LandingPage() {
                         Tech Lead
                       </p>
                     </div>
-                    <figure className="block-image size-full is-resized duotone-rgb224234255-rgb254254254-8">
+                    <figure className="block-image size-full is-resized">
                       <img
                         src="/landing-page/img/icon-quote.svg"
                         className="image-584"
-                        style={{ width: 50 }}
+                        style={{
+                          width: 50,
+                          filter:
+                            'invert(42%) sepia(68%) saturate(450%) hue-rotate(145deg) brightness(93%) contrast(88%) opacity(20%)'
+                        }}
                       />
                     </figure>
                   </div>
@@ -1335,11 +1348,15 @@ export default function LandingPage() {
                         Lead QA Analyst
                       </p>
                     </div>
-                    <figure className="block-image size-full is-resized duotone-rgb224234255-rgb255254254-9">
+                    <figure className="block-image size-full is-resized">
                       <img
                         src="/landing-page/img/icon-quote.svg"
                         className="image-584"
-                        style={{ width: 50 }}
+                        style={{
+                          width: 50,
+                          filter:
+                            'invert(42%) sepia(68%) saturate(450%) hue-rotate(145deg) brightness(93%) contrast(88%) opacity(20%)'
+                        }}
                       />
                     </figure>
                   </div>
@@ -1389,11 +1406,15 @@ export default function LandingPage() {
                         Full Stack Developer
                       </p>
                     </div>
-                    <figure className="block-image size-full is-resized duotone-rgb224234255-rgb255255255-10">
+                    <figure className="block-image size-full is-resized">
                       <img
                         src="/landing-page/img/icon-quote.svg"
                         className="image-584"
-                        style={{ width: 50 }}
+                        style={{
+                          width: 50,
+                          filter:
+                            'invert(42%) sepia(68%) saturate(450%) hue-rotate(145deg) brightness(93%) contrast(88%) opacity(20%)'
+                        }}
                       />
                     </figure>
                   </div>
@@ -1413,11 +1434,9 @@ export default function LandingPage() {
                 </div>
               </div>
             </div>
-            <div className="block-group is-nowrap is-layout-flex container-core-group-is-layout-53 block-group-is-layout-flex">
-              <div className="block-group is-layout-constrained block-group-is-layout-constrained" />
-            </div>
           </div>
         </div>
+        <PricingSection />
         <div
           className="block-group is-layout-constrained container-core-group-is-layout-60 block-group-is-layout-constrained"
           style={{
@@ -1442,11 +1461,11 @@ export default function LandingPage() {
                 style={{
                   borderTopLeftRadius: 20,
                   borderTopRightRadius: 20,
-                  borderTopColor: "#e0eaff",
+                  borderTopColor: "#d2fae5",
                   borderTopWidth: 1,
-                  borderRightColor: "#e0eaff",
+                  borderRightColor: "#d2fae5",
                   borderRightWidth: 1,
-                  borderLeftColor: "#e0eaff",
+                  borderLeftColor: "#d2fae5",
                   borderLeftWidth: 1,
                   paddingTop: 50,
                   paddingRight: 40,
@@ -1538,266 +1557,99 @@ export default function LandingPage() {
             </div>
           </div>
         </div>
-        <footer className="block-template-part">
-          <div className="block-group is-layout-flow block-group-is-layout-flow">
-            <div
-              className="block-cover is-repeated lambdagency-margin-top-n175"
+        <footer
+          style={{
+            backgroundColor: "#fff",
+            padding: "10px 20px",
+            borderTop: "1px solid #e2e8f0",
+            marginTop: "40px",
+          }}
+        >
+          <div
+            style={{
+              maxWidth: "1200px",
+              margin: "0 auto",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+            }}
+          >
+            {/* Navigation Links */}
+            <nav
               style={{
-                paddingTop: 175,
-                paddingRight: 20,
-                paddingBottom: 0,
-                paddingLeft: 20,
+                marginTop: "20px",
+                marginBottom: "20px",
+                display: "flex",
+                gap: "40px",
+                flexWrap: "wrap",
+                justifyContent: "center",
               }}
             >
-              <span
-                aria-hidden="true"
-                className="block-cover__background has-background-dim-100 has-background-dim block-cover__gradient-background has-background-gradient"
+              <a
+                href="/#home"
                 style={{
-                  background:
-                    "linear-gradient(180deg,rgba(255,255,255,0) 0%,rgb(255,255,255) 100%)",
+                  color: "#2d3748",
+                  fontWeight: 600,
+                  fontSize: "16px",
+                  textDecoration: "none",
                 }}
-              />
-              <div className="block-cover__image-background image-441 is-repeated"></div>
-              <div className="block-cover__inner-container is-layout-flow block-cover-is-layout-flow">
-                <div className="block-group is-layout-constrained container-core-group-is-layout-72 block-group-is-layout-constrained">
-                  <div
-                    className="block-columns is-layout-flex container-core-columns-is-layout-10 block-columns-is-layout-flex"
-                    style={{ paddingTop: 80, paddingBottom: 80 }}
-                  >
-                    <div
-                      className="block-column is-layout-flow container-core-column-is-layout-24 block-column-is-layout-flow"
-                      style={{ flexBasis: "44%" }}
-                    >
-                      <div
-                        className="block-group is-vertical is-layout-flex container-core-group-is-layout-62 block-group-is-layout-flex"
-                        style={{ minHeight: 206 }}
-                      >
-                        <h2
-                          style={{
-                            fontSize: 28,
-                            fontStyle: "normal",
-                            fontWeight: 600,
-                          }}
-                          className="has-link-color elements-423986706aa876a8be70250a2b28e601 block-site-title has-text-color has-theme-3-color"
-                        >
-                          <a
-                            href="/"
-                            target="_self"
-                            rel="home"
-                            aria-current="page"
-                          >
-                            λgency
-                          </a>
-                        </h2>
-                        <div className="block-group is-nowrap is-layout-flex container-core-group-is-layout-61 block-group-is-layout-flex">
-                          <p
-                            className="has-text-align-left has-theme-2-color has-text-color has-link-color elements-4b013a45cea709b5431448efd356df60 container-content-9"
-                            style={{ fontSize: 18 }}
-                          >
-                            λgency harnesses cutting-edge technology to automate
-                            your job search, providing you with tailored
-                            opportunities and a seamless application process.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                    <div
-                      className="block-column is-layout-flow block-column-is-layout-flow"
-                      style={{ flexBasis: "56%" }}
-                    >
-                      <div className="block-group is-content-justification-space-between is-layout-flex container-core-group-is-layout-71 block-group-is-layout-flex">
-                        <div className="block-group is-layout-constrained container-core-group-is-layout-64 block-group-is-layout-constrained">
-                          <h3
-                            className="block-heading has-theme-0-color has-text-color has-link-color elements-8a7153116e0bf2aa5f323696f04cecc9"
-                            style={{
-                              fontSize: 22,
-                              fontStyle: "normal",
-                              fontWeight: 600,
-                            }}
-                          >
-                            Links
-                          </h3>
-                          <div className="block-group is-vertical is-layout-flex container-core-group-is-layout-63 block-group-is-layout-flex">
-                            <p
-                              className="has-theme-2-color has-text-color has-link-color elements-3d4cc2f71ac2d38ddafbc21fa0e4876f"
-                              style={{ fontSize: 18 }}
-                            >
-                              <a
-                                href="/#home"
-                                data-type="link"
-                                data-id="/#home"
-                              >
-                                Home
-                              </a>
-                            </p>
-                            <p
-                              className="has-theme-2-color has-text-color has-link-color elements-77419f3610ec1bfe6f0342ea14d17fb2"
-                              style={{ fontSize: 18 }}
-                            >
-                              <a
-                                href="/#about"
-                                data-type="internal"
-                                data-id="#about"
-                              >
-                                About
-                              </a>
-                            </p>
-                            <p
-                              className="has-theme-2-color has-text-color has-link-color elements-a052dbf9cd30e8ae5f8098fcae5240ea"
-                              style={{ fontSize: 18 }}
-                            >
-                              <a
-                                href="/#pricing"
-                                data-type="internal"
-                                data-id="#pricing"
-                              >
-                                Pricing
-                              </a>
-                            </p>
-                            <p
-                              className="has-theme-2-color has-text-color has-link-color elements-43d0f59d026b996e698373ec07f39caa"
-                              style={{ fontSize: 18 }}
-                            >
-                              <a
-                                href="/#services"
-                                data-type="internal"
-                                data-id="#services"
-                              >
-                                Services
-                              </a>
-                            </p>
-                          </div>
-                        </div>
-                        <div className="block-group is-layout-constrained container-core-group-is-layout-66 block-group-is-layout-constrained">
-                          <h3
-                            className="block-heading has-theme-0-color has-text-color has-link-color elements-375664022365b35ccc7a17ef9c3d5711"
-                            style={{
-                              fontSize: 22,
-                              fontStyle: "normal",
-                              fontWeight: 600,
-                            }}
-                          >
-                            About
-                          </h3>
-                          <div className="block-group is-vertical is-layout-flex container-core-group-is-layout-65 block-group-is-layout-flex">
-                            <p
-                              className="has-theme-2-color has-text-color has-link-color elements-7cf08c2bde9d83f9836978517f7a0131"
-                              style={{ fontSize: 18 }}
-                            >
-                              <a href="#">Team</a>
-                            </p>
-                            <p
-                              className="has-theme-2-color has-text-color has-link-color elements-3436de5c4147615736ef05ccb524f039"
-                              style={{ fontSize: 18 }}
-                            >
-                              <a href="#">Careers</a>
-                            </p>
-                            <p
-                              className="has-theme-2-color has-text-color has-link-color elements-e5131dbaaaf1c8c56d9d20cf7abe74d5"
-                              style={{ fontSize: 18 }}
-                            >
-                              <a href="#">Affiliates</a>
-                            </p>
-                            <p
-                              className="has-theme-2-color has-text-color has-link-color elements-571500e51eb97657ac0ff1f6a7391903"
-                              style={{ fontSize: 18 }}
-                            >
-                              <a href="#">Community</a>
-                            </p>
-                          </div>
-                        </div>
-                        <div className="block-group is-layout-constrained container-core-group-is-layout-68 block-group-is-layout-constrained">
-                          <h3
-                            className="block-heading has-theme-0-color has-text-color has-link-color elements-74c1c05790e03034560573259e804447"
-                            style={{
-                              fontSize: 22,
-                              fontStyle: "normal",
-                              fontWeight: 600,
-                            }}
-                          >
-                            Support
-                          </h3>
-                          <div className="block-group is-vertical is-layout-flex container-core-group-is-layout-67 block-group-is-layout-flex">
-                            <p
-                              className="has-theme-2-color has-text-color has-link-color elements-ef80c008ce88a09dfcb67fa3fe073f9f"
-                              style={{ fontSize: 18 }}
-                            >
-                              <a href="#">FAQ</a>
-                            </p>
-                            <p
-                              className="has-theme-2-color has-text-color has-link-color elements-d2f23ea464d4c43644efd1dc41004a4e"
-                              style={{ fontSize: 18 }}
-                            >
-                              <a href="#">Contact</a>
-                            </p>
-                            <p
-                              className="has-theme-2-color has-text-color has-link-color elements-4099575d973a6a02ef39d0572f5aa508"
-                              style={{ fontSize: 18 }}
-                            >
-                              <a href="#">Support</a>
-                            </p>
-                          </div>
-                        </div>
-                        <div className="block-group is-layout-constrained container-core-group-is-layout-70 block-group-is-layout-constrained">
-                          <h3
-                            className="block-heading has-theme-0-color has-text-color has-link-color elements-32573ef6d0c3e7ff0bb8d652efcd4506"
-                            style={{
-                              fontSize: 22,
-                              fontStyle: "normal",
-                              fontWeight: 600,
-                            }}
-                          >
-                            Legal
-                          </h3>
-                          <div className="block-group is-vertical is-layout-flex container-core-group-is-layout-69 block-group-is-layout-flex">
-                            <p
-                              className="has-theme-2-color has-text-color has-link-color elements-03af5997473e6c4aa7057eb739ece4ac"
-                              style={{ fontSize: 18 }}
-                            >
-                              <a href="#">Terms &amp; Conditions</a>
-                            </p>
-                            <p
-                              className="has-theme-2-color has-text-color has-link-color elements-9712cae8dd3458422fbf7b7661f7e060"
-                              style={{ fontSize: 18 }}
-                            >
-                              <a href="#">Privacy Policy</a>
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div
-              className="block-group has-white-background-color has-background is-layout-constrained container-core-group-is-layout-74 block-group-is-layout-constrained"
-              style={{
-                borderTopColor: "var(---preset--color--theme-7)",
-                borderTopWidth: 1,
-                paddingTop: 20,
-                paddingRight: 20,
-                paddingBottom: 20,
-                paddingLeft: 20,
-              }}
-            >
-              <div className="block-group is-content-justification-space-between is-layout-flex container-core-group-is-layout-73 block-group-is-layout-flex">
-                <p
-                  className="has-theme-2-color has-text-color has-link-color elements-e6f84d2c92ddde96ff7e26592cceb54c"
-                  style={{ fontSize: 14 }}
-                >
-                  Powered by λgency
-                </p>
-                <p
-                  className="has-text-align-right has-theme-2-color has-text-color has-link-color elements-b683fe0f068d252bbc93e7886c7d7628"
-                  style={{ fontSize: 14 }}
-                >
-                  Copyright © 2024. All rights reserved.
-                </p>
-              </div>
+              >
+                Home
+              </a>
+              <a
+                href="/#about"
+                style={{
+                  color: "#2d3748",
+                  fontWeight: 600,
+                  fontSize: "16px",
+                  textDecoration: "none",
+                }}
+              >
+                About
+              </a>
+              <a
+                href="/#pricing"
+                style={{
+                  color: "#2d3748",
+                  fontWeight: 600,
+                  fontSize: "16px",
+                  textDecoration: "none",
+                }}
+              >
+                Pricing
+              </a>
+              <a
+                href="/#support"
+                style={{
+                  color: "#2d3748",
+                  fontWeight: 600,
+                  fontSize: "16px",
+                  textDecoration: "none",
+                }}
+              >
+                Support
+              </a>
+              <a
+                href="/#terms"
+                style={{
+                  color: "#2d3748",
+                  fontWeight: 600,
+                  fontSize: "16px",
+                  textDecoration: "none",
+                }}
+              >
+                Terms &amp; Conditions
+              </a>
+            </nav>
+
+            {/* Agency Info (Optional) */}
+            <div style={{ textAlign: "center", color: "#718096", fontSize: "14px" }}>
+              <p>Powered by λgency</p>
+              <p>&copy; 2024. All rights reserved.</p>
             </div>
           </div>
         </footer>
+
       </div>
       <svg
         xmlns="http://www.w3.org/2000/svg"

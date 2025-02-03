@@ -1,13 +1,13 @@
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 import uuid
 from fastapi import HTTPException
 from sqlmodel import Session, select
 import stripe
 from app.core.config import settings
-from app.models.core import Payment, Subscription, SubscriptionPlan, User
+from app.models.core import CheckoutSession, Payment, Subscription, SubscriptionMetric, SubscriptionPlan, User
 
-valid_currencies = ["usd", "aed", "afn", "all", "amd", "ang", "aoa", "ars", "aud", "awg", "azn", "bam", "bbd", "bdt", "bgn", "bhd", "bif", "bmd", "bnd", "bob", "brl", "bsd", "bwp", "byn", "bzd", "cad", "cdf", "chf", "clp", "cny", "cop", "crc", "cve", "czk", "djf", "dkk", "dop", "dzd", "egp", "etb", "eur", "fjd", "fkp", "gbp", "gel", "gip", "gmd", "gnf", "gtq", "gyd", "hkd", "hnl", "hrk", "htg", "huf", "idr", "ils", "inr", "isk", "jmd", "jod", "jpy", "kes", "kgs", "khr", "kmf", "krw", "kwd", "kyd", "kzt", "lak", "lbp", "lkr", "lrd", "lsl", "mad", "mdl", "mga", "mkd", "mmk", "mnt", "mop", "mur", "mvr", "mwk", "mxn", "myr", "mzn", "nad", "ngn", "nio", "nok", "npr", "nzd", "omr", "pab", "pen", "pgk", "php", "pkr", "pln", "pyg", "qar", "ron", "rsd", "rub", "rwf", "sar", "sbd", "scr", "sek", "sgd", "shp", "sle", "sos", "srd", "std", "szl", "thb", "tjs", "tnd", "top", "try", "ttd", "twd", "tzs", "uah", "ugx", "uyu", "uzs", "vnd", "vuv", "wst", "xaf", "xcd", "xof", "xpf", "yer", "zar", "zmw", "usdc", "btn", "ghs", "eek", "lvl", "svc", "vef", "ltl", "sll", "mro"]
-valid_metric_types = ["day", "week", "month", "year"]
+VALID_CURRENCIES = ("usd", "aed", "afn", "all", "amd", "ang", "aoa", "ars", "aud", "awg", "azn", "bam", "bbd", "bdt", "bgn", "bhd", "bif", "bmd", "bnd", "bob", "brl", "bsd", "bwp", "byn", "bzd", "cad", "cdf", "chf", "clp", "cny", "cop", "crc", "cve", "czk", "djf", "dkk", "dop", "dzd", "egp", "etb", "eur", "fjd", "fkp", "gbp", "gel", "gip", "gmd", "gnf", "gtq", "gyd", "hkd", "hnl", "hrk", "htg", "huf", "idr", "ils", "inr", "isk", "jmd", "jod", "jpy", "kes", "kgs", "khr", "kmf", "krw", "kwd", "kyd", "kzt", "lak", "lbp", "lkr", "lrd", "lsl", "mad", "mdl", "mga", "mkd", "mmk", "mnt", "mop", "mur", "mvr", "mwk", "mxn", "myr", "mzn", "nad", "ngn", "nio", "nok", "npr", "nzd", "omr", "pab", "pen", "pgk", "php", "pkr", "pln", "pyg", "qar", "ron", "rsd", "rub", "rwf", "sar", "sbd", "scr", "sek", "sgd", "shp", "sle", "sos", "srd", "std", "szl", "thb", "tjs", "tnd", "top", "try", "ttd", "twd", "tzs", "uah", "ugx", "uyu", "uzs", "vnd", "vuv", "wst", "xaf", "xcd", "xof", "xpf", "yer", "zar", "zmw", "usdc", "btn", "ghs", "eek", "lvl", "svc", "vef", "ltl", "sll", "mro")
+VALID_METRIC_TYPES = ("day", "week", "month", "year")
 
 class BadRequest(HTTPException):
     def __init__(self, detail: str) -> None:
@@ -54,8 +54,8 @@ def create_checkout_subscription_session(
             },
         ],
         mode="subscription",
-        success_url=f"{settings.FRONTEND_HOST}/success?session_id={payment.transaction_id}",
-        cancel_url=f"{settings.FRONTEND_HOST}/cancel?session_id={payment.transaction_id}",
+        success_url=f"{settings.FRONTEND_HOST}/stripe/success?session_id={payment.transaction_id}",
+        cancel_url=f"{settings.FRONTEND_HOST}/stripe/cancel?session_id={payment.transaction_id}",
         metadata={
             "payment_id": str(payment.id),
             "subscription_id": str(payment.subscription_id),
@@ -69,7 +69,7 @@ def create_subscription_plan(
     session: Session,
     subscription_plan: SubscriptionPlan,
 ) -> tuple[stripe.Product, stripe.Price]:
-    if subscription_plan.currency.lower() not in valid_currencies:
+    if subscription_plan.currency.lower() not in VALID_CURRENCIES:
         raise BadRequest("Invalid currency")
 
     product_creation_data = {
@@ -89,7 +89,7 @@ def create_subscription_plan(
     interval = subscription_plan.metric_type.name.lower()
     interval_count = subscription_plan.metric_value
     
-    if interval not in valid_metric_types:
+    if interval not in VALID_METRIC_TYPES:
         raise BadRequest("Invalid metric type")
 
     # create the product in Stripe
@@ -127,10 +127,10 @@ def update_subscription_plan(
     if not subscription_plan.stripe_product_id or not subscription_plan.stripe_price_id:
         create_subscription_plan(session, subscription_plan)
         
-    if subscription_plan.currency.lower() not in valid_currencies:
+    if subscription_plan.currency.lower() not in VALID_CURRENCIES:
         raise BadRequest("Invalid currency")
     
-    if subscription_plan.metric_type.name.lower() not in valid_metric_types:
+    if subscription_plan.metric_type.name.lower() not in VALID_METRIC_TYPES:
         raise BadRequest("Invalid metric type")
 
     # update the product in Stripe
@@ -240,7 +240,7 @@ def cancel_subscription(session: Session, subscription: Subscription) -> None:
     # update the subscription locally
     subscription.is_active = False
     subscription.end_date = datetime.fromtimestamp(
-        stripe_subscription.ended_at or datetime.now().timestamp()
+        stripe_subscription.ended_at or datetime.now(timezone.utc).timestamp()
     )
     session.add(subscription)
     session.commit()
@@ -300,3 +300,115 @@ def handle_checkout_session(session: Session, event: dict) -> None:
     session.commit()
     session.refresh(payment)
     session.refresh(subscription)
+
+def handle_success_callback(
+    session: Session,
+    checkout: CheckoutSession,
+    plan: SubscriptionPlan,
+    user: User
+):
+    # check at stripe if the payment was successful
+    checkout_session = stripe.checkout.Session.retrieve(checkout.session_id)
+    if checkout_session.payment_status != "paid":
+        raise BadRequest("Checkout session payment status is not 'paid'")
+    return validate_success_callback(session, checkout, plan, user)
+
+def validate_success_callback(
+    session: Session,
+    checkout: CheckoutSession,
+    plan: SubscriptionPlan,
+    user: User
+):
+    # Se já estiver marcado como 'complete', não processa de novo.
+    if checkout.status == "complete":
+        return
+
+    try:
+        # 1) Atualizar CheckoutSession
+        checkout.status = "complete"
+        checkout.payment_status = "paid"
+        checkout.updated_at = datetime.now(timezone.utc)
+        session.add(checkout)
+
+        # 2) Verificar se já existe uma Subscription ativa para o mesmo plano
+        existing_sub = session.exec(
+            select(Subscription)
+            .where(Subscription.user_id == user.id)
+            .where(Subscription.subscription_plan_id == plan.id)
+            .where(Subscription.is_active == True)
+        ).first()
+
+        # 3) Criar ou atualizar assinatura
+        if existing_sub:
+            _extend_subscription(existing_sub, plan)
+            subscription = existing_sub
+        else:
+            subscription = Subscription(
+                user_id=user.id,
+                subscription_plan_id=plan.id,
+                start_date=datetime.now(timezone.utc),
+                end_date=_calculate_end_date(plan),
+                is_active=True,
+                metric_type=plan.metric_type,
+                metric_status=1,  # se houver contagem
+                stripe_subscription_id=None,
+            )
+            session.add(subscription)
+            session.flush()
+
+        existing_payment = session.exec(
+            select(Payment).where(Payment.transaction_id == checkout.session_id)
+        ).first()
+
+        if not existing_payment:
+            new_payment = Payment(
+                subscription_id=subscription.id,
+                user_id=user.id,
+                amount=0.0,  # Ajuste para o valor real, se houver
+                currency="USD",
+                payment_date=datetime.now(timezone.utc),
+                payment_status="paid",
+                payment_gateway="stripe",
+                transaction_id=checkout.session_id,
+            )
+            session.add(new_payment)
+            session.flush()
+        else:
+            existing_payment.payment_status = "paid"
+            existing_payment.payment_date = datetime.now(timezone.utc)
+            session.add(existing_payment)
+            session.flush()
+            
+        session.commit()
+    except Exception as e:
+        session.rollback()
+        raise e
+
+
+def _extend_subscription(subscription: Subscription, plan: SubscriptionPlan):
+    now_utc = datetime.now(timezone.utc)
+
+    if subscription.end_date < now_utc:
+        subscription.start_date = now_utc
+        subscription.end_date = _calculate_end_date(plan, base_date=now_utc)
+    else:
+        subscription.end_date = _calculate_end_date(plan, base_date=subscription.end_date)
+
+    subscription.is_active = True
+
+
+def _calculate_end_date(plan: SubscriptionPlan, base_date: datetime | None = None) -> datetime:
+    if not base_date:
+        base_date = datetime.now(timezone.utc)
+
+    if plan.metric_type == SubscriptionMetric.DAY:
+        return base_date + timedelta(days=plan.metric_value)
+    elif plan.metric_type == SubscriptionMetric.WEEK:
+        return base_date + timedelta(weeks=plan.metric_value)
+    elif plan.metric_type == SubscriptionMetric.MONTH:
+        return base_date + timedelta(days=30 * plan.metric_value)
+    elif plan.metric_type == SubscriptionMetric.YEAR:
+        return base_date + timedelta(days=365 * plan.metric_value)
+    else:
+        # Se houver outros casos de métricas
+        return base_date

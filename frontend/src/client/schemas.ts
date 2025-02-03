@@ -75,6 +75,78 @@ export const $Certification = {
 	},
 } as const;
 
+export const $CheckoutSession = {
+	properties: {
+		id: {
+	type: 'string',
+	format: 'uuid',
+},
+		payment_gateway: {
+	type: 'string',
+	default: 'stripe',
+	maxLength: 50,
+},
+		session_id: {
+	type: 'string',
+	isRequired: true,
+	maxLength: 100,
+},
+		session_url: {
+	type: 'string',
+	isRequired: true,
+	maxLength: 500,
+},
+		user_id: {
+	type: 'string',
+	isRequired: true,
+	format: 'uuid',
+},
+		status: {
+	type: 'string',
+	default: 'open',
+	maxLength: 50,
+},
+		payment_status: {
+	type: 'string',
+	default: 'unpaid',
+	maxLength: 50,
+},
+		created_at: {
+	type: 'string',
+	default: '2025-02-02T07:53:01.732141Z',
+	format: 'date-time',
+},
+		expires_at: {
+	type: 'string',
+	isRequired: true,
+	format: 'date-time',
+},
+		updated_at: {
+	type: 'string',
+	default: '2025-02-02T07:53:01.732697Z',
+	format: 'date-time',
+},
+	},
+} as const;
+
+export const $CheckoutSessionPublic = {
+	properties: {
+		session_id: {
+	type: 'string',
+	isRequired: true,
+},
+		session_url: {
+	type: 'string',
+	isRequired: true,
+},
+		expires_at: {
+	type: 'string',
+	isRequired: true,
+	format: 'date-time',
+},
+	},
+} as const;
+
 export const $ConfigPublic = {
 	properties: {
 		remote: {
@@ -83,12 +155,15 @@ export const $ConfigPublic = {
 },
 		experience_level: {
 	type: 'ExperienceLevel',
+	default: [],
 },
 		job_types: {
 	type: 'JobTypes',
+	default: [],
 },
 		date: {
 	type: 'Date',
+	default: [],
 },
 		positions: {
 	type: 'array',
@@ -132,6 +207,7 @@ export const $ConfigPublic = {
 },
 		job_applicants_threshold: {
 	type: 'JobApplicantsThreshold',
+	default: [],
 },
 	},
 } as const;
@@ -446,7 +522,7 @@ export const $PersonalInformation = {
 },
 		date_of_birth: {
 	type: 'string',
-	default: '1995-02-09',
+	default: '1995-02-10',
 },
 		country: {
 	type: 'string',
@@ -488,6 +564,7 @@ export const $PlainTextResumePublic = {
 	properties: {
 		personal_information: {
 	type: 'PersonalInformation',
+	default: [],
 },
 		education_details: {
 	type: 'array',
@@ -594,18 +671,23 @@ export const $PlainTextResumePublic = {
 },
 		availability: {
 	type: 'Availability',
+	default: [],
 },
 		salary_expectations: {
 	type: 'SalaryExpectations',
+	default: [],
 },
 		self_identification: {
 	type: 'SelfIdentification',
+	default: [],
 },
 		legal_authorization: {
 	type: 'LegalAuthorization',
+	default: [],
 },
 		work_preferences: {
 	type: 'WorkPreferences',
+	default: [],
 },
 	},
 } as const;
@@ -663,7 +745,16 @@ export const $SelfIdentification = {
 
 export const $SubscriptionMetric = {
 	type: 'Enum',
-	enum: [1,2,3,4,5,],
+	enum: ['day','week','month','year','applies',],
+} as const;
+
+export const $SubscriptionPlanBenefitPublic = {
+	properties: {
+		name: {
+	type: 'string',
+	isRequired: true,
+},
+	},
 } as const;
 
 export const $SubscriptionPlanCreate = {
@@ -676,11 +767,15 @@ export const $SubscriptionPlanCreate = {
 	type: 'number',
 	isRequired: true,
 },
+		is_best_choice: {
+	type: 'boolean',
+	default: false,
+},
 		has_discount: {
 	type: 'boolean',
 	default: false,
 },
-		price_with_discount: {
+		price_without_discount: {
 	type: 'number',
 	default: 0,
 },
@@ -700,11 +795,18 @@ export const $SubscriptionPlanCreate = {
 },
 		metric_type: {
 	type: 'SubscriptionMetric',
-	default: 1,
+	default: "month",
 },
 		metric_value: {
 	type: 'number',
-	default: 30,
+	default: 1,
+},
+		benefits: {
+	type: 'array',
+	contains: {
+		type: 'SubscriptionPlanBenefitPublic',
+	},
+	default: [],
 },
 	},
 } as const;
@@ -724,11 +826,15 @@ export const $SubscriptionPlanPublic = {
 	type: 'number',
 	isRequired: true,
 },
+		is_best_choice: {
+	type: 'boolean',
+	isRequired: true,
+},
 		has_discount: {
 	type: 'boolean',
 	isRequired: true,
 },
-		price_with_discount: {
+		price_without_discount: {
 	type: 'number',
 	isRequired: true,
 },
@@ -752,23 +858,12 @@ export const $SubscriptionPlanPublic = {
 	type: 'number',
 	isRequired: true,
 },
-		stripe_product_id: {
-	type: 'any-of',
-	contains: [{
-	type: 'string',
-}, {
-	type: 'null',
-}],
-	isRequired: true,
-},
-		stripe_price_id: {
-	type: 'any-of',
-	contains: [{
-	type: 'string',
-}, {
-	type: 'null',
-}],
-	isRequired: true,
+		benefits: {
+	type: 'array',
+	contains: {
+		type: 'SubscriptionPlanBenefitPublic',
+	},
+	default: [],
 },
 	},
 } as const;
@@ -791,6 +886,14 @@ export const $SubscriptionPlanUpdate = {
 	type: 'null',
 }],
 },
+		is_best_choice: {
+	type: 'any-of',
+	contains: [{
+	type: 'boolean',
+}, {
+	type: 'null',
+}],
+},
 		has_discount: {
 	type: 'any-of',
 	contains: [{
@@ -799,7 +902,7 @@ export const $SubscriptionPlanUpdate = {
 	type: 'null',
 }],
 },
-		price_with_discount: {
+		price_without_discount: {
 	type: 'any-of',
 	contains: [{
 	type: 'number',
@@ -847,6 +950,17 @@ export const $SubscriptionPlanUpdate = {
 	type: 'null',
 }],
 },
+		benefits: {
+	type: 'any-of',
+	contains: [{
+	type: 'array',
+	contains: {
+		type: 'SubscriptionPlanBenefitPublic',
+	},
+}, {
+	type: 'null',
+}],
+},
 	},
 } as const;
 
@@ -857,7 +971,7 @@ export const $SubscriptionPlansPublic = {
 	contains: {
 		type: 'SubscriptionPlanPublic',
 	},
-	isRequired: true,
+	default: [],
 },
 	},
 } as const;

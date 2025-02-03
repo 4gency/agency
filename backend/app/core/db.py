@@ -8,6 +8,8 @@ engine = create_engine(str(settings.SQLALCHEMY_DATABASE_URI))
 
 
 def init_db(session: Session) -> str | None:
+    # TODO: comment this out after first run
+    SQLModel.metadata.create_all(engine)
     user = session.exec(
         select(User).where(User.email == settings.FIRST_SUPERUSER)
     ).first()

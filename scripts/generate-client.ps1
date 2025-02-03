@@ -6,7 +6,7 @@ $openapi = python -c "import app.main; import json; print(json.dumps(app.main.ap
 
 # Grava o conteúdo em openapi.json sem BOM
 [System.IO.File]::WriteAllText(
-    "openapi.json",
+    "../openapi.json",
     $openapi,
     (New-Object System.Text.UTF8Encoding($false))  # $false => sem BOM
 )

@@ -1,13 +1,13 @@
 :root {
-    --admin-theme-color: #007cba;
-    --admin-theme-color--rgb: 0, 124, 186;
-    --admin-theme-color-darker-10: #006ba1;
-    --admin-theme-color-darker-10--rgb: 0, 107, 161;
-    --admin-theme-color-darker-20: #005a87;
-    --admin-theme-color-darker-20--rgb: 0, 90, 135;
+    --admin-theme-color: #009688;
+    --admin-theme-color--rgb: 0, 150, 136;
+    --admin-theme-color-darker-10: #00766c;
+    --admin-theme-color-darker-10--rgb: 0, 118, 108;
+    --admin-theme-color-darker-20: #008751;
+    --admin-theme-color-darker-20--rgb: 0, 135, 81;
     --admin-border-width-focus: 2px;
-    --block-synced-color: #7a00df;
-    --block-synced-color--rgb: 122, 0, 223;
+    --block-synced-color: #00df70;
+    --block-synced-color--rgb: 0, 223, 112;
     --bound-block-color: var(--block-synced-color)
 }
 
@@ -43,11 +43,11 @@
 }
 
 :root .has-vivid-green-cyan-to-vivid-cyan-blue-gradient-background {
-    background: linear-gradient(135deg, #00d084, #0693e3)
+    background: linear-gradient(135deg, #00d080, #009688)
 }
 
 :root .has-purple-crush-gradient-background {
-    background: linear-gradient(135deg, #34e2e4, #4721fb 50%, #ab1dfe)
+    background: linear-gradient(135deg, #34e4be, #009688 50%, #ab1dfe)
 }
 
 :root .has-hazy-dawn-gradient-background {
@@ -63,11 +63,11 @@
 }
 
 :root .has-nightshade-gradient-background {
-    background: linear-gradient(135deg, #330968, #31cdcf)
+    background: linear-gradient(135deg, #09684c, #31cf92)
 }
 
 :root .has-midnight-gradient-background {
-    background: linear-gradient(135deg, #020381, #2874fc)
+    background: linear-gradient(135deg, #00766c, #009688)
 }
 
 .has-regular-font-size {

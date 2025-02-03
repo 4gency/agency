@@ -249,3 +249,112 @@ def get_user_subscriptions(
     if not subscriptions:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No subscriptions found")
     return subscriptions
+
+@router.get("/{user_id}/subscriptions", dependencies=[Depends(get_current_active_superuser)], response_model=List[SubscriptionPublic])
+def get_user_subscriptions_by_id(
+    user_id: uuid.UUID,
+    session: SessionDep,
+    only_active: Optional[bool] = True,
+) -> Any:
+    """
+    Get user subscription by id.
+    """
+    user = session.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    subscriptions: List[Subscription] = user.subscriptions
+    if only_active:
+        subscriptions = [s for s in subscriptions if s.is_active]
+    if not subscriptions:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No subscriptions found")
+    return subscriptions
+
+@router.delete("/me/subscriptions/{subscription_id}/cancel", response_model=Message)
+def cancel_user_subscription(
+    user: CurrentUser,
+    subscription_id: uuid.UUID,
+    session: SessionDep,
+) -> Any:
+    """
+    Cancel user subscription.
+    """
+    subscription = session.get(Subscription, subscription_id)
+    if not subscription:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
+    if subscription.user_id != user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Subscription not found")
+    if subscription.is_active:
+        subscription.is_active = False
+        # TODO: Add logic to cancel subscription on payment gateway
+        session.add(subscription)
+        session.commit()
+    return Message(message="Subscription cancelled successfully")
+
+@router.post("/me/subscriptions/{subscription_id}/reactivate", response_model=Message)
+def reactivate_user_subscription(
+    user: CurrentUser,
+    subscription_id: uuid.UUID,
+    session: SessionDep,
+) -> Any:
+    """
+    Reactivate user subscription.
+    """
+    subscription = session.get(Subscription, subscription_id)
+    if not subscription:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
+    if subscription.user_id != user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Subscription not found")
+    if not subscription.is_active:
+        subscription.is_active = True
+        # TODO: Add logic to reactivate subscription on payment gateway
+        session.add(subscription)
+        session.commit()
+    return Message(message="Subscription reactivated successfully")
+
+@router.delete("/{user_id}/subscriptions/{subscription_id}/cancel", dependencies=[Depends(get_current_active_superuser)], response_model=Message)
+def cancel_user_subscription_by_id(
+    user_id: uuid.UUID,
+    subscription_id: uuid.UUID,
+    session: SessionDep,
+) -> Any:
+    """
+    Cancel user subscription by id.
+    """
+    user = session.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    subscription = session.get(Subscription, subscription_id)
+    if not subscription:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
+    if subscription.user_id != user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Subscription not found")
+    if subscription.is_active:
+        subscription.is_active = False
+        # TODO: Add logic to cancel subscription on payment gateway
+        session.add(subscription)
+        session.commit()
+    return Message(message="Subscription cancelled successfully")
+
+@router.post("/{user_id}/subscriptions/{subscription_id}/reactivate", dependencies=[Depends(get_current_active_superuser)], response_model=Message)
+def reactivate_user_subscription_by_id(
+    user_id: uuid.UUID,
+    subscription_id: uuid.UUID,
+    session: SessionDep,
+) -> Any:
+    """
+    Reactivate user subscription by id.
+    """
+    user = session.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    subscription = session.get(Subscription, subscription_id)
+    if not subscription:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
+    if subscription.user_id != user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Subscription not found")
+    if not subscription.is_active:
+        subscription.is_active = True
+        # TODO: Add logic to reactivate subscription on payment gateway
+        session.add(subscription)
+        session.commit()
+    return Message(message="Subscription reactivated successfully")

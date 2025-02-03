@@ -115,3 +115,12 @@ def verify_password_reset_token(token: str) -> str | None:
         return str(decoded_token["sub"])
     except InvalidTokenError:
         return None
+
+
+def timestamp_to_datetime(timestamp: int) -> datetime:
+    """datetime based on timestamp
+
+    Args:
+        timestamp (int): 1738526524
+    """
+    return datetime.fromtimestamp(timestamp, timezone.utc)

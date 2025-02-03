@@ -1,6 +1,5 @@
 import datetime
 
-from app.api.routes import subscription
 from odmantic import EmbeddedModel, Field, Model
 from pydantic import BaseModel, EmailStr
 

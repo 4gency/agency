@@ -1,5 +1,6 @@
+from typing import Any
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 
 from pydantic import EmailStr, field_validator
@@ -7,11 +8,11 @@ from sqlmodel import Field, Relationship, SQLModel
 
 
 class SubscriptionMetric(Enum):
-    DAY = 1
-    WEEK = 2
-    MONTH = 3
-    YEAR = 4
-    APPLY = 5
+    DAY = "day"
+    WEEK = "week"
+    MONTH = "month"
+    YEAR = "year"
+    APPLIES = "applies"
 
 
 # Shared properties
@@ -53,7 +54,7 @@ class UpdatePassword(SQLModel):
 class User(UserBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     hashed_password: str
-    stripe_customer_id: str | None = Field(default=None, index=True)
+    stripe_customer_id: str | None = Field(default=None)
 
     subscriptions: list["Subscription"] = Relationship(back_populates="user", cascade_delete=True)
     payments: list["Payment"] = Relationship(back_populates="user", cascade_delete=True)
@@ -69,48 +70,60 @@ class UsersPublic(SQLModel):
     count: int
 
 
+class SubscriptionPlanBenefit(SQLModel, table=True):
+    __tablename__ = "subscription_plan_benefit" # type: ignore
+    
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    subscription_plan_id: uuid.UUID = Field(foreign_key="subscription_plan.id")
+    name: str = Field(max_length=100)
+    
+    subscription_plan: "SubscriptionPlan" = Relationship(back_populates="benefits")
+
 class SubscriptionPlanBase(SQLModel):
     name: str
     price: float
+    is_best_choice: bool = Field(default=False)
     has_discount: bool = Field(default=False)
-    price_with_discount: float = Field(default=0.0)
+    price_without_discount: float = Field(default=0.0)
     currency: str = Field(default="USD", max_length=10)
     description: str = Field(default="", max_length=10000)
     is_active: bool = Field(default=True)
-    metric_type: SubscriptionMetric = Field(default=SubscriptionMetric.DAY)
-    metric_value: int = Field(default=30)
+    metric_type: SubscriptionMetric = Field(default=SubscriptionMetric.MONTH)
+    metric_value: int = Field(default=1)
 
 
 class SubscriptionPlanCreate(SubscriptionPlanBase):
-    pass
+    benefits: list["SubscriptionPlanBenefitPublic"] = []
 
 
 class SubscriptionPlanUpdate(SQLModel):
     name: str | None = None
     price: float | None = None
+    is_best_choice: bool | None = None
     has_discount: bool | None = None
-    price_with_discount: float | None = None
+    price_without_discount: float | None = None
     currency: str | None = None
     description: str | None = None
     is_active: bool | None = None
     metric_type: SubscriptionMetric | None = None
     metric_value: int | None = None
+    benefits: list["SubscriptionPlanBenefitPublic"] | None = None
     
     @field_validator('metric_value')
-    def check_metric_value(cls, value):
+    def check_metric_value(cls, value: int | None) -> int | None:
         if value is not None and value <= 0:
             raise ValueError("metric_value must be greater than 0")
         return value
 
-
 class SubscriptionPlan(SQLModel, table=True):
-    __tablename__ = "subscription_plan"
-
+    __tablename__ = "subscription_plan" # type: ignore
+    
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     name: str
     price: float
+    is_best_choice: bool = Field(default=False)
     has_discount: bool = Field(default=False)
-    price_with_discount: float = Field(default=0.0)
+    price_without_discount: float = Field(default=0.0)
     currency: str = Field(default="USD", max_length=10)
     description: str = Field(default="", max_length=10000)
     is_active: bool = Field(default=True)
@@ -120,9 +133,11 @@ class SubscriptionPlan(SQLModel, table=True):
     stripe_product_id: str | None = Field(default=None, index=True)
     stripe_price_id: str | None = Field(default=None, index=True)
 
+    benefits: list["SubscriptionPlanBenefit"] = Relationship(back_populates="subscription_plan", cascade_delete=True)
     subscriptions: list["Subscription"] = Relationship(
         back_populates="subscription_plan"
     )
+    checkout_sessions: list["CheckoutSession"] = Relationship(back_populates="plan")
 
 
 class SubscriptionBase(SQLModel):
@@ -174,12 +189,33 @@ class Subscription(SQLModel, table=True):
     payment: "Payment" = Relationship(back_populates="subscription")
 
     def need_to_deactivate(self) -> bool:
-        if self.metric_type == SubscriptionMetric.DAY:
-            if self.end_date < datetime.now():  # TODO: make it utc
+        """
+        Verifica se a assinatura precisa ser desativada baseado no tipo de métrica.
+        
+        Retorna True se:
+          - Para métricas baseadas em tempo (DAY, WEEK, MONTH, YEAR), a data de término (end_date) 
+            já tiver passado (considerando UTC).
+          - Para métrica APPLIES, o metric_status seja menor que 1 (por exemplo, sem créditos).
+        Caso contrário, retorna False.
+        """
+
+        # Momento atual em UTC
+        now_utc = datetime.now(timezone.utc)
+
+        # Se a métrica for baseada em tempo (dia, semana, mês, ano),
+        # basta checar se já passou da end_date
+        if self.metric_type in [SubscriptionMetric.DAY,
+                                SubscriptionMetric.WEEK,
+                                SubscriptionMetric.MONTH,
+                                SubscriptionMetric.YEAR]:
+            if self.end_date < now_utc:
                 return True
-        elif self.metric_type == SubscriptionMetric.APPLY:
+        
+        # Se a métrica for APPLIES, checa se ainda há "créditos"
+        elif self.metric_type == SubscriptionMetric.APPLIES:
             if self.metric_status < 1:
                 return True
+        
         return False
 
 
@@ -226,6 +262,43 @@ class Payment(SQLModel, table=True):
     subscription: Subscription = Relationship(back_populates="payment")
     user: User = Relationship(back_populates="payments")
 
+class CheckoutSession(SQLModel, table=True):
+    __tablename__ = "checkout_session" # type: ignore
+    
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    payment_gateway: str = Field(
+        default="stripe", max_length=50
+    )  # e.g., Stripe, BoaCompra
+    session_id: str = Field(index=True, max_length=100)
+    session_url: str = Field(max_length=500)
+    user_id: uuid.UUID
+    status: str = Field(default="open", max_length=50) # open, complete, or expired
+    subscription_plan_id: uuid.UUID = Field(foreign_key="subscription_plan.id")
+    payment_status: str = Field(default="unpaid", max_length=50) # paid, unpaid, or no_payment_required
+    
+    created_at: datetime = Field(default=datetime.now(timezone.utc))
+    expires_at: datetime = Field()
+    updated_at: datetime = Field(default=datetime.now(timezone.utc))
+    
+    plan: "SubscriptionPlan" = Relationship(back_populates="checkout_sessions")
+    
+class CheckoutSessionUpdate(SQLModel):
+    payment_gateway: str | None = None
+    session_id: str | None = None
+    session_url: str | None = None
+    user_id: uuid.UUID | None = None
+    status: str | None = None
+    subscription_plan_id: uuid.UUID | None = None
+    payment_status: str | None = None
+    created_at: datetime | None = None
+    expires_at: datetime | None = None
+    updated_at: datetime | None = None
+    
+class CheckoutSessionPublic(SQLModel):
+    id: uuid.UUID
+    session_id: str
+    session_url: str
+    expires_at: datetime
 
 # Generic message
 class Message(SQLModel):
@@ -247,22 +320,23 @@ class NewPassword(SQLModel):
     token: str
     new_password: str = Field(min_length=8, max_length=40)
 
+class SubscriptionPlanBenefitPublic(SQLModel):
+    name: str
 
 class SubscriptionPlanPublic(SQLModel):
     id: uuid.UUID
     name: str
     price: float
+    is_best_choice: bool
     has_discount: bool
-    price_with_discount: float
+    price_without_discount: float
     currency: str
     description: str
     is_active: bool
     metric_type: SubscriptionMetric
     metric_value: int
     
-    stripe_product_id: str | None
-    stripe_price_id: str | None
-
+    benefits: list[SubscriptionPlanBenefitPublic] = []
 
 class SubscriptionPlansPublic(SQLModel):
-    plans: list[SubscriptionPlanPublic]
+    plans: list[SubscriptionPlanPublic] = []

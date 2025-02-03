@@ -37,7 +37,7 @@ def get_plain_text_resume(current_user: CurrentUser, subscription_id: uuid.UUID,
     return PlainTextResumePublic(**resume.model_dump())
 
 
-@router.put("/{subscription_id}/job-preferences", status_code=status.HTTP_200_OK)
+@router.patch("/{subscription_id}/job-preferences", status_code=status.HTTP_200_OK)
 def update_config(
     *,
     current_user: CurrentUser,
@@ -64,7 +64,7 @@ def update_config(
     )
 
 
-@router.put("/{subscription_id}/resume", status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+@router.patch("/{subscription_id}/resume", status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 def update_plain_text_resume(
     *,
     current_user: CurrentUser,
