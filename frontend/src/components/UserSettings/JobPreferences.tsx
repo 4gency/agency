@@ -168,7 +168,12 @@ const MultiSelectToggle: React.FC<MultiSelectToggleProps> = ({
       {options.map((option) => (
         <Button
           key={option.value}
-          variant={selected.includes(option.value) ? "solid" : "outline"}
+          bg={selected.includes(option.value) ? "#00766C" : "white"} 
+          color={selected.includes(option.value) ? "white" : "black"}
+          border="1px solid #00766C"
+          _hover={{
+            bg: selected.includes(option.value) ? "#00655D" : "gray.100",
+          }}
           onClick={() => handleToggle(option.value)}
         >
           {option.label}
@@ -249,23 +254,8 @@ const JobPreferencesPage: React.FC = () => {
   // Default form data for first render
   const defaultFormValues: JobPreferencesForm = {
     remote: true,
-    experience_levels: [
-      "internship",
-      "entry",
-      "associate",
-      "mid_senior_level",
-      "director",
-      "executive",
-    ],
-    job_types: [
-      "full_time",
-      "contract",
-      "part_time",
-      "temporary",
-      "internship",
-      "other",
-      "volunteer",
-    ],
+    experience_levels: [],
+    job_types: [],
     posting_date: "all_time",
     apply_once_at_company: true,
     distance: 0,
@@ -394,7 +384,12 @@ const JobPreferencesPage: React.FC = () => {
           <FormLabel>Remote</FormLabel>
           <Input type="hidden" {...register("remote")} />
           <Button
-            variant={watch("remote") ? "solid" : "outline"}
+            bg={watch("remote") ? "#00766C" : "white"}
+            color={watch("remote") ? "white" : "black"}
+            border="1px solid #00766C"
+            _hover={{
+              bg: watch("remote") ? "#00655D" : "gray.100",
+            }}
             onClick={() => setValue("remote", !watch("remote"))}
           >
             {watch("remote") ? "Remote Allowed" : "Remote Not Allowed"}
@@ -441,7 +436,12 @@ const JobPreferencesPage: React.FC = () => {
         <FormControl mb={4}>
           <Input type="hidden" {...register("apply_once_at_company")} />
           <Button
-            variant={watch("apply_once_at_company") ? "solid" : "outline"}
+            bg={watch("apply_once_at_company") ? "#00766C" : "white"}
+            color={watch("apply_once_at_company") ? "white" : "black"}
+            border="1px solid #00766C"
+            _hover={{
+              bg: watch("apply_once_at_company") ? "#00655D" : "gray.100",
+            }}
             onClick={() =>
               setValue("apply_once_at_company", !watch("apply_once_at_company"))
             }
