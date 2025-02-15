@@ -172,9 +172,40 @@ async def stripe_webhook(
     event_type = event.get("type", "")
     if event_type == "checkout.session.completed":
         stripe_controller.handle_checkout_session(session, event)
-    elif event_type.startswith("payment_intent."):
-        stripe_controller.handle_payment_intent(session, event)
     else:
         print(f"Unhandled event type: {event_type}")
 
     return {"status": "success"}
+
+@router.post("/stripe/cancel")
+def stripe_cancel(
+    session: SessionDep,
+    session_id: str,
+    user: CurrentUser,
+):
+    """
+    Stripe cancel route: usuário retornou do Stripe pela URL de cancelamento.
+    """
+    # 1) Busca a checkout session local via "session_id" do Stripe
+    checkout = session.exec(
+        select(CheckoutSession).where(CheckoutSession.session_id == session_id)
+    ).first()
+
+    if not checkout:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Checkout session not found"
+        )
+
+    # 2) Busca o subscription_plan
+    plan = crud_subs.get_subscription_plan_by_id(session=session, id=checkout.subscription_plan_id)
+    if not plan:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Subscription plan not found, please contact support!"
+        )
+
+    # 3) Chama a função do "stripe_controller" para tratar cancelamento
+    stripe_controller.handle_cancel_callback(session, checkout, plan, user)
+
+    return {"message": "Cancel callback processed"}
