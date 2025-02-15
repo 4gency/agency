@@ -1,118 +1,105 @@
 from datetime import datetime, timedelta, timezone
 import uuid
+
+import stripe
 from fastapi import HTTPException
 from sqlmodel import Session, select
-import stripe
-from app.core.config import settings
-from app.models.core import CheckoutSession, Payment, Subscription, SubscriptionMetric, SubscriptionPlan, User
 
-VALID_CURRENCIES = ("usd", "aed", "afn", "all", "amd", "ang", "aoa", "ars", "aud", "awg", "azn", "bam", "bbd", "bdt", "bgn", "bhd", "bif", "bmd", "bnd", "bob", "brl", "bsd", "bwp", "byn", "bzd", "cad", "cdf", "chf", "clp", "cny", "cop", "crc", "cve", "czk", "djf", "dkk", "dop", "dzd", "egp", "etb", "eur", "fjd", "fkp", "gbp", "gel", "gip", "gmd", "gnf", "gtq", "gyd", "hkd", "hnl", "hrk", "htg", "huf", "idr", "ils", "inr", "isk", "jmd", "jod", "jpy", "kes", "kgs", "khr", "kmf", "krw", "kwd", "kyd", "kzt", "lak", "lbp", "lkr", "lrd", "lsl", "mad", "mdl", "mga", "mkd", "mmk", "mnt", "mop", "mur", "mvr", "mwk", "mxn", "myr", "mzn", "nad", "ngn", "nio", "nok", "npr", "nzd", "omr", "pab", "pen", "pgk", "php", "pkr", "pln", "pyg", "qar", "ron", "rsd", "rub", "rwf", "sar", "sbd", "scr", "sek", "sgd", "shp", "sle", "sos", "srd", "std", "szl", "thb", "tjs", "tnd", "top", "try", "ttd", "twd", "tzs", "uah", "ugx", "uyu", "uzs", "vnd", "vuv", "wst", "xaf", "xcd", "xof", "xpf", "yer", "zar", "zmw", "usdc", "btn", "ghs", "eek", "lvl", "svc", "vef", "ltl", "sll", "mro")
+from app.core.config import settings
+from app.models.core import (
+    CheckoutSession,
+    Payment,
+    Subscription,
+    SubscriptionMetric,
+    SubscriptionPlan,
+    User,
+)
+
+# --------------------------------------------------
+# 1) Constantes e Exceções
+# --------------------------------------------------
+
+VALID_CURRENCIES = (
+    "usd", "aed", "afn", "all", "amd", "ang", "aoa", "ars", "aud", "awg", "azn", "bam", "bbd",
+    "bdt", "bgn", "bhd", "bif", "bmd", "bnd", "bob", "brl", "bsd", "bwp", "byn", "bzd", "cad",
+    "cdf", "chf", "clp", "cny", "cop", "crc", "cve", "czk", "djf", "dkk", "dop", "dzd", "egp",
+    "etb", "eur", "fjd", "fkp", "gbp", "gel", "gip", "gmd", "gnf", "gtq", "gyd", "hkd", "hnl",
+    "hrk", "htg", "huf", "idr", "ils", "inr", "isk", "jmd", "jod", "jpy", "kes", "kgs", "khr",
+    "kmf", "krw", "kwd", "kyd", "kzt", "lak", "lbp", "lkr", "lrd", "lsl", "mad", "mdl", "mga",
+    "mkd", "mmk", "mnt", "mop", "mur", "mvr", "mwk", "mxn", "myr", "mzn", "nad", "ngn", "nio",
+    "nok", "npr", "nzd", "omr", "pab", "pen", "pgk", "php", "pkr", "pln", "pyg", "qar", "ron",
+    "rsd", "rub", "rwf", "sar", "sbd", "scr", "sek", "sgd", "shp", "sle", "sos", "srd", "std",
+    "szl", "thb", "tjs", "tnd", "top", "try", "ttd", "twd", "tzs", "uah", "ugx", "uyu", "uzs",
+    "vnd", "vuv", "wst", "xaf", "xcd", "xof", "xpf", "yer", "zar", "zmw", "usdc", "btn", "ghs",
+    "eek", "lvl", "svc", "vef", "ltl", "sll", "mro"
+)
 VALID_METRIC_TYPES = ("day", "week", "month", "year")
+
 
 class BadRequest(HTTPException):
     def __init__(self, detail: str) -> None:
         super().__init__(status_code=400, detail=detail)
 
+
 class NotFound(HTTPException):
     def __init__(self, detail: str) -> None:
         super().__init__(status_code=404, detail=detail)
 
+
+# --------------------------------------------------
+# 2) Verificações Básicas
+# --------------------------------------------------
+
 def integration_enabled() -> bool:
+    """Retorna True se a chave secreta da Stripe estiver configurada."""
     return bool(settings.STRIPE_SECRET_KEY)
 
-def create_checkout_subscription_session(
-    session: Session,
-    subscription_plan: SubscriptionPlan,
-    user: User,
-    payment: Payment,
-) -> stripe.checkout.Session:
-    # check if the user has a Stripe customer ID
-    if not user.stripe_customer_id:
-        customer = stripe.Customer.create(
-            email=user.email,
-            name=user.full_name or user.email,
-        )
-        user.stripe_customer_id = customer.id
-        session.add(user)
-        session.commit()
-        session.refresh(user)
-    else:
-        customer = stripe.Customer.retrieve(user.stripe_customer_id)
 
-    # check if the subscription plan is set up in Stripe
-    if not subscription_plan.stripe_price_id:
-        raise BadRequest("Subscription plan is not set up in Stripe.")
-
-    # create the checkout session
-    checkout_session = stripe.checkout.Session.create(
-        customer=customer.id,
-        payment_method_types=["card"],
-        line_items=[
-            {
-                "price": subscription_plan.stripe_price_id,
-                "quantity": 1,
-            },
-        ],
-        mode="subscription",
-        success_url=f"{settings.FRONTEND_HOST}/stripe/success?session_id={payment.transaction_id}",
-        cancel_url=f"{settings.FRONTEND_HOST}/stripe/cancel?session_id={payment.transaction_id}",
-        metadata={
-            "payment_id": str(payment.id),
-            "subscription_id": str(payment.subscription_id),
-            "user_id": str(user.id),
-            "transaction_id": str(payment.transaction_id),
-        },
-    )
-    return checkout_session
+# --------------------------------------------------
+# 3) Funções de Plano de Assinatura (Product/Price)
+# --------------------------------------------------
 
 def create_subscription_plan(
     session: Session,
     subscription_plan: SubscriptionPlan,
-) -> tuple[stripe.Product, stripe.Price]:
+):
+    """
+    Cria um Product e Price na Stripe para o SubscriptionPlan,
+    armazenando os IDs no banco.
+    """
     if subscription_plan.currency.lower() not in VALID_CURRENCIES:
         raise BadRequest("Invalid currency")
 
-    product_creation_data = {
-        "name": subscription_plan.name,
-        "active": subscription_plan.is_active,
-        "metadata": {
-            "subscription_plan_id": str(subscription_plan.id),
-        },
-    }
-    if subscription_plan.description:
-        product_creation_data["description"] = subscription_plan.description
-
-    # calculate the amount in cents
-    amount = int(subscription_plan.price * 100)
-
-    # get the interval
     interval = subscription_plan.metric_type.name.lower()
     interval_count = subscription_plan.metric_value
-    
     if interval not in VALID_METRIC_TYPES:
         raise BadRequest("Invalid metric type")
 
-    # create the product in Stripe
-    product = stripe.Product.create(
-        **product_creation_data
-    )
-    
-    # create the price in Stripe
+    product_data = {
+        "name": subscription_plan.name,
+        "active": subscription_plan.is_active,
+        "metadata": {"subscription_plan_id": str(subscription_plan.id)},
+    }
+    if subscription_plan.description:
+        product_data["description"] = subscription_plan.description
+
+    amount_cents = int(subscription_plan.price * 100)
+
+    # Cria product na Stripe
+    product = stripe.Product.create(**product_data)
+
+    # Cria price na Stripe
     price = stripe.Price.create(
-        unit_amount=amount,
+        unit_amount=amount_cents,
         currency=subscription_plan.currency.lower(),
-        recurring={
-            "interval": interval,
-            "interval_count": interval_count,
-        },
+        recurring={"interval": interval, "interval_count": interval_count},
         product=product.id,
         active=subscription_plan.is_active,
     )
 
-    # save the Stripe IDs to the database
+    # Salva IDs no BD
     subscription_plan.stripe_product_id = product.id
     subscription_plan.stripe_price_id = price.id
-
     session.add(subscription_plan)
     session.commit()
     session.refresh(subscription_plan)
@@ -124,56 +111,58 @@ def update_subscription_plan(
     session: Session,
     subscription_plan: SubscriptionPlan,
 ) -> None:
+    """
+    Atualiza Product/Price na Stripe se já existir,
+    ou cria se não houver IDs. Altera Price caso mude de valor ou intervalo.
+    """
+    # Se não tem product/price, cria
     if not subscription_plan.stripe_product_id or not subscription_plan.stripe_price_id:
         create_subscription_plan(session, subscription_plan)
-        
+        return
+
+    # Valida moeda e tipo de métrica
     if subscription_plan.currency.lower() not in VALID_CURRENCIES:
         raise BadRequest("Invalid currency")
-    
-    if subscription_plan.metric_type.name.lower() not in VALID_METRIC_TYPES:
-        raise BadRequest("Invalid metric type")
 
-    # update the product in Stripe
+    interval = subscription_plan.metric_type.name.lower()
+    interval_count = subscription_plan.metric_value
+    if interval not in VALID_METRIC_TYPES:
+        raise BadRequest("Invalid metric type")
+    if interval_count <= 0:
+        raise BadRequest("Invalid metric value")
+
+    # Atualiza product
     stripe.Product.modify(
         subscription_plan.stripe_product_id,
         name=subscription_plan.name,
         description=subscription_plan.description,
         active=subscription_plan.is_active,
-        metadata={
-            "subscription_plan_id": str(subscription_plan.id),
-        },
+        metadata={"subscription_plan_id": str(subscription_plan.id)},
     )
 
-    # now, let's check if the price has changed
-    price = stripe.Price.retrieve(subscription_plan.stripe_price_id)
+    # Verifica se precisa criar um novo price
+    current_price = stripe.Price.retrieve(subscription_plan.stripe_price_id)
+    new_amount_cents = int(subscription_plan.price * 100)
 
-    # calculate the new amount
-    new_amount = int(subscription_plan.price * 100)
-    new_interval = subscription_plan.metric_type.name.lower()
-    new_interval_count = subscription_plan.metric_value
-    
-    if new_interval_count <= 0:
-        raise BadRequest("Invalid metric value")
-    
-    price_changed = price.unit_amount != new_amount
-
-    # if not changed, check if the recurring interval has changed
-    if not price_changed and price.recurring:
-        price_changed = (
-            price.recurring.get('interval') != new_interval or
-            price.recurring.get('interval_count') != new_interval_count
-        )
+    price_changed = False
+    if current_price.unit_amount != new_amount_cents:
+        price_changed = True
+    else:
+        # Checa se mudou o intervalo
+        if current_price.recurring:
+            if (
+                current_price.recurring.get("interval") != interval
+                or current_price.recurring.get("interval_count") != interval_count
+            ):
+                price_changed = True
 
     if price_changed:
-        # create a new price
         new_price = stripe.Price.create(
-            unit_amount=new_amount,
+            unit_amount=new_amount_cents,
             currency=subscription_plan.currency.lower(),
-            recurring={
-                "interval": new_interval,
-                "interval_count": new_interval_count,
-            },
+            recurring={"interval": interval, "interval_count": interval_count},
             product=subscription_plan.stripe_product_id,
+            active=subscription_plan.is_active,
         )
         subscription_plan.stripe_price_id = new_price.id
 
@@ -186,42 +175,107 @@ def deactivate_subscription_plan(
     session: Session,
     subscription_plan: SubscriptionPlan,
 ) -> None:
+    """
+    Desativa um product na Stripe (não remove o Price).
+    """
     if not subscription_plan.stripe_product_id:
         raise NotFound("Subscription plan is not set up in Stripe.")
+    stripe.Product.modify(subscription_plan.stripe_product_id, active=False)
 
-    # deactivate the product in Stripe
-    stripe.Product.modify(
-        subscription_plan.stripe_product_id,
-        active=False,
+
+# --------------------------------------------------
+# 4) Funções de Checkout / Customer
+# --------------------------------------------------
+
+def ensure_stripe_customer(session: Session, user: User) -> str:
+    """
+    Verifica se o User tem stripe_customer_id. Se não tiver,
+    cria um Customer na Stripe e salva localmente.
+    Retorna o ID do customer.
+    """
+    if user.stripe_customer_id:
+        # Já existe
+        return user.stripe_customer_id
+
+    customer = stripe.Customer.create(
+        email=user.email,
+        name=user.full_name or user.email,
+    )
+    user.stripe_customer_id = customer.id
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+
+    return customer.id
+
+
+def create_checkout_subscription_session(
+    session: Session,
+    subscription_plan: SubscriptionPlan,
+    user: User,
+    payment: Payment,
+) -> stripe.checkout.Session:
+    """
+    Cria uma sessão de checkout (Stripe Checkout) para assinar um plano.
+    Usa 'payment' para preencher metadata de identificação.
+    """
+    # Garante que o user tenha Stripe Customer
+    customer_id = ensure_stripe_customer(session, user)
+
+    if not subscription_plan.stripe_price_id:
+        raise BadRequest("Subscription plan is not set up in Stripe.")
+
+    # Cria checkout session
+    checkout_session = stripe.checkout.Session.create(
+        customer=customer_id,
+        payment_method_types=["card"],
+        line_items=[{"price": subscription_plan.stripe_price_id, "quantity": 1}],
+        mode="subscription",
+        success_url=f"{settings.FRONTEND_HOST}/stripe/success?session_id={{CHECKOUT_SESSION_ID}}",
+        cancel_url=f"{settings.FRONTEND_HOST}/stripe/cancel?session_id={{CHECKOUT_SESSION_ID}}",
+        metadata={
+            "payment_id": str(payment.id),
+            "subscription_id": str(payment.subscription_id),
+            "user_id": str(user.id),
+            "transaction_id": str(payment.transaction_id),
+        },
     )
 
-    
+    return checkout_session
+
+
+# --------------------------------------------------
+# 5) Funções de Assinatura (Subscription)
+# --------------------------------------------------
+
 def update_subscription_payment(
     session: Session,
     subscription: Subscription,
     payment: Payment,
 ) -> None:
+    """
+    Puxa dados da subscription na Stripe e atualiza:
+    - subscription (status, datas)
+    - payment (invoice, amounts)
+    """
     if not subscription.stripe_subscription_id:
         raise NotFound("Subscription does not have a Stripe Subscription ID.")
 
-    # get the subscription from Stripe
-    stripe_subscription = stripe.Subscription.retrieve(subscription.stripe_subscription_id)
+    stripe_sub = stripe.Subscription.retrieve(subscription.stripe_subscription_id)
+    subscription_status = stripe_sub.status
+    subscription.is_active = subscription_status in ["active", "trialing"]
+    subscription.start_date = datetime.fromtimestamp(stripe_sub.current_period_start)
+    subscription.end_date = datetime.fromtimestamp(stripe_sub.current_period_end)
 
-    # update the subscription locally
-    subscription_status = stripe_subscription.status
-    subscription.is_active = subscription_status in ['active', 'trialing']
-    subscription.start_date = datetime.fromtimestamp(stripe_subscription.current_period_start)
-    subscription.end_date = datetime.fromtimestamp(stripe_subscription.current_period_end)
-
-    # update the payment locally
-    latest_invoice = stripe_subscription.latest_invoice
-    if latest_invoice:
-        invoice = stripe.Invoice.retrieve(str(latest_invoice))
+    # Atualiza pagamento a partir da latest_invoice
+    latest_invoice_id = stripe_sub.latest_invoice
+    if latest_invoice_id:
+        invoice = stripe.Invoice.retrieve(str(latest_invoice_id))
         payment.payment_status = invoice.status if invoice.status else "unknown"
         payment.payment_date = datetime.fromtimestamp(invoice.created)
-        payment.amount = invoice.amount_paid / 100
+        payment.amount = (invoice.amount_paid or 0) / 100
         payment.currency = invoice.currency.upper()
-        payment.stripe_payment_intent_id = invoice.payment_intent
+        payment.transaction_id = str(invoice.payment_intent)
 
     session.add(subscription)
     session.add(payment)
@@ -231,75 +285,202 @@ def update_subscription_payment(
 
 
 def cancel_subscription(session: Session, subscription: Subscription) -> None:
+    """
+    Cancela (deleta) completamente a assinatura na Stripe,
+    removendo cobranças futuras e mudando status local para inativo.
+    """
     if not subscription.stripe_subscription_id:
         raise NotFound("Subscription does not have a Stripe Subscription ID.")
 
-    stripe_subscription = stripe.Subscription.retrieve(subscription.stripe_subscription_id)
-    stripe_subscription.delete()
+    stripe_sub = stripe.Subscription.retrieve(subscription.stripe_subscription_id)
+    stripe_sub.delete()
 
-    # update the subscription locally
     subscription.is_active = False
     subscription.end_date = datetime.fromtimestamp(
-        stripe_subscription.ended_at or datetime.now(timezone.utc).timestamp()
+        stripe_sub.ended_at or datetime.now(timezone.utc).timestamp()
     )
+
     session.add(subscription)
     session.commit()
     session.refresh(subscription)
 
 
-# webhook handlers:
+def cancel_subscription_recurring_payment(
+    session: Session,
+    subscription: Subscription,
+    cancel_at_period_end: bool = True
+) -> None:
+    """
+    Cancela somente a recorrência de pagamento na Stripe,
+    definindo cancel_at_period_end. Não deleta a subscription.
+
+    - Se True: assinatura permanece ativa até o fim do ciclo atual,
+      mas não será renovada.
+    - Se False: cancela imediatamente a recorrência (status='canceled').
+    """
+    if not subscription.stripe_subscription_id:
+        raise NotFound("Subscription does not have a Stripe Subscription ID.")
+
+    stripe_sub = stripe.Subscription.retrieve(subscription.stripe_subscription_id)
+    if stripe_sub.status in ("canceled", "inactive"):
+        raise BadRequest("Subscription is already fully canceled on Stripe.")
+
+    updated_sub = stripe.Subscription.modify(
+        subscription.stripe_subscription_id,
+        cancel_at_period_end=cancel_at_period_end
+    )
+
+    # Se cancelar imediatamente (False), Stripe define status='canceled'
+    if not cancel_at_period_end:
+        subscription.is_active = False
+        subscription.end_date = datetime.fromtimestamp(
+            updated_sub.ended_at or datetime.now(timezone.utc).timestamp()
+        )
+    else:
+        # Caso contrário, a sub fica "ativa" até o fim do período
+        # Se quiser marcar algo local para saber que ela será cancelada, pode fazer.
+        pass
+
+    session.add(subscription)
+    session.commit()
+    session.refresh(subscription)
+
+
+def reactivate_subscription(session: Session, subscription: Subscription) -> None:
+    """
+    Reativa uma assinatura que estava com cancel_at_period_end=True.
+    Se a assinatura já estiver com status='canceled' na Stripe,
+    não é possível reativar (precisa criar outra).
+    """
+    if not subscription.stripe_subscription_id:
+        raise NotFound("Subscription does not have a Stripe Subscription ID.")
+
+    stripe_sub = stripe.Subscription.retrieve(subscription.stripe_subscription_id)
+
+    if stripe_sub.status == "canceled":
+        raise BadRequest("Subscription is fully canceled on Stripe. Need a new subscription.")
+
+    if not stripe_sub.cancel_at_period_end:
+        raise BadRequest("Subscription is not set to cancel at period end.")
+
+    stripe.Subscription.modify(
+        subscription.stripe_subscription_id,
+        cancel_at_period_end=False
+    )
+
+    subscription.is_active = True
+    session.add(subscription)
+    session.commit()
+    session.refresh(subscription)
+
+
+# --------------------------------------------------
+# 6) Helpers de Datas e Extensão
+# --------------------------------------------------
+
+def _calculate_end_date(plan: SubscriptionPlan, base_date: datetime | None = None) -> datetime:
+    """Calcula a data de término com base na metric_type e metric_value do plano."""
+    if not base_date:
+        base_date = datetime.now(timezone.utc)
+
+    if plan.metric_type == SubscriptionMetric.DAY:
+        return base_date + timedelta(days=plan.metric_value)
+    elif plan.metric_type == SubscriptionMetric.WEEK:
+        return base_date + timedelta(weeks=plan.metric_value)
+    elif plan.metric_type == SubscriptionMetric.MONTH:
+        return base_date + timedelta(days=30 * plan.metric_value)
+    elif plan.metric_type == SubscriptionMetric.YEAR:
+        return base_date + timedelta(days=365 * plan.metric_value)
+    return base_date
+
+
+def _extend_subscription(subscription: Subscription, plan: SubscriptionPlan):
+    """
+    Se a sub já expirou, redefine start_date para agora.
+    Se ainda está ativa, soma a nova duração ao end_date atual.
+    """
+    now_utc = datetime.now(timezone.utc)
+
+    # Garante que end_date esteja em UTC
+    if subscription.end_date.tzinfo is None:
+        subscription.end_date = subscription.end_date.replace(tzinfo=timezone.utc)
+
+    if subscription.end_date < now_utc:
+        subscription.start_date = now_utc
+        subscription.end_date = _calculate_end_date(plan, base_date=now_utc)
+    else:
+        subscription.end_date = _calculate_end_date(plan, base_date=subscription.end_date)
+
+    subscription.is_active = True
+
+
+# --------------------------------------------------
+# 7) Webhooks e Callbacks
+# --------------------------------------------------
+
 def handle_payment_intent(session: Session, event: dict) -> None:
-    payment_intent = event['data']['object']
-    payment_intent_id = payment_intent['id']
+    """
+    Webhook handler para eventos de payment_intent.* (ex. 'payment_intent.succeeded').
+    Atualiza o Payment local correspondente.
+    """
+    payment_intent = event["data"]["object"]
+    payment_intent_id = payment_intent["id"]
 
     payment = session.exec(
-        select(Payment).where(Payment.stripe_payment_intent_id == payment_intent_id) # type: ignore
+        select(Payment).where(Payment.transaction_id == payment_intent_id)
     ).first()
-
     if not payment:
-        # Registro não encontrado
-        return
+        return  # Não encontrou no BD
 
-    # Atualizar o status do pagamento
-    payment.payment_status = payment_intent['status']
-    payment.payment_date = datetime.fromtimestamp(payment_intent['created'])
-    payment.amount = (payment_intent['amount_received'] / 100 if payment_intent.get('amount_received') else 0)
-    payment.currency = payment_intent['currency'].upper()
+    payment.payment_status = payment_intent["status"]
+    payment.payment_date = datetime.fromtimestamp(payment_intent["created"])
+    payment.amount = (payment_intent.get("amount_received") or 0) / 100
+    payment.currency = payment_intent["currency"].upper()
 
     session.add(payment)
     session.commit()
     session.refresh(payment)
+
 
 def handle_checkout_session(session: Session, event: dict) -> None:
-    checkout_session = event['data']['object']
-    session_id = checkout_session['id']
-    payment_intent_id = checkout_session.get('payment_intent')
-    stripe_subscription_id = checkout_session.get('subscription')
-    metadata = checkout_session.get('metadata', {})
+    """
+    Webhook handler para 'checkout.session.completed'.
+    Garante que a subscription local tenha o stripe_subscription_id,
+    atualiza Payment e Subscription.
+    """
+    checkout_obj = event["data"]["object"]
+    session_id = checkout_obj["id"]
+    payment_intent_id = checkout_obj.get("payment_intent")
+    stripe_subscription_id = checkout_obj.get("subscription")
 
-    payment_id = metadata.get('payment_id')
-    subscription_id_local = metadata.get('subscription_id')
-    # user_id = metadata.get('user_id')
+    metadata = checkout_obj.get("metadata", {})
+    payment_id = metadata.get("payment_id")
+    local_sub_id = metadata.get("subscription_id")
 
-    payment = session.get(Payment, uuid.UUID(payment_id))
-    subscription = session.get(Subscription, uuid.UUID(subscription_id_local))
-
+    # Atualiza Payment
+    payment = session.get(Payment, uuid.UUID(payment_id)) if payment_id else None
     if payment:
-        payment.stripe_payment_intent_id = payment_intent_id
-        payment.payment_status = 'processing'
+        payment.transaction_id = payment_intent_id
+        payment.payment_status = "pending"
 
-    if subscription:
+    # Atualiza Subscription
+    subscription = session.get(Subscription, uuid.UUID(local_sub_id)) if local_sub_id else None
+    if subscription and stripe_subscription_id:
         subscription.stripe_subscription_id = stripe_subscription_id
         subscription.is_active = True
-        stripe_subscription = stripe.Subscription.retrieve(stripe_subscription_id)
-        subscription.start_date = datetime.fromtimestamp(stripe_subscription.current_period_start)
-        subscription.end_date = datetime.fromtimestamp(stripe_subscription.current_period_end)
 
-    session.add(payment)
-    session.add(subscription)
+        # Pega datas da sub do Stripe
+        stripe_sub = stripe.Subscription.retrieve(stripe_subscription_id)
+        subscription.start_date = datetime.fromtimestamp(stripe_sub.current_period_start)
+        subscription.end_date = datetime.fromtimestamp(stripe_sub.current_period_end)
+
+    session.add_all([payment, subscription])
     session.commit()
-    session.refresh(payment)
-    session.refresh(subscription)
+    if payment:
+        session.refresh(payment)
+    if subscription:
+        session.refresh(subscription)
+
 
 def handle_success_callback(
     session: Session,
@@ -307,30 +488,53 @@ def handle_success_callback(
     plan: SubscriptionPlan,
     user: User
 ):
-    # check at stripe if the payment was successful
-    checkout_session = stripe.checkout.Session.retrieve(checkout.session_id)
-    if checkout_session.payment_status != "paid":
-        raise BadRequest("Checkout session payment status is not 'paid'")
-    return validate_success_callback(session, checkout, plan, user)
+    # 1) Busca a Session no Stripe
+    stripe_sess = stripe.checkout.Session.retrieve(checkout.session_id)
 
-def validate_success_callback(
+    # 2) Verifica se está 'paid'
+    if stripe_sess.payment_status != "paid":
+        raise BadRequest("Checkout session payment status is not 'paid'")
+
+    # 3) Obtém o subscription_id do Stripe
+    stripe_subscription_id = stripe_sess.get("subscription")
+
+    # 4) (Opcional) se quiser já atualizar localmente a Subscription que foi criada no success callback
+    # Precisamos achar a Subscription que criamos/atualizamos lá em _validate_success_callback
+    # Então chamamos:
+    subscription = _validate_success_callback(session, checkout, plan, user)
+
+    # 5) Se a subscription local não tiver ID ainda e a Stripe devolver um ID
+    if subscription and not subscription.stripe_subscription_id and stripe_subscription_id:
+        subscription.stripe_subscription_id = stripe_subscription_id
+        session.add(subscription)
+        session.commit()
+        session.refresh(subscription)
+
+    return {"message": "Success callback processed"}
+
+
+def _validate_success_callback(
     session: Session,
     checkout: CheckoutSession,
     plan: SubscriptionPlan,
     user: User
 ):
-    # Se já estiver marcado como 'complete', não processa de novo.
+    """
+    Marca checkout como 'complete' + 'paid'.
+    Cria ou estende assinatura localmente para esse user + plan,
+    cria Payment se ainda não existir, etc.
+    """
     if checkout.status == "complete":
-        return
+        return  # Se já processou, sai
 
     try:
-        # 1) Atualizar CheckoutSession
+        # 1) Atualiza status do CheckoutSession
         checkout.status = "complete"
         checkout.payment_status = "paid"
         checkout.updated_at = datetime.now(timezone.utc)
         session.add(checkout)
 
-        # 2) Verificar se já existe uma Subscription ativa para o mesmo plano
+        # 2) Verifica se já existe sub ativa para o mesmo plano
         existing_sub = session.exec(
             select(Subscription)
             .where(Subscription.user_id == user.id)
@@ -338,7 +542,7 @@ def validate_success_callback(
             .where(Subscription.is_active == True)
         ).first()
 
-        # 3) Criar ou atualizar assinatura
+        # 3) Cria ou atualiza a sub
         if existing_sub:
             _extend_subscription(existing_sub, plan)
             subscription = existing_sub
@@ -350,12 +554,13 @@ def validate_success_callback(
                 end_date=_calculate_end_date(plan),
                 is_active=True,
                 metric_type=plan.metric_type,
-                metric_status=1,  # se houver contagem
+                metric_status=1,
                 stripe_subscription_id=None,
             )
             session.add(subscription)
             session.flush()
 
+        # 4) Verifica Payment existente (por transaction_id == checkout.session_id)
         existing_payment = session.exec(
             select(Payment).where(Payment.transaction_id == checkout.session_id)
         ).first()
@@ -364,8 +569,8 @@ def validate_success_callback(
             new_payment = Payment(
                 subscription_id=subscription.id,
                 user_id=user.id,
-                amount=0.0,  # Ajuste para o valor real, se houver
-                currency="USD",
+                amount=plan.price,  # Ajuste para valor real
+                currency=plan.currency,
                 payment_date=datetime.now(timezone.utc),
                 payment_status="paid",
                 payment_gateway="stripe",
@@ -378,37 +583,9 @@ def validate_success_callback(
             existing_payment.payment_date = datetime.now(timezone.utc)
             session.add(existing_payment)
             session.flush()
-            
+
         session.commit()
+        return subscription
     except Exception as e:
         session.rollback()
         raise e
-
-
-def _extend_subscription(subscription: Subscription, plan: SubscriptionPlan):
-    now_utc = datetime.now(timezone.utc)
-
-    if subscription.end_date < now_utc:
-        subscription.start_date = now_utc
-        subscription.end_date = _calculate_end_date(plan, base_date=now_utc)
-    else:
-        subscription.end_date = _calculate_end_date(plan, base_date=subscription.end_date)
-
-    subscription.is_active = True
-
-
-def _calculate_end_date(plan: SubscriptionPlan, base_date: datetime | None = None) -> datetime:
-    if not base_date:
-        base_date = datetime.now(timezone.utc)
-
-    if plan.metric_type == SubscriptionMetric.DAY:
-        return base_date + timedelta(days=plan.metric_value)
-    elif plan.metric_type == SubscriptionMetric.WEEK:
-        return base_date + timedelta(weeks=plan.metric_value)
-    elif plan.metric_type == SubscriptionMetric.MONTH:
-        return base_date + timedelta(days=30 * plan.metric_value)
-    elif plan.metric_type == SubscriptionMetric.YEAR:
-        return base_date + timedelta(days=365 * plan.metric_value)
-    else:
-        # Se houver outros casos de métricas
-        return base_date

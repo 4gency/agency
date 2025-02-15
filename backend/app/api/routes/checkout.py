@@ -21,8 +21,8 @@ def stripe_success(
     Stripe success route: usuário retornou do Stripe com session_id.
     """
     checkout = session.exec(
-        select(CheckoutSession).where(CheckoutSession.id == session_id)
-    ).first()  # .first() retorna None se não achar
+        select(CheckoutSession).where(CheckoutSession.session_id == session_id)
+    ).first()
 
     if not checkout:
         raise HTTPException(

@@ -1,6 +1,7 @@
 import uuid
 from typing import Any, List, Optional
 
+from app.integrations.stripe import cancel_subscription_recurring_payment, reactivate_subscription
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import func, select
 
@@ -276,19 +277,18 @@ def cancel_user_subscription(
     session: SessionDep,
 ) -> Any:
     """
-    Cancel user subscription.
+    Cancel user subscription (recurring payment).
     """
     subscription = session.get(Subscription, subscription_id)
     if not subscription:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
     if subscription.user_id != user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Subscription not found")
-    if subscription.is_active:
-        subscription.is_active = False
-        # TODO: Add logic to cancel subscription on payment gateway
-        session.add(subscription)
-        session.commit()
-    return Message(message="Subscription cancelled successfully")
+
+    cancel_subscription_recurring_payment(session, subscription, cancel_at_period_end=True)
+
+    return Message(message="Recurring payment cancelled successfully")
+
 
 @router.post("/me/subscriptions/{subscription_id}/reactivate", response_model=Message)
 def reactivate_user_subscription(
@@ -297,28 +297,28 @@ def reactivate_user_subscription(
     session: SessionDep,
 ) -> Any:
     """
-    Reactivate user subscription.
+    Reactivate user subscription if still in 'cancel_at_period_end' window.
     """
     subscription = session.get(Subscription, subscription_id)
     if not subscription:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
     if subscription.user_id != user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Subscription not found")
-    if not subscription.is_active:
-        subscription.is_active = True
-        # TODO: Add logic to reactivate subscription on payment gateway
-        session.add(subscription)
-        session.commit()
+
+    reactivate_subscription(session, subscription)
+
     return Message(message="Subscription reactivated successfully")
 
-@router.delete("/{user_id}/subscriptions/{subscription_id}/cancel", dependencies=[Depends(get_current_active_superuser)], response_model=Message)
+@router.delete("/{user_id}/subscriptions/{subscription_id}/cancel",
+               dependencies=[Depends(get_current_active_superuser)],
+               response_model=Message)
 def cancel_user_subscription_by_id(
     user_id: uuid.UUID,
     subscription_id: uuid.UUID,
     session: SessionDep,
 ) -> Any:
     """
-    Cancel user subscription by id.
+    Cancel user subscription by id (recurring payment on Stripe).
     """
     user = session.get(User, user_id)
     if not user:
@@ -328,14 +328,19 @@ def cancel_user_subscription_by_id(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
     if subscription.user_id != user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Subscription not found")
-    if subscription.is_active:
-        subscription.is_active = False
-        # TODO: Add logic to cancel subscription on payment gateway
-        session.add(subscription)
-        session.commit()
-    return Message(message="Subscription cancelled successfully")
 
-@router.post("/{user_id}/subscriptions/{subscription_id}/reactivate", dependencies=[Depends(get_current_active_superuser)], response_model=Message)
+    # Se já estiver desativada localmente, não há mais nada a fazer
+    if not subscription.is_active:
+        return Message(message="Subscription is already inactive")
+
+    cancel_subscription_recurring_payment(session, subscription, cancel_at_period_end=True)
+
+    return Message(message="Recurring payment cancelled successfully (will end at period end)")
+
+
+@router.post("/{user_id}/subscriptions/{subscription_id}/reactivate",
+             dependencies=[Depends(get_current_active_superuser)],
+             response_model=Message)
 def reactivate_user_subscription_by_id(
     user_id: uuid.UUID,
     subscription_id: uuid.UUID,
@@ -352,9 +357,8 @@ def reactivate_user_subscription_by_id(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
     if subscription.user_id != user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Subscription not found")
-    if not subscription.is_active:
-        subscription.is_active = True
-        # TODO: Add logic to reactivate subscription on payment gateway
-        session.add(subscription)
-        session.commit()
+
+    reactivate_subscription(session, subscription)
+
     return Message(message="Subscription reactivated successfully")
+
