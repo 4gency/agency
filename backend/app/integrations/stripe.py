@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime, timedelta, timezone
+from typing import Any
 
 import stripe
 from fastapi import HTTPException
@@ -202,7 +203,7 @@ def integration_enabled() -> bool:
 def create_subscription_plan(
     session: Session,
     subscription_plan: SubscriptionPlan,
-):
+) -> tuple[stripe.Product, stripe.Price]:
     """
     Cria um Product e Price na Stripe para o SubscriptionPlan,
     armazenando os IDs no banco.
@@ -210,7 +211,8 @@ def create_subscription_plan(
     if subscription_plan.currency.lower() not in VALID_CURRENCIES:
         raise BadRequest("Invalid currency")
 
-    interval = subscription_plan.metric_type.name.lower()
+    interval: str = subscription_plan.metric_type.value
+
     interval_count = subscription_plan.metric_value
     if interval not in VALID_METRIC_TYPES:
         raise BadRequest("Invalid metric type")
@@ -226,13 +228,13 @@ def create_subscription_plan(
     amount_cents = int(subscription_plan.price * 100)
 
     # Cria product na Stripe
-    product = stripe.Product.create(**product_data)
+    product = stripe.Product.create(**product_data)  # type: ignore
 
     # Cria price na Stripe
     price = stripe.Price.create(
         unit_amount=amount_cents,
         currency=subscription_plan.currency.lower(),
-        recurring={"interval": interval, "interval_count": interval_count},
+        recurring={"interval": interval, "interval_count": interval_count},  # type: ignore
         product=product.id,
         active=subscription_plan.is_active,
     )
@@ -300,7 +302,7 @@ def update_subscription_plan(
         new_price = stripe.Price.create(
             unit_amount=new_amount_cents,
             currency=subscription_plan.currency.lower(),
-            recurring={"interval": interval, "interval_count": interval_count},
+            recurring={"interval": interval, "interval_count": interval_count},  # type: ignore
             product=subscription_plan.stripe_product_id,
             active=subscription_plan.is_active,
         )
@@ -537,7 +539,7 @@ def _calculate_end_date(
     return base_date
 
 
-def _extend_subscription(subscription: Subscription, plan: SubscriptionPlan):
+def _extend_subscription(subscription: Subscription, plan: SubscriptionPlan) -> None:
     """
     Se a sub já expirou, redefine start_date para agora.
     Se ainda está ativa, soma a nova duração ao end_date atual.
@@ -564,7 +566,7 @@ def _extend_subscription(subscription: Subscription, plan: SubscriptionPlan):
 # --------------------------------------------------
 
 
-def handle_checkout_session(session: Session, event: dict) -> None:
+def handle_checkout_session(session: Session, event: dict[Any, Any]) -> None:
     """
     Webhook handler para 'checkout.session.completed'.
     Decide se foi um 'success' ou 'cancel' e chama a lógica unificada.
@@ -594,7 +596,7 @@ def handle_checkout_session(session: Session, event: dict) -> None:
 
 def handle_success_callback(
     session: Session, checkout: CheckoutSession, plan: SubscriptionPlan, user: User
-):
+) -> dict[str, str]:
     """
     Rota de sucesso. Verifica no Stripe se está pago e chama a mesma
     função de sucesso unificada (se ainda não tiver processado).
@@ -622,7 +624,9 @@ def handle_success_callback(
         raise BadRequest("Checkout session payment status is not 'paid'")
 
 
-def handle_cancel_callback(session: Session, checkout: CheckoutSession):
+def handle_cancel_callback(
+    session: Session, checkout: CheckoutSession
+) -> dict[str, str]:
     """
     Rota de cancelamento. Se não estiver pago, marcamos como cancelado.
     Caso já tenha sido pago, ignoramos.
@@ -664,7 +668,7 @@ def _common_success_logic(
     subscription: Subscription | None,
     payment: Payment | None,
     stripe_subscription_id: str | None,
-):
+) -> None:
     """
     Lógica de 'success' usada tanto pelo webhook checkout.session.completed
     (caso payment_status='paid'), quanto pelo callback success do usuário.
@@ -705,7 +709,7 @@ def _common_cancel_logic(
     session: Session,
     # subscription: Subscription | None,
     payment: Payment | None,
-):
+) -> None:
     """
     Lógica de 'cancel' usada tanto pelo webhook (se por acaso recebesse um evento 'canceled')
     quanto pela rota callback de cancel:
@@ -731,7 +735,7 @@ def _common_cancel_logic(
 
 def _validate_success_callback(
     session: Session, checkout: CheckoutSession, plan: SubscriptionPlan, user: User
-):
+) -> Subscription | None:
     """
     Marca checkout como 'complete' + 'paid'.
     Cria ou estende assinatura localmente para esse user + plan,

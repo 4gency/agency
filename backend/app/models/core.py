@@ -72,7 +72,7 @@ class UsersPublic(SQLModel):
 
 
 class SubscriptionPlanBenefit(SQLModel, table=True):
-    __tablename__ = "subscription_plan_benefit"  # type: ignore
+    __tablename__ = "subscription_plan_benefit"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     subscription_plan_id: uuid.UUID = Field(foreign_key="subscription_plan.id")
@@ -119,7 +119,7 @@ class SubscriptionPlanUpdate(SQLModel):
 
 
 class SubscriptionPlan(SQLModel, table=True):
-    __tablename__ = "subscription_plan"  # type: ignore
+    __tablename__ = "subscription_plan"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     name: str
@@ -181,7 +181,7 @@ class SubscriptionUpdate(SQLModel):
 
 
 class Subscription(SQLModel, table=True):
-    __tablename__ = "subscription"  # type: ignore
+    __tablename__ = "subscription"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: uuid.UUID = Field(foreign_key="user.id")
@@ -259,7 +259,7 @@ class PaymentUpdate(SQLModel):
 
 
 class Payment(SQLModel, table=True):
-    __tablename__ = "payment"  # type: ignore
+    __tablename__ = "payment"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     subscription_id: uuid.UUID = Field(foreign_key="subscription.id")
@@ -278,7 +278,7 @@ class Payment(SQLModel, table=True):
 
 
 class CheckoutSession(SQLModel, table=True):
-    __tablename__ = "checkout_session"  # type: ignore
+    __tablename__ = "checkout_session"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     payment_gateway: str = Field(
@@ -366,7 +366,7 @@ class SubscriptionPlansPublic(SQLModel):
 
 
 class WorkerSession(SQLModel, table=True):
-    __tablename__ = "worker_session"  # type: ignore
+    __tablename__ = "worker_session"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     subscription_id: uuid.UUID = Field(foreign_key="subscription.id")
@@ -392,7 +392,7 @@ class WorkerSession(SQLModel, table=True):
         back_populates="worker_session", cascade_delete=True
     )
 
-    def update_metrics(self):
+    def update_metrics(self) -> None:
         """
         Atualiza as métricas da sessão, como total de aplicações, sucesso, falhas, taxa de sucesso e tempo médio por ação.
         """
@@ -409,7 +409,7 @@ class WorkerSession(SQLModel, table=True):
         self.success_rate = (
             self.total_success / self.total_applied if self.total_applied > 0 else 0.0
         )
-        self.total_time = (self.finished_at - self.created_at).total_seconds()
+        self.total_time = int((self.finished_at - self.created_at).total_seconds())
 
         total_time_applies = sum([apply.total_time for apply in self.applies])
         total_time_success = sum(
@@ -431,7 +431,7 @@ class WorkerSession(SQLModel, table=True):
 
 
 class Apply(SQLModel, table=True):
-    __tablename__ = "apply"  # type: ignore
+    __tablename__ = "apply"
 
     id: int = Field(primary_key=True)
     session_id: uuid.UUID = Field(foreign_key="worker_session.id")

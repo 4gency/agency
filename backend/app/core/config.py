@@ -6,8 +6,6 @@ from pydantic import (
     AnyUrl,
     BeforeValidator,
     HttpUrl,
-    MongoDsn,
-    PostgresDsn,
     computed_field,
     model_validator,
 )
@@ -59,7 +57,7 @@ class Settings(BaseSettings):
 
     @computed_field  # type: ignore[prop-decorator]
     @property
-    def SQLALCHEMY_DATABASE_URI(self) -> PostgresDsn:
+    def SQLALCHEMY_DATABASE_URI(self) -> MultiHostUrl:
         return MultiHostUrl.build(
             scheme="postgresql+psycopg",
             username=self.POSTGRES_USER,
@@ -77,7 +75,7 @@ class Settings(BaseSettings):
 
     @computed_field  # type: ignore[prop-decorator]
     @property
-    def MONGODB_URI(self) -> MongoDsn:
+    def MONGODB_URI(self) -> MultiHostUrl:
         scheme = "mongodb"
         if "." in self.MONGODB_SERVER:
             scheme = "mongodb+srv"  # DNS (supports SRV)

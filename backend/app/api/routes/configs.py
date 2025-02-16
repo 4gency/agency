@@ -16,7 +16,7 @@ def get_config(
     current_user: CurrentUser,  # noqa
     subscription_id: uuid.UUID,
     nosql_session: NosqlSessionDep,
-):
+) -> Any:
     config = config_crud.get_config(
         session=nosql_session,
         subscription_id=str(subscription_id),
@@ -35,7 +35,7 @@ def get_plain_text_resume(
     current_user: CurrentUser,  # noqa
     subscription_id: uuid.UUID,
     nosql_session: NosqlSessionDep,
-):
+) -> Any:
     resume = config_crud.get_resume(
         session=nosql_session,
         subscription_id=str(subscription_id),
@@ -70,11 +70,16 @@ def update_config(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Config not found"
         )
 
-    update_dict = config_in.model_dump(exclude_unset=True)
+    if config.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User does not have access to this config",
+        )
+
     config_crud.update_config(
         session=nosql_session,
         config_instance=config,
-        new_config_data=update_dict,
+        config_in=config_in,
     )
 
 
@@ -101,9 +106,14 @@ def update_plain_text_resume(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Resume not found"
         )
 
-    update_dict = resume_in.model_dump(exclude_unset=True)
+    if resume.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User does not have access to this resume",
+        )
+
     config_crud.update_resume(
         session=nosql_session,
         resume_instance=resume,
-        new_resume_data=update_dict,
+        resume_in=resume_in,
     )

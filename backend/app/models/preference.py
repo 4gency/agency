@@ -89,6 +89,5 @@ class Config(Model):
 
     job_applicants_threshold: JobApplicantsThreshold = JobApplicantsThreshold()
 
-    model_config = {
-        "collection": "configs",
-    }
+    class Config:
+        collection: str = "configs"

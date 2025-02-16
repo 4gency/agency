@@ -163,6 +163,5 @@ class PlainTextResume(Model):
     legal_authorization: LegalAuthorization = LegalAuthorization()
     work_preferences: WorkPreferences = WorkPreferences()
 
-    model_config = {
-        "collection": "plain_text_resumes",
-    }
+    class Config:
+        collection: str = "plain_text_resumes"
