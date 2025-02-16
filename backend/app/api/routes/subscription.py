@@ -7,8 +7,6 @@ from app.api.deps import SessionDep, get_current_active_superuser
 from app.models.crud import subscription as crud_subs
 from app.models.core import (
     Message,
-    Subscription,
-    SubscriptionPublic,
     SubscriptionPlanCreate,
     SubscriptionPlanPublic,
     SubscriptionPlansPublic,

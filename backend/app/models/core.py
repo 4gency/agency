@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Literal
 import uuid
 from datetime import datetime, timezone
 from enum import Enum
@@ -187,6 +187,7 @@ class Subscription(SQLModel, table=True):
     user: User = Relationship(back_populates="subscriptions")
     subscription_plan: SubscriptionPlan = Relationship(back_populates="subscriptions")
     payment: "Payment" = Relationship(back_populates="subscription")
+    sessions: list["Session"] = Relationship(back_populates="subscription")
 
     def need_to_deactivate(self) -> bool:
         """
@@ -276,12 +277,12 @@ class CheckoutSession(SQLModel, table=True):
     subscription_plan_id: uuid.UUID = Field(foreign_key="subscription_plan.id")
     payment_status: str = Field(default="unpaid", max_length=50) # paid, unpaid, or no_payment_required
     
-    created_at: datetime = Field(default=datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     expires_at: datetime = Field()
-    updated_at: datetime = Field(default=datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     
     plan: "SubscriptionPlan" = Relationship(back_populates="checkout_sessions")
-    
+
 class CheckoutSessionUpdate(SQLModel):
     payment_gateway: str | None = None
     session_id: str | None = None
@@ -340,3 +341,64 @@ class SubscriptionPlanPublic(SQLModel):
 
 class SubscriptionPlansPublic(SQLModel):
     plans: list[SubscriptionPlanPublic] = []
+
+class Session(SQLModel, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    subscription_id: uuid.UUID
+    
+    status: str = Field(default="starting", max_length=10) # Literal["starting", "running", "paused", "stopped", "failed", "completed"]
+    
+    # Metrics
+    calculated_metrics: bool = False
+    total_time: int = 0  # in seconds
+    total_applied: int = 0
+    total_success: int = 0
+    total_failed: int = 0
+    success_rate: float = 0.0
+    average_time_per_apply: float = 0.0
+    average_time_per_success: float = 0.0
+    average_time_per_failed: float = 0.0
+    
+    crashes_count: int = 0
+    
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    finished_at: datetime | None = Field(nullable=True)
+    
+    subscription: Subscription = Relationship(back_populates="sessions")
+    applies: list["Apply"] = Relationship(back_populates="session", cascade_delete=True)
+    
+    def update_metrics(self):
+        """
+        Atualiza as métricas da sessão, como total de aplicações, sucesso, falhas, taxa de sucesso e tempo médio por ação.
+        """
+        if not self.finished_at or not isinstance(self.finished_at, datetime):
+            raise ValueError("Session must be finished to calculate metrics")
+        
+        self.total_applied = len(self.applies)
+        self.total_success = len([apply for apply in self.applies if apply.status == "success"])
+        self.total_failed = len([apply for apply in self.applies if apply.status == "failed"])
+        self.success_rate = self.total_success / self.total_applied if self.total_applied > 0 else 0.0
+        self.total_time = (self.finished_at - self.created_at).total_seconds()
+        
+        total_time_applies = sum([apply.total_time for apply in self.applies])
+        total_time_success = sum([apply.total_time for apply in self.applies if apply.status == "success"])
+        total_time_failed = sum([apply.total_time for apply in self.applies if apply.status == "failed"])
+        
+        self.average_time_per_apply = total_time_applies / self.total_applied if self.total_applied > 0 else 0.0
+        self.average_time_per_success = total_time_success / self.total_success if self.total_success > 0 else 0.0
+        self.average_time_per_failed = total_time_failed / self.total_failed if self.total_failed > 0 else 0.0
+
+    
+class Apply(SQLModel, table=True):
+    id: int = Field(primary_key=True)
+    session_id: uuid.UUID
+    started_at: datetime
+    total_time: int # in seconds
+    status: str = Field(max_length=10) # Literal["awaiting", "started", "success", "failed"]
+    pdf_text: str | None = Field(max_length=10000, nullable=True)
+    failed: bool = False
+    failed_reason: str | None = Field(max_length=10000, nullable=True)
+    company_name: str | None = Field(max_length=255, nullable=True)
+    linkedin_url: str | None = Field(max_length=255, nullable=True)
+
+    session: Session = Relationship(back_populates="applies")

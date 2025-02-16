@@ -9,7 +9,6 @@ from odmantic.session import SyncSession
 from pydantic import ValidationError
 from sqlmodel import Session
 
-from app.api.utils import update_user_active_subscriptions
 from app.core import security
 from app.core.config import settings
 from app.core.db import engine
@@ -69,7 +68,8 @@ def get_current_active_superuser(current_user: CurrentUser) -> User:
 def get_current_active_subscriber(
     session: SessionDep, current_user: CurrentUser
 ) -> User:
-    update_user_active_subscriptions(session, current_user)
+    # from app.api.utils import update_user_active_subscriptions
+    # update_user_active_subscriptions(session, current_user)
     subscriptions = current_user.subscriptions
 
     for sub in subscriptions:
