@@ -48,7 +48,7 @@ def stripe_success(
     if checkout.user_id != user.id:
         raise HTTPException(
             status_code=403,
-            detail="Checkout session does not belong to the authenticated user"
+            detail="Checkout session does not belong to the authenticated user",
         )
 
     stripe_controller.handle_success_callback(session, checkout, plan, user)

@@ -182,7 +182,7 @@ class SubscriptionUpdate(SQLModel):
 
 class Subscription(SQLModel, table=True):
     __tablename__ = "subscription"  # type: ignore
-    
+
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: uuid.UUID = Field(foreign_key="user.id")
     subscription_plan_id: uuid.UUID = Field(foreign_key="subscription_plan.id")
@@ -260,7 +260,7 @@ class PaymentUpdate(SQLModel):
 
 class Payment(SQLModel, table=True):
     __tablename__ = "payment"  # type: ignore
-    
+
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     subscription_id: uuid.UUID = Field(foreign_key="subscription.id")
     user_id: uuid.UUID = Field(foreign_key="user.id")
@@ -367,11 +367,11 @@ class SubscriptionPlansPublic(SQLModel):
 
 class WorkerSession(SQLModel, table=True):
     __tablename__ = "worker_session"  # type: ignore
-    
+
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     subscription_id: uuid.UUID = Field(foreign_key="subscription.id")
     status: str = Field(default="starting", max_length=10)
-    
+
     # Metrics
     calculated_metrics: bool = False
     total_time: int = 0  # in seconds
@@ -388,7 +388,9 @@ class WorkerSession(SQLModel, table=True):
     finished_at: datetime | None = Field(nullable=True)
 
     subscription: Subscription = Relationship(back_populates="worker_sessions")
-    applies: list["Apply"] = Relationship(back_populates="worker_session", cascade_delete=True)
+    applies: list["Apply"] = Relationship(
+        back_populates="worker_session", cascade_delete=True
+    )
 
     def update_metrics(self):
         """
@@ -429,8 +431,8 @@ class WorkerSession(SQLModel, table=True):
 
 
 class Apply(SQLModel, table=True):
-    __tablename__ = "apply" # type: ignore
-    
+    __tablename__ = "apply"  # type: ignore
+
     id: int = Field(primary_key=True)
     session_id: uuid.UUID = Field(foreign_key="worker_session.id")
     started_at: datetime
