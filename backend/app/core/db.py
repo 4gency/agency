@@ -2,7 +2,7 @@ from sqlmodel import Session, create_engine, select
 
 from app.core.config import settings
 from app.models import crud
-from app.models.core import *
+from app.models.core import *  # noqa
 
 engine = create_engine(str(settings.SQLALCHEMY_DATABASE_URI))
 
