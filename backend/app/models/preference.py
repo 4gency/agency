@@ -89,5 +89,6 @@ class Config(Model):
 
     job_applicants_threshold: JobApplicantsThreshold = JobApplicantsThreshold()
 
-    class Config:
-        collection: str = "configs"
+    model_config = {
+        "collection": "configs",  # type: ignore[typeddict-unknown-key]
+    }

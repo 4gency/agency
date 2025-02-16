@@ -163,5 +163,6 @@ class PlainTextResume(Model):
     legal_authorization: LegalAuthorization = LegalAuthorization()
     work_preferences: WorkPreferences = WorkPreferences()
 
-    class Config:
-        collection: str = "plain_text_resumes"
+    model_config = {
+        "collection": "plain_text_resumes",  # type: ignore[typeddict-unknown-key]
+    }
