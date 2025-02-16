@@ -360,6 +360,12 @@ export type StripeWebhookData = {
 
 export type StripeWebhookResponse = unknown
 
+export type StripeCancelData = {
+  sessionId: string
+}
+
+export type StripeCancelResponse = unknown
+
 export type GetConfigData = {
   subscriptionId: string
 }
