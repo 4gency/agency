@@ -45,6 +45,12 @@ def stripe_success(
             detail="Subscription plan not found, please contact support!",
         )
 
+    if checkout.user_id != user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Checkout session does not belong to the authenticated user"
+        )
+
     stripe_controller.handle_success_callback(session, checkout, plan, user)
 
     return {"message": "Success callback processed"}
