@@ -47,7 +47,7 @@
 //   const navigate = useNavigate({ from: Route.fullPath })
 //   const setPage = (page: number) =>
 //     navigate({ search: (prev: { page: number }) => ({ ...prev, page }) })
-  
+
 //   const {
 //     data: items,
 //     isPending,

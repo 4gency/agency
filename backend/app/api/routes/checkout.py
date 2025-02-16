@@ -1,15 +1,23 @@
 from uuid import UUID
-from app.integrations import stripe as stripe_controller
-from fastapi import APIRouter, Depends, HTTPException, Header, Request, status
+
+import stripe
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
+from sqlmodel import select
+
 from app.api.deps import CurrentUser, SessionDep, get_current_active_superuser
-from app.models.core import CheckoutSessionPublic, CheckoutSession, SubscriptionPlan, CheckoutSessionUpdate
 from app.core.config import settings
+from app.integrations import stripe as stripe_controller
+from app.models.core import (
+    CheckoutSession,
+    CheckoutSessionPublic,
+    CheckoutSessionUpdate,
+    SubscriptionPlan,
+)
 from app.models.crud import subscription as crud_subs
 from app.utils import timestamp_to_datetime
-from sqlmodel import select
-import stripe
 
 router = APIRouter()
+
 
 @router.post("/stripe/success")
 def stripe_success(
@@ -25,27 +33,26 @@ def stripe_success(
     ).first()
 
     if not checkout:
-        raise HTTPException(
-            status_code=404,
-            detail="Checkout session not found"
-        )
-        
+        raise HTTPException(status_code=404, detail="Checkout session not found")
+
     plan: SubscriptionPlan | None = crud_subs.get_subscription_plan_by_id(
-        session=session,
-        id=checkout.subscription_plan_id
+        session=session, id=checkout.subscription_plan_id
     )
-    
+
     if not plan:
         raise HTTPException(
             status_code=500,
-            detail="Subscription plan not found, please contact support!"
+            detail="Subscription plan not found, please contact support!",
         )
 
     stripe_controller.handle_success_callback(session, checkout, plan, user)
 
     return {"message": "Success callback processed"}
 
-@router.get("/stripe/checkout-session/{session_id}", response_model=CheckoutSessionPublic)
+
+@router.get(
+    "/stripe/checkout-session/{session_id}", response_model=CheckoutSessionPublic
+)
 def get_stripe_checkout_session_by_id(
     session: SessionDep,
     session_id: UUID,
@@ -55,14 +62,14 @@ def get_stripe_checkout_session_by_id(
     Get Stripe checkout session by ID.
     """
     checkout = session.exec(
-        select(CheckoutSession).where(CheckoutSession.id == session_id, CheckoutSession.user_id == user.id)
+        select(CheckoutSession).where(
+            CheckoutSession.id == session_id, CheckoutSession.user_id == user.id
+        )
     ).first()
     if not checkout:
-        raise HTTPException(
-            status_code=404,
-            detail="Checkout session not found"
-        )
+        raise HTTPException(status_code=404, detail="Checkout session not found")
     return CheckoutSessionPublic.model_validate(checkout)
+
 
 @router.get("/stripe/checkout-session", response_model=list[CheckoutSessionPublic])
 def get_stripe_checkout_sessions(
@@ -75,26 +82,33 @@ def get_stripe_checkout_sessions(
     Get Stripe checkout sessions.
     """
     checkout_sessions = session.exec(
-        select(CheckoutSession).where(CheckoutSession.user_id == user.id).offset(skip).limit(limit)
+        select(CheckoutSession)
+        .where(CheckoutSession.user_id == user.id)
+        .offset(skip)
+        .limit(limit)
     ).all()
-    
-    return [CheckoutSessionPublic.model_validate(checkout) for checkout in checkout_sessions]
+
+    return [
+        CheckoutSessionPublic.model_validate(checkout) for checkout in checkout_sessions
+    ]
+
 
 @router.post("/stripe/checkout-session", response_model=CheckoutSessionPublic)
 def create_stripe_checkout_session(
     session: SessionDep,
     subscription_plan_id: UUID,
     user: CurrentUser,
-    ) -> CheckoutSession:
+) -> CheckoutSession:
     """
     Create Stripe checkout session.
     """
     sub_plan = crud_subs.get_subscription_plan_by_id(
-        session=session, 
-        id=subscription_plan_id
+        session=session, id=subscription_plan_id
     )
     if not sub_plan or not sub_plan.is_active:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription plan not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Subscription plan not found"
+        )
     sub, payment = crud_subs.create_sub_payment(
         session=session,
         user=user,
@@ -108,7 +122,7 @@ def create_stripe_checkout_session(
         user=user,
         payment=payment,
     )
-    
+
     checkout = CheckoutSession(
         payment_gateway="stripe",
         session_id=data["id"],
@@ -119,19 +133,20 @@ def create_stripe_checkout_session(
         payment_status=data["payment_status"],
         expires_at=timestamp_to_datetime(data["expires_at"]),
     )
-    
+
     session.add(checkout)
     session.commit()
-    
+
     return checkout
 
-@router.patch("/stripe/checkout-session/{session_id}", 
-            dependencies=[Depends(get_current_active_superuser)],
-            response_model=CheckoutSessionPublic)
+
+@router.patch(
+    "/stripe/checkout-session/{session_id}",
+    dependencies=[Depends(get_current_active_superuser)],
+    response_model=CheckoutSessionPublic,
+)
 def update_stripe_checkout_session(
-    session: SessionDep,
-    session_id: UUID,
-    checkout_session: CheckoutSessionUpdate
+    session: SessionDep, session_id: UUID, checkout_session: CheckoutSessionUpdate
 ):
     """
     Update Stripe checkout session.
@@ -140,16 +155,14 @@ def update_stripe_checkout_session(
         select(CheckoutSession).where(CheckoutSession.id == session_id)
     ).first()
     if not checkout:
-        raise HTTPException(
-            status_code=404,
-            detail="Checkout session not found"
-        )
-    checkout_data = checkout.model_dump(exclude_unset=True)
+        raise HTTPException(status_code=404, detail="Checkout session not found")
+    checkout_data = checkout_session.model_dump(exclude_unset=True)
     checkout.sqlmodel_update(checkout_data)
     session.add(checkout)
     session.commit()
     session.refresh(checkout)
     return CheckoutSessionPublic.model_validate(checkout)
+
 
 @router.post("/stripe/webhook")
 async def stripe_webhook(
@@ -177,6 +190,7 @@ async def stripe_webhook(
 
     return {"status": "success"}
 
+
 @router.post("/stripe/cancel")
 def stripe_cancel(
     session: SessionDep,
@@ -193,16 +207,17 @@ def stripe_cancel(
 
     if not checkout:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Checkout session not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Checkout session not found"
         )
 
     # 2) Busca o subscription_plan
-    plan = crud_subs.get_subscription_plan_by_id(session=session, id=checkout.subscription_plan_id)
+    plan = crud_subs.get_subscription_plan_by_id(
+        session=session, id=checkout.subscription_plan_id
+    )
     if not plan:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Subscription plan not found, please contact support!"
+            detail="Subscription plan not found, please contact support!",
         )
 
     # 3) Chama a função do "stripe_controller" para tratar cancelamento

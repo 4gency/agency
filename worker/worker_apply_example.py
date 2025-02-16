@@ -11,11 +11,13 @@ BACKEND_API_KEY = os.getenv("BACKEND_API_KEY", "my_secret_api_key")
 SESSION_ID = os.getenv("SESSION_ID", "uuid4-session-id")
 USER_ID = os.getenv("USER_ID", "uuid4-user-id")
 
+
 class optional_instance:
     """
     A descriptor that automatically injects the singleton instance into
     the method when it's called on the class.
     """
+
     def __init__(self, func):
         self.func = func
         wraps(func)(self)
@@ -25,13 +27,15 @@ class optional_instance:
             instance = owner()
         return lambda *args, **kwargs: self.func(instance, *args, **kwargs)
 
+
 class Singleton(type):
     _instances = {}
-    
+
     def __call__(cls, *args, **kwargs):
         if cls not in cls._instances:
             cls._instances[cls] = super().__call__(*args, **kwargs)
         return cls._instances[cls]
+
 
 @dataclass
 class Apply(metaclass=Singleton):
@@ -55,13 +59,13 @@ class Apply(metaclass=Singleton):
         self.failed_reason = None
         self.company_name = None
         self.linkedin_url = None
-    
+
     def __send_to_backend(self, data):
         """Sends the current state to the backend."""
         response = requests.post(
-            f"{BACKEND_URL}/api/v1/users/{USER_ID}/bots/{SESSION_ID}/apply", 
+            f"{BACKEND_URL}/api/v1/users/{USER_ID}/bots/{SESSION_ID}/apply",
             headers={"Authorization": f"Bearer {BACKEND_API_KEY}"},
-            json=data, 
+            json=data,
         )
         response.raise_for_status()
 

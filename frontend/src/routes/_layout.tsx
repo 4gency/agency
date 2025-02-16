@@ -32,7 +32,7 @@ function Layout() {
   return (
     <Flex maxW="large" h="auto" position="relative">
       <Sidebar />
-      <Outlet />      
+      <Outlet />
       <UserMenu />
     </Flex>
   )

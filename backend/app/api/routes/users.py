@@ -1,19 +1,21 @@
 import uuid
-from typing import Any, List, Optional
+from typing import Any
 
-from app.integrations.stripe import cancel_subscription_recurring_payment, reactivate_subscription
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import func, select
 
-from app.models import crud
 from app.api.deps import (
     CurrentUser,
-    NosqlSessionDep,
     SessionDep,
     get_current_active_superuser,
 )
 from app.core.config import settings
 from app.core.security import get_password_hash, verify_password
+from app.integrations.stripe import (
+    cancel_subscription_recurring_payment,
+    reactivate_subscription,
+)
+from app.models import crud
 from app.models.core import (
     # Item,
     Message,
@@ -58,9 +60,7 @@ def read_users(session: SessionDep, skip: int = 0, limit: int = 100) -> Any:
 @router.post(
     "/", dependencies=[Depends(get_current_active_superuser)], response_model=UserPublic
 )
-def create_user(
-    *, session: SessionDep, user_in: UserCreate
-) -> Any:
+def create_user(*, session: SessionDep, user_in: UserCreate) -> Any:
     """
     Create new user.
     """
@@ -96,7 +96,8 @@ def update_user_me(
         existing_user = crud.get_user_by_email(session=session, email=user_in.email)
         if existing_user and existing_user.id != current_user.id:
             raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT, detail="User with this email already exists"
+                status_code=status.HTTP_409_CONFLICT,
+                detail="User with this email already exists",
             )
     user_data = user_in.model_dump(exclude_unset=True)
     current_user.sqlmodel_update(user_data)
@@ -114,10 +115,13 @@ def update_password_me(
     Update own password.
     """
     if not verify_password(body.current_password, current_user.hashed_password):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Incorrect password")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Incorrect password"
+        )
     if body.current_password == body.new_password:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="New password cannot be the same as the current one"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New password cannot be the same as the current one",
         )
     hashed_password = get_password_hash(body.new_password)
     current_user.hashed_password = hashed_password
@@ -141,7 +145,8 @@ def delete_user_me(session: SessionDep, current_user: CurrentUser) -> Any:
     """
     if current_user.is_superuser:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Super users are not allowed to delete themselves"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Super users are not allowed to delete themselves",
         )
     # statement = delete(Item).where(col(Item.owner_id) == current_user.id)
     # session.exec(statement)  # type: ignore
@@ -209,7 +214,8 @@ def update_user(
         existing_user = crud.get_user_by_email(session=session, email=user_in.email)
         if existing_user and existing_user.id != user_id:
             raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT, detail="User with this email already exists"
+                status_code=status.HTTP_409_CONFLICT,
+                detail="User with this email already exists",
             )
 
     db_user = crud.update_user(session=session, db_user=db_user, user_in=user_in)
@@ -225,10 +231,13 @@ def delete_user(
     """
     user = session.get(User, user_id)
     if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
     if user == current_user:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Super users are not allowed to delete themselves"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Super users are not allowed to delete themselves",
         )
     # statement = delete(Item).where(col(Item.owner_id) == user_id)
     # session.exec(statement)  # type: ignore
@@ -236,39 +245,52 @@ def delete_user(
     session.commit()
     return Message(message="User deleted successfully")
 
-@router.get("/me/subscriptions", response_model=List[SubscriptionPublic])
+
+@router.get("/me/subscriptions", response_model=list[SubscriptionPublic])
 def get_user_subscriptions(
     user: CurrentUser,
-    only_active: Optional[bool] = True,
+    only_active: bool | None = True,
 ) -> Any:
     """
     Get user subscription.
     """
-    subscriptions: List[Subscription] = user.subscriptions
+    subscriptions: list[Subscription] = user.subscriptions
     if only_active:
         subscriptions = [s for s in subscriptions if s.is_active]
     if not subscriptions:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No subscriptions found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="No subscriptions found"
+        )
     return subscriptions
 
-@router.get("/{user_id}/subscriptions", dependencies=[Depends(get_current_active_superuser)], response_model=List[SubscriptionPublic])
+
+@router.get(
+    "/{user_id}/subscriptions",
+    dependencies=[Depends(get_current_active_superuser)],
+    response_model=list[SubscriptionPublic],
+)
 def get_user_subscriptions_by_id(
     user_id: uuid.UUID,
     session: SessionDep,
-    only_active: Optional[bool] = True,
+    only_active: bool | None = True,
 ) -> Any:
     """
     Get user subscription by id.
     """
     user = session.get(User, user_id)
     if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-    subscriptions: List[Subscription] = user.subscriptions
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
+    subscriptions: list[Subscription] = user.subscriptions
     if only_active:
         subscriptions = [s for s in subscriptions if s.is_active]
     if not subscriptions:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No subscriptions found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="No subscriptions found"
+        )
     return subscriptions
+
 
 @router.delete("/me/subscriptions/{subscription_id}/cancel", response_model=Message)
 def cancel_user_subscription(
@@ -281,11 +303,17 @@ def cancel_user_subscription(
     """
     subscription = session.get(Subscription, subscription_id)
     if not subscription:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found"
+        )
     if subscription.user_id != user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Subscription not found")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Subscription not found"
+        )
 
-    cancel_subscription_recurring_payment(session, subscription, cancel_at_period_end=True)
+    cancel_subscription_recurring_payment(
+        session, subscription, cancel_at_period_end=True
+    )
 
     return Message(message="Recurring payment cancelled successfully")
 
@@ -301,17 +329,24 @@ def reactivate_user_subscription(
     """
     subscription = session.get(Subscription, subscription_id)
     if not subscription:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found"
+        )
     if subscription.user_id != user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Subscription not found")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Subscription not found"
+        )
 
     reactivate_subscription(session, subscription)
 
     return Message(message="Subscription reactivated successfully")
 
-@router.delete("/{user_id}/subscriptions/{subscription_id}/cancel",
-               dependencies=[Depends(get_current_active_superuser)],
-               response_model=Message)
+
+@router.delete(
+    "/{user_id}/subscriptions/{subscription_id}/cancel",
+    dependencies=[Depends(get_current_active_superuser)],
+    response_model=Message,
+)
 def cancel_user_subscription_by_id(
     user_id: uuid.UUID,
     subscription_id: uuid.UUID,
@@ -322,25 +357,37 @@ def cancel_user_subscription_by_id(
     """
     user = session.get(User, user_id)
     if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
     subscription = session.get(Subscription, subscription_id)
     if not subscription:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found"
+        )
     if subscription.user_id != user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Subscription not found")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Subscription not found"
+        )
 
     # Se já estiver desativada localmente, não há mais nada a fazer
     if not subscription.is_active:
         return Message(message="Subscription is already inactive")
 
-    cancel_subscription_recurring_payment(session, subscription, cancel_at_period_end=True)
+    cancel_subscription_recurring_payment(
+        session, subscription, cancel_at_period_end=True
+    )
 
-    return Message(message="Recurring payment cancelled successfully (will end at period end)")
+    return Message(
+        message="Recurring payment cancelled successfully (will end at period end)"
+    )
 
 
-@router.post("/{user_id}/subscriptions/{subscription_id}/reactivate",
-             dependencies=[Depends(get_current_active_superuser)],
-             response_model=Message)
+@router.post(
+    "/{user_id}/subscriptions/{subscription_id}/reactivate",
+    dependencies=[Depends(get_current_active_superuser)],
+    response_model=Message,
+)
 def reactivate_user_subscription_by_id(
     user_id: uuid.UUID,
     subscription_id: uuid.UUID,
@@ -351,14 +398,19 @@ def reactivate_user_subscription_by_id(
     """
     user = session.get(User, user_id)
     if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
     subscription = session.get(Subscription, subscription_id)
     if not subscription:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found"
+        )
     if subscription.user_id != user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Subscription not found")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Subscription not found"
+        )
 
     reactivate_subscription(session, subscription)
 
     return Message(message="Subscription reactivated successfully")
-

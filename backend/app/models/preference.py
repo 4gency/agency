@@ -64,7 +64,7 @@ class ConfigPublic(BaseModel, extra="ignore"):
 class Config(Model):
     subscription_id: str = Field(index=True, unique=True)
     user_id: str
-    
+
     llm_model_type: str = Field(default="openai")
     llm_model: str = Field(default="gpt-4o-mini")
     # llm_api_url: str = 'https://api.pawan.krd/cosmosrp/v1'

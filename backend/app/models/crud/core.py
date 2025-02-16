@@ -20,7 +20,7 @@ def create_user(*, session: Session, user_create: UserCreate) -> User:
 
 def update_user(*, session: Session, db_user: User, user_in: UserUpdate) -> Any:
     user_data = user_in.model_dump(exclude_unset=True)
-    extra_data = {} 
+    extra_data = {}
     if "password" in user_data:
         password = user_data["password"]
         hashed_password = get_password_hash(password)

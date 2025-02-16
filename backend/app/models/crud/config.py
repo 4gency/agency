@@ -25,7 +25,9 @@ def create_resume(*, session, resume: PlainTextResume) -> PlainTextResume:
 
 
 def get_resume(*, session, subscription_id: str) -> PlainTextResume | None:
-    resume = session.find_one(PlainTextResume, PlainTextResume.subscription_id == subscription_id)
+    resume = session.find_one(
+        PlainTextResume, PlainTextResume.subscription_id == subscription_id
+    )
     return resume
 
 

@@ -1,9 +1,9 @@
-from typing import Any
 import uuid
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, status
 
-from app.api.deps import CurrentUser, NosqlSessionDep, SessionDep
+from app.api.deps import CurrentUser, NosqlSessionDep
 from app.models.crud import config as config_crud
 from app.models.preference import ConfigPublic
 from app.models.resume import PlainTextResumePublic
@@ -12,27 +12,39 @@ router = APIRouter()
 
 
 @router.get("/{subscription_id}/job-preferences", response_model=ConfigPublic)
-def get_config(current_user: CurrentUser, subscription_id: uuid.UUID, nosql_session: NosqlSessionDep):
+def get_config(
+    current_user: CurrentUser,
+    subscription_id: uuid.UUID,
+    nosql_session: NosqlSessionDep,
+):
     config = config_crud.get_config(
         session=nosql_session,
         subscription_id=str(subscription_id),
     )
 
     if not config:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Config not found")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Config not found"
+        )
 
     return ConfigPublic(**config.model_dump())
 
 
 @router.get("/{subscription_id}/resume", response_model=PlainTextResumePublic)
-def get_plain_text_resume(current_user: CurrentUser, subscription_id: uuid.UUID, nosql_session: NosqlSessionDep):
+def get_plain_text_resume(
+    current_user: CurrentUser,
+    subscription_id: uuid.UUID,
+    nosql_session: NosqlSessionDep,
+):
     resume = config_crud.get_resume(
         session=nosql_session,
         subscription_id=str(subscription_id),
     )
 
     if not resume:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Resume not found")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Resume not found"
+        )
 
     return PlainTextResumePublic(**resume.model_dump())
 
@@ -54,7 +66,9 @@ def update_config(
     )
 
     if not config:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Config not found")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Config not found"
+        )
 
     update_dict = config_in.model_dump(exclude_unset=True)
     config_crud.update_config(
@@ -64,7 +78,9 @@ def update_config(
     )
 
 
-@router.patch("/{subscription_id}/resume", status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+@router.patch(
+    "/{subscription_id}/resume", status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+)
 def update_plain_text_resume(
     *,
     current_user: CurrentUser,
@@ -82,8 +98,7 @@ def update_plain_text_resume(
 
     if not resume:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
-            detail="Resume not found"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Resume not found"
         )
 
     update_dict = resume_in.model_dump(exclude_unset=True)

@@ -1,4 +1,3 @@
-from typing import Any, Literal
 import uuid
 from datetime import datetime, timezone
 from enum import Enum
@@ -56,7 +55,9 @@ class User(UserBase, table=True):
     hashed_password: str
     stripe_customer_id: str | None = Field(default=None)
 
-    subscriptions: list["Subscription"] = Relationship(back_populates="user", cascade_delete=True)
+    subscriptions: list["Subscription"] = Relationship(
+        back_populates="user", cascade_delete=True
+    )
     payments: list["Payment"] = Relationship(back_populates="user", cascade_delete=True)
 
 
@@ -71,13 +72,14 @@ class UsersPublic(SQLModel):
 
 
 class SubscriptionPlanBenefit(SQLModel, table=True):
-    __tablename__ = "subscription_plan_benefit" # type: ignore
-    
+    __tablename__ = "subscription_plan_benefit"  # type: ignore
+
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     subscription_plan_id: uuid.UUID = Field(foreign_key="subscription_plan.id")
     name: str = Field(max_length=100)
-    
+
     subscription_plan: "SubscriptionPlan" = Relationship(back_populates="benefits")
+
 
 class SubscriptionPlanBase(SQLModel):
     name: str
@@ -108,16 +110,17 @@ class SubscriptionPlanUpdate(SQLModel):
     metric_type: SubscriptionMetric | None = None
     metric_value: int | None = None
     benefits: list["SubscriptionPlanBenefitPublic"] | None = None
-    
-    @field_validator('metric_value')
+
+    @field_validator("metric_value")
     def check_metric_value(cls, value: int | None) -> int | None:
         if value is not None and value <= 0:
             raise ValueError("metric_value must be greater than 0")
         return value
 
+
 class SubscriptionPlan(SQLModel, table=True):
-    __tablename__ = "subscription_plan" # type: ignore
-    
+    __tablename__ = "subscription_plan"  # type: ignore
+
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     name: str
     price: float
@@ -129,11 +132,13 @@ class SubscriptionPlan(SQLModel, table=True):
     is_active: bool = Field(default=True)
     metric_type: SubscriptionMetric = Field(default=SubscriptionMetric.DAY)
     metric_value: int = Field(default=30)
-    
+
     stripe_product_id: str | None = Field(default=None, index=True)
     stripe_price_id: str | None = Field(default=None, index=True)
 
-    benefits: list["SubscriptionPlanBenefit"] = Relationship(back_populates="subscription_plan", cascade_delete=True)
+    benefits: list["SubscriptionPlanBenefit"] = Relationship(
+        back_populates="subscription_plan", cascade_delete=True
+    )
     subscriptions: list["Subscription"] = Relationship(
         back_populates="subscription_plan"
     )
@@ -148,7 +153,8 @@ class SubscriptionBase(SQLModel):
     is_active: bool = Field(default=True)
     metric_type: SubscriptionMetric
     metric_status: int
-    
+
+
 class SubscriptionPublic(SQLModel):
     id: uuid.UUID
     user_id: uuid.UUID
@@ -159,8 +165,10 @@ class SubscriptionPublic(SQLModel):
     metric_type: SubscriptionMetric
     metric_status: int
 
+
 class SubscriptionCreate(SubscriptionBase):
     pass
+
 
 class SubscriptionUpdate(SQLModel):
     user_id: uuid.UUID | None = None
@@ -181,7 +189,7 @@ class Subscription(SQLModel, table=True):
     is_active: bool = Field(default=True)
     metric_type: SubscriptionMetric
     metric_status: int
-    
+
     stripe_subscription_id: str | None = Field(default=None, index=True)
 
     user: User = Relationship(back_populates="subscriptions")
@@ -192,9 +200,9 @@ class Subscription(SQLModel, table=True):
     def need_to_deactivate(self) -> bool:
         """
         Verifica se a assinatura precisa ser desativada baseado no tipo de métrica.
-        
+
         Retorna True se:
-          - Para métricas baseadas em tempo (DAY, WEEK, MONTH, YEAR), a data de término (end_date) 
+          - Para métricas baseadas em tempo (DAY, WEEK, MONTH, YEAR), a data de término (end_date)
             já tiver passado (considerando UTC).
           - Para métrica APPLIES, o metric_status seja menor que 1 (por exemplo, sem créditos).
         Caso contrário, retorna False.
@@ -205,18 +213,20 @@ class Subscription(SQLModel, table=True):
 
         # Se a métrica for baseada em tempo (dia, semana, mês, ano),
         # basta checar se já passou da end_date
-        if self.metric_type in [SubscriptionMetric.DAY,
-                                SubscriptionMetric.WEEK,
-                                SubscriptionMetric.MONTH,
-                                SubscriptionMetric.YEAR]:
+        if self.metric_type in [
+            SubscriptionMetric.DAY,
+            SubscriptionMetric.WEEK,
+            SubscriptionMetric.MONTH,
+            SubscriptionMetric.YEAR,
+        ]:
             if self.end_date < now_utc:
                 return True
-        
+
         # Se a métrica for APPLIES, checa se ainda há "créditos"
         elif self.metric_type == SubscriptionMetric.APPLIES:
             if self.metric_status < 1:
                 return True
-        
+
         return False
 
 
@@ -259,13 +269,13 @@ class Payment(SQLModel, table=True):
     )  # e.g., Stripe, BoaCompra
     transaction_id: str = Field(index=True)
 
-
     subscription: Subscription = Relationship(back_populates="payment")
     user: User = Relationship(back_populates="payments")
 
+
 class CheckoutSession(SQLModel, table=True):
-    __tablename__ = "checkout_session" # type: ignore
-    
+    __tablename__ = "checkout_session"  # type: ignore
+
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     payment_gateway: str = Field(
         default="stripe", max_length=50
@@ -273,15 +283,18 @@ class CheckoutSession(SQLModel, table=True):
     session_id: str = Field(index=True, max_length=100)
     session_url: str = Field(max_length=500)
     user_id: uuid.UUID
-    status: str = Field(default="open", max_length=50) # open, complete, or expired
+    status: str = Field(default="open", max_length=50)  # open, complete, or expired
     subscription_plan_id: uuid.UUID = Field(foreign_key="subscription_plan.id")
-    payment_status: str = Field(default="unpaid", max_length=50) # paid, unpaid, or no_payment_required
-    
+    payment_status: str = Field(
+        default="unpaid", max_length=50
+    )  # paid, unpaid, or no_payment_required
+
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     expires_at: datetime = Field()
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    
+
     plan: "SubscriptionPlan" = Relationship(back_populates="checkout_sessions")
+
 
 class CheckoutSessionUpdate(SQLModel):
     payment_gateway: str | None = None
@@ -294,12 +307,14 @@ class CheckoutSessionUpdate(SQLModel):
     created_at: datetime | None = None
     expires_at: datetime | None = None
     updated_at: datetime | None = None
-    
+
+
 class CheckoutSessionPublic(SQLModel):
     id: uuid.UUID
     session_id: str
     session_url: str
     expires_at: datetime
+
 
 # Generic message
 class Message(SQLModel):
@@ -321,8 +336,10 @@ class NewPassword(SQLModel):
     token: str
     new_password: str = Field(min_length=8, max_length=40)
 
+
 class SubscriptionPlanBenefitPublic(SQLModel):
     name: str
+
 
 class SubscriptionPlanPublic(SQLModel):
     id: uuid.UUID
@@ -336,18 +353,22 @@ class SubscriptionPlanPublic(SQLModel):
     is_active: bool
     metric_type: SubscriptionMetric
     metric_value: int
-    
+
     benefits: list[SubscriptionPlanBenefitPublic] = []
+
 
 class SubscriptionPlansPublic(SQLModel):
     plans: list[SubscriptionPlanPublic] = []
 
+
 class Session(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     subscription_id: uuid.UUID
-    
-    status: str = Field(default="starting", max_length=10) # Literal["starting", "running", "paused", "stopped", "failed", "completed"]
-    
+
+    status: str = Field(
+        default="starting", max_length=10
+    )  # Literal["starting", "running", "paused", "stopped", "failed", "completed"]
+
     # Metrics
     calculated_metrics: bool = False
     total_time: int = 0  # in seconds
@@ -358,43 +379,61 @@ class Session(SQLModel, table=True):
     average_time_per_apply: float = 0.0
     average_time_per_success: float = 0.0
     average_time_per_failed: float = 0.0
-    
+
     crashes_count: int = 0
-    
+
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     finished_at: datetime | None = Field(nullable=True)
-    
+
     subscription: Subscription = Relationship(back_populates="sessions")
     applies: list["Apply"] = Relationship(back_populates="session", cascade_delete=True)
-    
+
     def update_metrics(self):
         """
         Atualiza as métricas da sessão, como total de aplicações, sucesso, falhas, taxa de sucesso e tempo médio por ação.
         """
         if not self.finished_at or not isinstance(self.finished_at, datetime):
             raise ValueError("Session must be finished to calculate metrics")
-        
-        self.total_applied = len(self.applies)
-        self.total_success = len([apply for apply in self.applies if apply.status == "success"])
-        self.total_failed = len([apply for apply in self.applies if apply.status == "failed"])
-        self.success_rate = self.total_success / self.total_applied if self.total_applied > 0 else 0.0
-        self.total_time = (self.finished_at - self.created_at).total_seconds()
-        
-        total_time_applies = sum([apply.total_time for apply in self.applies])
-        total_time_success = sum([apply.total_time for apply in self.applies if apply.status == "success"])
-        total_time_failed = sum([apply.total_time for apply in self.applies if apply.status == "failed"])
-        
-        self.average_time_per_apply = total_time_applies / self.total_applied if self.total_applied > 0 else 0.0
-        self.average_time_per_success = total_time_success / self.total_success if self.total_success > 0 else 0.0
-        self.average_time_per_failed = total_time_failed / self.total_failed if self.total_failed > 0 else 0.0
 
-    
+        self.total_applied = len(self.applies)
+        self.total_success = len(
+            [apply for apply in self.applies if apply.status == "success"]
+        )
+        self.total_failed = len(
+            [apply for apply in self.applies if apply.status == "failed"]
+        )
+        self.success_rate = (
+            self.total_success / self.total_applied if self.total_applied > 0 else 0.0
+        )
+        self.total_time = (self.finished_at - self.created_at).total_seconds()
+
+        total_time_applies = sum([apply.total_time for apply in self.applies])
+        total_time_success = sum(
+            [apply.total_time for apply in self.applies if apply.status == "success"]
+        )
+        total_time_failed = sum(
+            [apply.total_time for apply in self.applies if apply.status == "failed"]
+        )
+
+        self.average_time_per_apply = (
+            total_time_applies / self.total_applied if self.total_applied > 0 else 0.0
+        )
+        self.average_time_per_success = (
+            total_time_success / self.total_success if self.total_success > 0 else 0.0
+        )
+        self.average_time_per_failed = (
+            total_time_failed / self.total_failed if self.total_failed > 0 else 0.0
+        )
+
+
 class Apply(SQLModel, table=True):
     id: int = Field(primary_key=True)
     session_id: uuid.UUID
     started_at: datetime
-    total_time: int # in seconds
-    status: str = Field(max_length=10) # Literal["awaiting", "started", "success", "failed"]
+    total_time: int  # in seconds
+    status: str = Field(
+        max_length=10
+    )  # Literal["awaiting", "started", "success", "failed"]
     pdf_text: str | None = Field(max_length=10000, nullable=True)
     failed: bool = False
     failed_reason: str | None = Field(max_length=10000, nullable=True)

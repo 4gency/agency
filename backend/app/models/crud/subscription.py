@@ -1,6 +1,6 @@
-from datetime import datetime, timezone
-from typing import Optional
 import uuid
+from datetime import datetime, timezone
+
 from sqlmodel import Session, select
 
 from app.models.core import (
@@ -14,7 +14,7 @@ from app.models.core import (
     SubscriptionPlanCreate,
     SubscriptionPlanUpdate,
     SubscriptionUpdate,
-    User
+    User,
 )
 
 
@@ -25,11 +25,13 @@ def create_subscription_plan(
     benefits = subscription_plan_create.benefits
     db_obj = SubscriptionPlan.model_validate(sp_data)
     session.add(db_obj)
-    
+
     session.commit()
     session.refresh(db_obj)
     for benefit in benefits:
-        db_obj_benefit = SubscriptionPlanBenefit.model_validate(benefit, update={"subscription_plan_id": db_obj.id})
+        db_obj_benefit = SubscriptionPlanBenefit.model_validate(
+            benefit, update={"subscription_plan_id": db_obj.id}
+        )
         session.add(db_obj_benefit)
     session.commit()
     session.refresh(db_obj)
@@ -103,20 +105,21 @@ def create_payment(*, session: Session, payment_create: PaymentCreate) -> Paymen
     session.refresh(db_obj)
     return db_obj
 
+
 def create_sub_payment(
-    *, 
+    *,
     session: Session,
     user: User,
     sub_plan: SubscriptionPlan,
     payment_status: str,
     payment_gateway: str,
-    transaction_id: Optional[str] = None,
+    transaction_id: str | None = None,
 ) -> tuple[Subscription, Payment]:
     sub_cr = SubscriptionCreate(
         user_id=user.id,
         subscription_plan_id=sub_plan.id,
         start_date=datetime.now(timezone.utc),
-        end_date=datetime.now(timezone.utc), # TODO: calculate end date
+        end_date=datetime.now(timezone.utc),  # TODO: calculate end date
         is_active=False,
         metric_type=sub_plan.metric_type,
         metric_status=sub_plan.metric_value,
@@ -134,6 +137,7 @@ def create_sub_payment(
     )
     payment = create_payment(session=session, payment_create=pmt_cr)
     return subscription, payment
+
 
 def update_payment(
     *, session: Session, db_payment: Payment, payment_in: PaymentUpdate
@@ -161,7 +165,8 @@ def delete_subscription_plan(
 ) -> None:
     session.delete(db_subscription_plan)
     session.commit()
-    
+
+
 def deactivate_subscription_plan(
     *, session: Session, db_subscription_plan: SubscriptionPlan
 ):

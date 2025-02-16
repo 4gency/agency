@@ -8,7 +8,7 @@ document.addEventListener("DOMContentLoaded", function () {
             element.style.transform = 'none';
         }
         if (element.getBoundingClientRect().top > 0 && element.getBoundingClientRect().top <= (window.innerHeight * 0.75)) {
-            element.classList.add('lambdagency-animate-init');            
+            element.classList.add('lambdagency-animate-init');
         }
     }
 

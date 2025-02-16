@@ -162,7 +162,7 @@ class PlainTextResume(Model):
     self_identification: SelfIdentification = SelfIdentification()
     legal_authorization: LegalAuthorization = LegalAuthorization()
     work_preferences: WorkPreferences = WorkPreferences()
-    
+
     model_config = {
         "collection": "plain_text_resumes",
     }

@@ -1,5 +1,5 @@
-from datetime import datetime, timedelta, timezone
 import uuid
+from datetime import datetime, timedelta, timezone
 
 import stripe
 from fastapi import HTTPException
@@ -20,18 +20,156 @@ from app.models.core import (
 # --------------------------------------------------
 
 VALID_CURRENCIES = (
-    "usd", "aed", "afn", "all", "amd", "ang", "aoa", "ars", "aud", "awg", "azn", "bam", "bbd",
-    "bdt", "bgn", "bhd", "bif", "bmd", "bnd", "bob", "brl", "bsd", "bwp", "byn", "bzd", "cad",
-    "cdf", "chf", "clp", "cny", "cop", "crc", "cve", "czk", "djf", "dkk", "dop", "dzd", "egp",
-    "etb", "eur", "fjd", "fkp", "gbp", "gel", "gip", "gmd", "gnf", "gtq", "gyd", "hkd", "hnl",
-    "hrk", "htg", "huf", "idr", "ils", "inr", "isk", "jmd", "jod", "jpy", "kes", "kgs", "khr",
-    "kmf", "krw", "kwd", "kyd", "kzt", "lak", "lbp", "lkr", "lrd", "lsl", "mad", "mdl", "mga",
-    "mkd", "mmk", "mnt", "mop", "mur", "mvr", "mwk", "mxn", "myr", "mzn", "nad", "ngn", "nio",
-    "nok", "npr", "nzd", "omr", "pab", "pen", "pgk", "php", "pkr", "pln", "pyg", "qar", "ron",
-    "rsd", "rub", "rwf", "sar", "sbd", "scr", "sek", "sgd", "shp", "sle", "sos", "srd", "std",
-    "szl", "thb", "tjs", "tnd", "top", "try", "ttd", "twd", "tzs", "uah", "ugx", "uyu", "uzs",
-    "vnd", "vuv", "wst", "xaf", "xcd", "xof", "xpf", "yer", "zar", "zmw", "usdc", "btn", "ghs",
-    "eek", "lvl", "svc", "vef", "ltl", "sll", "mro"
+    "usd",
+    "aed",
+    "afn",
+    "all",
+    "amd",
+    "ang",
+    "aoa",
+    "ars",
+    "aud",
+    "awg",
+    "azn",
+    "bam",
+    "bbd",
+    "bdt",
+    "bgn",
+    "bhd",
+    "bif",
+    "bmd",
+    "bnd",
+    "bob",
+    "brl",
+    "bsd",
+    "bwp",
+    "byn",
+    "bzd",
+    "cad",
+    "cdf",
+    "chf",
+    "clp",
+    "cny",
+    "cop",
+    "crc",
+    "cve",
+    "czk",
+    "djf",
+    "dkk",
+    "dop",
+    "dzd",
+    "egp",
+    "etb",
+    "eur",
+    "fjd",
+    "fkp",
+    "gbp",
+    "gel",
+    "gip",
+    "gmd",
+    "gnf",
+    "gtq",
+    "gyd",
+    "hkd",
+    "hnl",
+    "hrk",
+    "htg",
+    "huf",
+    "idr",
+    "ils",
+    "inr",
+    "isk",
+    "jmd",
+    "jod",
+    "jpy",
+    "kes",
+    "kgs",
+    "khr",
+    "kmf",
+    "krw",
+    "kwd",
+    "kyd",
+    "kzt",
+    "lak",
+    "lbp",
+    "lkr",
+    "lrd",
+    "lsl",
+    "mad",
+    "mdl",
+    "mga",
+    "mkd",
+    "mmk",
+    "mnt",
+    "mop",
+    "mur",
+    "mvr",
+    "mwk",
+    "mxn",
+    "myr",
+    "mzn",
+    "nad",
+    "ngn",
+    "nio",
+    "nok",
+    "npr",
+    "nzd",
+    "omr",
+    "pab",
+    "pen",
+    "pgk",
+    "php",
+    "pkr",
+    "pln",
+    "pyg",
+    "qar",
+    "ron",
+    "rsd",
+    "rub",
+    "rwf",
+    "sar",
+    "sbd",
+    "scr",
+    "sek",
+    "sgd",
+    "shp",
+    "sle",
+    "sos",
+    "srd",
+    "std",
+    "szl",
+    "thb",
+    "tjs",
+    "tnd",
+    "top",
+    "try",
+    "ttd",
+    "twd",
+    "tzs",
+    "uah",
+    "ugx",
+    "uyu",
+    "uzs",
+    "vnd",
+    "vuv",
+    "wst",
+    "xaf",
+    "xcd",
+    "xof",
+    "xpf",
+    "yer",
+    "zar",
+    "zmw",
+    "usdc",
+    "btn",
+    "ghs",
+    "eek",
+    "lvl",
+    "svc",
+    "vef",
+    "ltl",
+    "sll",
+    "mro",
 )
 VALID_METRIC_TYPES = ("day", "week", "month", "year")
 
@@ -50,6 +188,7 @@ class NotFound(HTTPException):
 # 2) Verificações Básicas
 # --------------------------------------------------
 
+
 def integration_enabled() -> bool:
     """Retorna True se a chave secreta da Stripe estiver configurada."""
     return bool(settings.STRIPE_SECRET_KEY)
@@ -58,6 +197,7 @@ def integration_enabled() -> bool:
 # --------------------------------------------------
 # 3) Funções de Plano de Assinatura (Product/Price)
 # --------------------------------------------------
+
 
 def create_subscription_plan(
     session: Session,
@@ -187,6 +327,7 @@ def deactivate_subscription_plan(
 # 4) Funções de Checkout / Customer
 # --------------------------------------------------
 
+
 def ensure_stripe_customer(session: Session, user: User) -> str:
     """
     Verifica se o User tem stripe_customer_id. Se não tiver,
@@ -248,6 +389,7 @@ def create_checkout_subscription_session(
 # 5) Funções de Assinatura (Subscription)
 # --------------------------------------------------
 
+
 def update_subscription_payment(
     session: Session,
     subscription: Subscription,
@@ -306,9 +448,7 @@ def cancel_subscription(session: Session, subscription: Subscription) -> None:
 
 
 def cancel_subscription_recurring_payment(
-    session: Session,
-    subscription: Subscription,
-    cancel_at_period_end: bool = True
+    session: Session, subscription: Subscription, cancel_at_period_end: bool = True
 ) -> None:
     """
     Cancela somente a recorrência de pagamento na Stripe,
@@ -326,8 +466,7 @@ def cancel_subscription_recurring_payment(
         raise BadRequest("Subscription is already fully canceled on Stripe.")
 
     updated_sub = stripe.Subscription.modify(
-        subscription.stripe_subscription_id,
-        cancel_at_period_end=cancel_at_period_end
+        subscription.stripe_subscription_id, cancel_at_period_end=cancel_at_period_end
     )
 
     # Se cancelar imediatamente (False), Stripe define status='canceled'
@@ -358,14 +497,15 @@ def reactivate_subscription(session: Session, subscription: Subscription) -> Non
     stripe_sub = stripe.Subscription.retrieve(subscription.stripe_subscription_id)
 
     if stripe_sub.status == "canceled":
-        raise BadRequest("Subscription is fully canceled on Stripe. Need a new subscription.")
+        raise BadRequest(
+            "Subscription is fully canceled on Stripe. Need a new subscription."
+        )
 
     if not stripe_sub.cancel_at_period_end:
         raise BadRequest("Subscription is not set to cancel at period end.")
 
     stripe.Subscription.modify(
-        subscription.stripe_subscription_id,
-        cancel_at_period_end=False
+        subscription.stripe_subscription_id, cancel_at_period_end=False
     )
 
     subscription.is_active = True
@@ -378,7 +518,10 @@ def reactivate_subscription(session: Session, subscription: Subscription) -> Non
 # 6) Helpers de Datas e Extensão
 # --------------------------------------------------
 
-def _calculate_end_date(plan: SubscriptionPlan, base_date: datetime | None = None) -> datetime:
+
+def _calculate_end_date(
+    plan: SubscriptionPlan, base_date: datetime | None = None
+) -> datetime:
     """Calcula a data de término com base na metric_type e metric_value do plano."""
     if not base_date:
         base_date = datetime.now(timezone.utc)
@@ -409,7 +552,9 @@ def _extend_subscription(subscription: Subscription, plan: SubscriptionPlan):
         subscription.start_date = now_utc
         subscription.end_date = _calculate_end_date(plan, base_date=now_utc)
     else:
-        subscription.end_date = _calculate_end_date(plan, base_date=subscription.end_date)
+        subscription.end_date = _calculate_end_date(
+            plan, base_date=subscription.end_date
+        )
 
     subscription.is_active = True
 
@@ -417,6 +562,7 @@ def _extend_subscription(subscription: Subscription, plan: SubscriptionPlan):
 # --------------------------------------------------
 # 7) Webhooks e Callbacks
 # --------------------------------------------------
+
 
 def handle_checkout_session(session: Session, event: dict) -> None:
     """
@@ -434,7 +580,9 @@ def handle_checkout_session(session: Session, event: dict) -> None:
     local_sub_id = metadata.get("subscription_id")
 
     payment = session.get(Payment, uuid.UUID(payment_id)) if payment_id else None
-    subscription = session.get(Subscription, uuid.UUID(local_sub_id)) if local_sub_id else None
+    subscription = (
+        session.get(Subscription, uuid.UUID(local_sub_id)) if local_sub_id else None
+    )
 
     # Se pagamento_status='paid', chamamos _common_success_logic
     # caso contrário, pode ser um 'cancel' ou 'unpaid'
@@ -445,10 +593,7 @@ def handle_checkout_session(session: Session, event: dict) -> None:
 
 
 def handle_success_callback(
-    session: Session,
-    checkout: CheckoutSession,
-    plan: SubscriptionPlan,
-    user: User
+    session: Session, checkout: CheckoutSession, plan: SubscriptionPlan, user: User
 ):
     """
     Rota de sucesso. Verifica no Stripe se está pago e chama a mesma
@@ -463,7 +608,9 @@ def handle_success_callback(
         local_sub_id = stripe_sess.get("metadata", {}).get("subscription_id")
 
         payment = session.get(Payment, uuid.UUID(payment_id)) if payment_id else None
-        subscription = session.get(Subscription, uuid.UUID(local_sub_id)) if local_sub_id else None
+        subscription = (
+            session.get(Subscription, uuid.UUID(local_sub_id)) if local_sub_id else None
+        )
 
         _common_success_logic(session, subscription, payment, stripe_subscription_id)
         # Também chamamos _validate_success_callback para criar/estender se não existir
@@ -476,10 +623,7 @@ def handle_success_callback(
 
 
 def handle_cancel_callback(
-    session: Session,
-    checkout: CheckoutSession,
-    plan: SubscriptionPlan,
-    user: User
+    session: Session, checkout: CheckoutSession, plan: SubscriptionPlan, user: User
 ):
     """
     Rota de cancelamento. Se não estiver pago, marcamos como cancelado.
@@ -516,6 +660,7 @@ def handle_cancel_callback(
 # LÓGICA COMPARTILHADA DE SUCESSO / CANCEL
 #
 
+
 def _common_success_logic(
     session: Session,
     subscription: Subscription | None,
@@ -537,9 +682,15 @@ def _common_success_logic(
 
         # Se quisermos puxar datas exatas da Stripe:
         if subscription.stripe_subscription_id:
-            stripe_sub = stripe.Subscription.retrieve(subscription.stripe_subscription_id)
-            subscription.start_date = datetime.fromtimestamp(stripe_sub.current_period_start)
-            subscription.end_date = datetime.fromtimestamp(stripe_sub.current_period_end)
+            stripe_sub = stripe.Subscription.retrieve(
+                subscription.stripe_subscription_id
+            )
+            subscription.start_date = datetime.fromtimestamp(
+                stripe_sub.current_period_start
+            )
+            subscription.end_date = datetime.fromtimestamp(
+                stripe_sub.current_period_end
+            )
 
     if payment:
         payment.payment_status = "paid"
@@ -565,7 +716,11 @@ def _common_cancel_logic(
     if payment and payment.payment_status not in ("paid", "refunded"):
         payment.payment_status = "canceled"
 
-    session.add_all([payment,])
+    session.add_all(
+        [
+            payment,
+        ]
+    )
     session.commit()
     if payment:
         session.refresh(payment)
@@ -575,11 +730,9 @@ def _common_cancel_logic(
 # VALIDATE SUCCESS
 #
 
+
 def _validate_success_callback(
-    session: Session,
-    checkout: CheckoutSession,
-    plan: SubscriptionPlan,
-    user: User
+    session: Session, checkout: CheckoutSession, plan: SubscriptionPlan, user: User
 ):
     """
     Marca checkout como 'complete' + 'paid'.
