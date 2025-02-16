@@ -71,8 +71,8 @@ def get_current_active_superuser(current_user: CurrentUser) -> User:
 
 
 def get_current_active_subscriber(
-    session: SessionDep,
-    current_user: CurrentUser,  # noqa
+    session: SessionDep,  # noqa
+    current_user: CurrentUser,
 ) -> User:
     # from app.api.utils import update_user_active_subscriptions
     # update_user_active_subscriptions(session, current_user)
