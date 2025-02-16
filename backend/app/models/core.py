@@ -181,6 +181,8 @@ class SubscriptionUpdate(SQLModel):
 
 
 class Subscription(SQLModel, table=True):
+    __tablename__ = "subscription"  # type: ignore
+    
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: uuid.UUID = Field(foreign_key="user.id")
     subscription_plan_id: uuid.UUID = Field(foreign_key="subscription_plan.id")
@@ -194,8 +196,8 @@ class Subscription(SQLModel, table=True):
 
     user: User = Relationship(back_populates="subscriptions")
     subscription_plan: SubscriptionPlan = Relationship(back_populates="subscriptions")
-    payment: "Payment" = Relationship(back_populates="subscription")
-    sessions: list["Session"] = Relationship(back_populates="subscription")
+    payments: list["Payment"] = Relationship(back_populates="subscription")
+    worker_sessions: list["WorkerSession"] = Relationship(back_populates="subscription")
 
     def need_to_deactivate(self) -> bool:
         """
@@ -257,6 +259,8 @@ class PaymentUpdate(SQLModel):
 
 
 class Payment(SQLModel, table=True):
+    __tablename__ = "payment"  # type: ignore
+    
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     subscription_id: uuid.UUID = Field(foreign_key="subscription.id")
     user_id: uuid.UUID = Field(foreign_key="user.id")
@@ -269,7 +273,7 @@ class Payment(SQLModel, table=True):
     )  # e.g., Stripe, BoaCompra
     transaction_id: str = Field(index=True)
 
-    subscription: Subscription = Relationship(back_populates="payment")
+    subscription: Subscription = Relationship(back_populates="payments")
     user: User = Relationship(back_populates="payments")
 
 
@@ -361,14 +365,13 @@ class SubscriptionPlansPublic(SQLModel):
     plans: list[SubscriptionPlanPublic] = []
 
 
-class Session(SQLModel, table=True):
+class WorkerSession(SQLModel, table=True):
+    __tablename__ = "worker_session"  # type: ignore
+    
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    subscription_id: uuid.UUID
-
-    status: str = Field(
-        default="starting", max_length=10
-    )  # Literal["starting", "running", "paused", "stopped", "failed", "completed"]
-
+    subscription_id: uuid.UUID = Field(foreign_key="subscription.id")
+    status: str = Field(default="starting", max_length=10)
+    
     # Metrics
     calculated_metrics: bool = False
     total_time: int = 0  # in seconds
@@ -379,14 +382,13 @@ class Session(SQLModel, table=True):
     average_time_per_apply: float = 0.0
     average_time_per_success: float = 0.0
     average_time_per_failed: float = 0.0
-
     crashes_count: int = 0
 
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     finished_at: datetime | None = Field(nullable=True)
 
-    subscription: Subscription = Relationship(back_populates="sessions")
-    applies: list["Apply"] = Relationship(back_populates="session", cascade_delete=True)
+    subscription: Subscription = Relationship(back_populates="worker_sessions")
+    applies: list["Apply"] = Relationship(back_populates="worker_session", cascade_delete=True)
 
     def update_metrics(self):
         """
@@ -427,8 +429,10 @@ class Session(SQLModel, table=True):
 
 
 class Apply(SQLModel, table=True):
+    __tablename__ = "apply" # type: ignore
+    
     id: int = Field(primary_key=True)
-    session_id: uuid.UUID
+    session_id: uuid.UUID = Field(foreign_key="worker_session.id")
     started_at: datetime
     total_time: int  # in seconds
     status: str = Field(
@@ -440,4 +444,4 @@ class Apply(SQLModel, table=True):
     company_name: str | None = Field(max_length=255, nullable=True)
     linkedin_url: str | None = Field(max_length=255, nullable=True)
 
-    session: Session = Relationship(back_populates="applies")
+    worker_session: WorkerSession = Relationship(back_populates="applies")
