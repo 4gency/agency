@@ -16,6 +16,8 @@ import type {
   CreateStripeCheckoutSessionResponse,
   StripeWebhookData,
   StripeWebhookResponse,
+  StripeCancelData,
+  StripeCancelResponse,
   GetConfigData,
   GetConfigResponse,
   UpdateConfigData,
@@ -213,6 +215,29 @@ export class CheckoutService {
       url: "/api/v1/checkout/stripe/webhook",
       headers: {
         "stripe-signature": data.stripeSignature,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Stripe Cancel
+   * Stripe cancel route: usuário retornou do Stripe pela URL de cancelamento.
+   * @param data The data for the request.
+   * @param data.sessionId
+   * @returns unknown Successful Response
+   * @throws ApiError
+   */
+  public static stripeCancel(
+    data: StripeCancelData,
+  ): CancelablePromise<StripeCancelResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/checkout/stripe/cancel",
+      query: {
+        session_id: data.sessionId,
       },
       errors: {
         422: "Validation Error",
@@ -807,7 +832,7 @@ export class UsersService {
 
   /**
    * Cancel User Subscription
-   * Cancel user subscription.
+   * Cancel user subscription (recurring payment).
    * @param data The data for the request.
    * @param data.subscriptionId
    * @returns Message Successful Response
@@ -830,7 +855,7 @@ export class UsersService {
 
   /**
    * Reactivate User Subscription
-   * Reactivate user subscription.
+   * Reactivate user subscription if still in 'cancel_at_period_end' window.
    * @param data The data for the request.
    * @param data.subscriptionId
    * @returns Message Successful Response
@@ -853,7 +878,7 @@ export class UsersService {
 
   /**
    * Cancel User Subscription By Id
-   * Cancel user subscription by id.
+   * Cancel user subscription by id (recurring payment on Stripe).
    * @param data The data for the request.
    * @param data.userId
    * @param data.subscriptionId
