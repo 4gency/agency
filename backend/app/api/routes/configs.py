@@ -13,7 +13,7 @@ router = APIRouter()
 
 @router.get("/{subscription_id}/job-preferences", response_model=ConfigPublic)
 def get_config(
-    current_user: CurrentUser,
+    current_user: CurrentUser,  # noqa
     subscription_id: uuid.UUID,
     nosql_session: NosqlSessionDep,
 ):
@@ -32,7 +32,7 @@ def get_config(
 
 @router.get("/{subscription_id}/resume", response_model=PlainTextResumePublic)
 def get_plain_text_resume(
-    current_user: CurrentUser,
+    current_user: CurrentUser,  # noqa
     subscription_id: uuid.UUID,
     nosql_session: NosqlSessionDep,
 ):
@@ -52,7 +52,7 @@ def get_plain_text_resume(
 @router.patch("/{subscription_id}/job-preferences", status_code=status.HTTP_200_OK)
 def update_config(
     *,
-    current_user: CurrentUser,
+    current_user: CurrentUser,  # noqa
     subscription_id: uuid.UUID,
     nosql_session: NosqlSessionDep,
     config_in: ConfigPublic,
@@ -83,7 +83,7 @@ def update_config(
 )
 def update_plain_text_resume(
     *,
-    current_user: CurrentUser,
+    current_user: CurrentUser,  # noqa
     subscription_id: uuid.UUID,
     nosql_session: NosqlSessionDep,
     resume_in: PlainTextResumePublic,

@@ -312,7 +312,7 @@ def update_subscription_plan(
 
 
 def deactivate_subscription_plan(
-    session: Session,
+    session: Session,  # noqa
     subscription_plan: SubscriptionPlan,
 ) -> None:
     """
@@ -752,7 +752,7 @@ def _validate_success_callback(
             select(Subscription)
             .where(Subscription.user_id == user.id)
             .where(Subscription.subscription_plan_id == plan.id)
-            .where(Subscription.is_active == True)
+            .where(Subscription.is_active is True)
         ).first()
 
         # 3) Cria ou atualiza a sub

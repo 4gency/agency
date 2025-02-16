@@ -9,12 +9,12 @@ engine = create_engine(str(settings.SQLALCHEMY_DATABASE_URI))
 
 def init_db(session: Session) -> str | None:
     # TODO: comment this out after first run
-    SQLModel.metadata.create_all(engine)
+    SQLModel.metadata.create_all(engine)  # noqa
     user = session.exec(
-        select(User).where(User.email == settings.FIRST_SUPERUSER)
+        select(User).where(User.email == settings.FIRST_SUPERUSER)  # noqa
     ).first()
     if not user:
-        user_in = UserCreate(
+        user_in = UserCreate(  # noqa
             email=settings.FIRST_SUPERUSER,
             password=settings.FIRST_SUPERUSER_PASSWORD,
             is_superuser=True,
