@@ -169,7 +169,7 @@ def delete_subscription_plan(
 
 def deactivate_subscription_plan(
     *, session: Session, db_subscription_plan: SubscriptionPlan
-):
+) -> None:
     db_subscription_plan.is_active = False
     session.add(db_subscription_plan)
     session.commit()

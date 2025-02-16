@@ -164,5 +164,5 @@ class PlainTextResume(Model):
     work_preferences: WorkPreferences = WorkPreferences()
 
     model_config = {
-        "collection": "plain_text_resumes",
+        "collection": "plain_text_resumes",  # type: ignore[typeddict-unknown-key]
     }

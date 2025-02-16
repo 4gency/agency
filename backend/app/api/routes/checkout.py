@@ -1,3 +1,4 @@
+from typing import Any
 from uuid import UUID
 
 import stripe
@@ -11,6 +12,7 @@ from app.models.core import (
     CheckoutSession,
     CheckoutSessionPublic,
     CheckoutSessionUpdate,
+    Message,
     SubscriptionPlan,
 )
 from app.models.crud import subscription as crud_subs
@@ -19,12 +21,12 @@ from app.utils import timestamp_to_datetime
 router = APIRouter()
 
 
-@router.post("/stripe/success")
+@router.post("/stripe/success", response_model=Message)
 def stripe_success(
     session: SessionDep,
     session_id: str,
     user: CurrentUser,
-):
+) -> Any:
     """
     Stripe success route: usuário retornou do Stripe com session_id.
     """
@@ -45,6 +47,12 @@ def stripe_success(
             detail="Subscription plan not found, please contact support!",
         )
 
+    if checkout.user_id != user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Checkout session does not belong to the authenticated user",
+        )
+
     stripe_controller.handle_success_callback(session, checkout, plan, user)
 
     return {"message": "Success callback processed"}
@@ -57,7 +65,7 @@ def get_stripe_checkout_session_by_id(
     session: SessionDep,
     session_id: UUID,
     user: CurrentUser,
-):
+) -> Any:
     """
     Get Stripe checkout session by ID.
     """
@@ -77,7 +85,7 @@ def get_stripe_checkout_sessions(
     user: CurrentUser,
     skip: int = 0,
     limit: int = 30,
-):
+) -> Any:
     """
     Get Stripe checkout sessions.
     """
@@ -98,7 +106,7 @@ def create_stripe_checkout_session(
     session: SessionDep,
     subscription_plan_id: UUID,
     user: CurrentUser,
-) -> CheckoutSession:
+) -> Any:
     """
     Create Stripe checkout session.
     """
@@ -147,7 +155,7 @@ def create_stripe_checkout_session(
 )
 def update_stripe_checkout_session(
     session: SessionDep, session_id: UUID, checkout_session: CheckoutSessionUpdate
-):
+) -> Any:
     """
     Update Stripe checkout session.
     """
@@ -164,15 +172,15 @@ def update_stripe_checkout_session(
     return CheckoutSessionPublic.model_validate(checkout)
 
 
-@router.post("/stripe/webhook")
+@router.post("/stripe/webhook", response_model=Message)
 async def stripe_webhook(
     request: Request,
     session: SessionDep,
     stripe_signature: str = Header(None),
-):
+) -> Any:
     payload = await request.body()
     try:
-        event = stripe.Webhook.construct_event(
+        event: stripe.Event = stripe.Webhook.construct_event(  # type: ignore[no-untyped-call]
             payload=payload,
             sig_header=stripe_signature,
             secret=settings.STRIPE_WEBHOOK_SECRET,
@@ -188,15 +196,15 @@ async def stripe_webhook(
     else:
         print(f"Unhandled event type: {event_type}")
 
-    return {"status": "success"}
+    return {"message": "success"}
 
 
-@router.post("/stripe/cancel")
+@router.post("/stripe/cancel", response_model=Message)
 def stripe_cancel(
     session: SessionDep,
     session_id: str,
     user: CurrentUser,
-):
+) -> Any:
     """
     Stripe cancel route: usuário retornou do Stripe pela URL de cancelamento.
     """
@@ -220,7 +228,13 @@ def stripe_cancel(
             detail="Subscription plan not found, please contact support!",
         )
 
+    if checkout.user_id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Checkout session does not belong to the authenticated user",
+        )
+
     # 3) Chama a função do "stripe_controller" para tratar cancelamento
-    stripe_controller.handle_cancel_callback(session, checkout, plan, user)
+    stripe_controller.handle_cancel_callback(session, checkout)
 
     return {"message": "Cancel callback processed"}
