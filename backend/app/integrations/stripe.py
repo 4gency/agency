@@ -622,9 +622,7 @@ def handle_success_callback(
         raise BadRequest("Checkout session payment status is not 'paid'")
 
 
-def handle_cancel_callback(
-    session: Session, checkout: CheckoutSession, plan: SubscriptionPlan, user: User
-):
+def handle_cancel_callback(session: Session, checkout: CheckoutSession):
     """
     Rota de cancelamento. Se não estiver pago, marcamos como cancelado.
     Caso já tenha sido pago, ignoramos.

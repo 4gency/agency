@@ -226,7 +226,13 @@ def stripe_cancel(
             detail="Subscription plan not found, please contact support!",
         )
 
+    if checkout.user_id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Checkout session does not belong to the authenticated user",
+        )
+
     # 3) Chama a função do "stripe_controller" para tratar cancelamento
-    stripe_controller.handle_cancel_callback(session, checkout, plan, user)
+    stripe_controller.handle_cancel_callback(session, checkout)
 
     return {"message": "Cancel callback processed"}
