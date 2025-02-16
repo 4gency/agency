@@ -85,7 +85,7 @@ export class CheckoutService {
    * Stripe success route: usuário retornou do Stripe com session_id.
    * @param data The data for the request.
    * @param data.sessionId
-   * @returns unknown Successful Response
+   * @returns Message Successful Response
    * @throws ApiError
    */
   public static stripeSuccess(
@@ -204,7 +204,7 @@ export class CheckoutService {
    * Stripe Webhook
    * @param data The data for the request.
    * @param data.stripeSignature
-   * @returns unknown Successful Response
+   * @returns Message Successful Response
    * @throws ApiError
    */
   public static stripeWebhook(
@@ -227,7 +227,7 @@ export class CheckoutService {
    * Stripe cancel route: usuário retornou do Stripe pela URL de cancelamento.
    * @param data The data for the request.
    * @param data.sessionId
-   * @returns unknown Successful Response
+   * @returns Message Successful Response
    * @throws ApiError
    */
   public static stripeCancel(

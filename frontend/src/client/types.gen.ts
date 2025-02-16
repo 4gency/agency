@@ -326,7 +326,7 @@ export type StripeSuccessData = {
   sessionId: string
 }
 
-export type StripeSuccessResponse = unknown
+export type StripeSuccessResponse = Message
 
 export type GetStripeCheckoutSessionByIdData = {
   sessionId: string
@@ -358,13 +358,13 @@ export type StripeWebhookData = {
   stripeSignature?: string
 }
 
-export type StripeWebhookResponse = unknown
+export type StripeWebhookResponse = Message
 
 export type StripeCancelData = {
   sessionId: string
 }
 
-export type StripeCancelResponse = unknown
+export type StripeCancelResponse = Message
 
 export type GetConfigData = {
   subscriptionId: string
