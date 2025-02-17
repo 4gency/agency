@@ -74,17 +74,11 @@ def get_current_active_subscriber(
     session: SessionDep,  # noqa
     current_user: CurrentUser,
 ) -> User:
-    # from app.api.utils import update_user_active_subscriptions
-    # update_user_active_subscriptions(session, current_user)
-    subscriptions = current_user.subscriptions
-
-    for sub in subscriptions:
-        if sub.is_active:
-            return current_user
-    else:
+    if not current_user.is_subscriber:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="The user is not a subscriber"
         )
+    return current_user
 
 
 CurrentSubscriber = Annotated[User, Depends(get_current_active_subscriber)]

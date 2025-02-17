@@ -778,6 +778,9 @@ def _validate_success_callback(
             session.add(subscription)
             session.flush()
 
+        user.is_subscriber = True
+        session.add(user)
+
         # 4) Verifica Payment
         existing_payment = session.exec(
             select(Payment).where(Payment.transaction_id == checkout.session_id)
