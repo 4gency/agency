@@ -32,6 +32,8 @@ if settings.SENTRY_DSN and settings.ENVIRONMENT != "local":
 
 if settings.STRIPE_SECRET_KEY:
     stripe.api_key = settings.STRIPE_SECRET_KEY
+elif settings.ENVIRONMENT != "local":
+    raise ValueError("Stripe secret key is not set")
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
