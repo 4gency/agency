@@ -142,12 +142,14 @@ services:
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER?Variable not set}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Variable not set}
-      - MONGODB_SERVER=${MONGODB_SERVER? Variable not set}
+      - MONGODB_SERVER=mongodb
       - MONGODB_PORT=${MONGODB_PORT? Variable not set}
       - MONGODB_DB=${MONGODB_DB? Variable not set}
       - MONGODB_USER=${MONGODB_USER? Variable not set}
       - MONGODB_PASSWORD=${MONGODB_PASSWORD? Variable not set}
       - SENTRY_DSN=${SENTRY_DSN}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
 
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/utils/health-check/"]
