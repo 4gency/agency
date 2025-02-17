@@ -325,6 +325,19 @@ def deactivate_subscription_plan(
     stripe.Product.modify(subscription_plan.stripe_product_id, active=False)
 
 
+def setup_plan_in_stripe(
+    session: Session,
+    subscription_plan: SubscriptionPlan,
+) -> None:
+    """
+    Cria ou atualiza Product/Price na Stripe para o SubscriptionPlan.
+    """
+    if not subscription_plan.stripe_product_id or not subscription_plan.stripe_price_id:
+        create_subscription_plan(session, subscription_plan)
+    else:
+        update_subscription_plan(session, subscription_plan)
+
+
 # --------------------------------------------------
 # 4) Funções de Checkout / Customer
 # --------------------------------------------------
@@ -366,7 +379,7 @@ def create_checkout_subscription_session(
     customer_id = ensure_stripe_customer(session, user)
 
     if not subscription_plan.stripe_price_id:
-        raise BadRequest("Subscription plan is not set up in Stripe.")
+        setup_plan_in_stripe(session, subscription_plan)
 
     # Cria checkout session
     checkout_session = stripe.checkout.Session.create(
