@@ -1,26 +1,30 @@
 import uuid
 from datetime import datetime, timedelta, timezone
+from typing import Any
 
 from app.api.utils import update_user_active_subscriptions
 from app.models.core import Subscription, SubscriptionMetric, User
 
-class DummySession:
-    def __init__(self):
-        self.commits = 0
-        self.added = []
-        self.refreshed = []
 
-    def add(self, obj):
+class DummySession:
+    def __init__(self) -> None:
+        self.commits: int = 0
+        self.added: list[Any] = []
+        self.refreshed: list[Any] = []
+
+    def add(self, obj: Any) -> None:
         self.added.append(obj)
 
-    def commit(self):
+    def commit(self) -> None:
         self.commits += 1
 
-    def refresh(self, obj):
+    def refresh(self, obj: Any) -> None:
         self.refreshed.append(obj)
 
 
-def test_update_user_active_subscriptions_deactivates_expired_and_applies_subscriptions():
+def test_update_user_active_subscriptions_deactivates_expired_and_applies_subscriptions() -> (
+    None
+):
     now = datetime.now(timezone.utc)
 
     expired_subscription = Subscription(
@@ -84,7 +88,7 @@ def test_update_user_active_subscriptions_deactivates_expired_and_applies_subscr
 
     dummy_session = DummySession()
 
-    update_user_active_subscriptions(dummy_session, user)
+    update_user_active_subscriptions(dummy_session, user)  # type: ignore
 
     assert expired_subscription.is_active is False
     assert applies_subscription.is_active is False
@@ -99,7 +103,7 @@ def test_update_user_active_subscriptions_deactivates_expired_and_applies_subscr
     assert dummy_session.refreshed.count(user) == 2
 
 
-def test_update_user_active_subscriptions_no_deactivation():
+def test_update_user_active_subscriptions_no_deactivation() -> None:
     now = datetime.now(timezone.utc)
 
     active_subscription = Subscription(
@@ -123,7 +127,7 @@ def test_update_user_active_subscriptions_no_deactivation():
 
     dummy_session = DummySession()
 
-    update_user_active_subscriptions(dummy_session, user)
+    update_user_active_subscriptions(dummy_session, user)  # type: ignore
 
     assert active_subscription.is_active is True
 

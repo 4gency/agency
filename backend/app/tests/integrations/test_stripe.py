@@ -1,84 +1,85 @@
 import uuid
-import pytest
 from datetime import datetime, timedelta, timezone
+from typing import Any
 from unittest.mock import MagicMock
+
+import pytest
 import stripe
 
-from app.models.core import (
-    CheckoutSession,
-    SubscriptionPlan,
-    SubscriptionMetric,
-    Subscription,
-    User,
-    Payment,
-)
 from app.integrations.stripe import (
     BadRequest,
     NotFound,
-    create_subscription_plan,
-    ensure_stripe_customer,
-    update_subscription_payment,
     cancel_subscription,
-    reactivate_subscription,
-    handle_checkout_session,
-    update_subscription_plan,
-    deactivate_subscription_plan,
-    create_checkout_subscription_session,
     cancel_subscription_recurring_payment,
-    handle_success_callback,
+    create_checkout_subscription_session,
+    create_subscription_plan,
+    deactivate_subscription_plan,
+    ensure_stripe_customer,
     handle_cancel_callback,
-    integration_enabled,
+    handle_checkout_session,
+    handle_success_callback,
+    reactivate_subscription,
+    update_subscription_payment,
+    update_subscription_plan,
+)
+from app.models.core import (
+    CheckoutSession,
+    Payment,
+    Subscription,
+    SubscriptionMetric,
+    SubscriptionPlan,
+    User,
 )
 
 
 @pytest.fixture(scope="session", autouse=True)
-def set_stripe_api_key():
+def set_stripe_api_key() -> None:
     stripe.api_key = "sk_test_dummy"
 
 
 @pytest.fixture(autouse=True)
-def mock_integration_enabled(mocker):
+def mock_integration_enabled(mocker: Any) -> None:
     mocker.patch("app.integrations.stripe.integration_enabled", return_value=True)
 
 
 @pytest.fixture
-def dummy_session():
+def dummy_session() -> Any:
     class DummySession:
-        def __init__(self):
-            self.added = []
-            self.commits = 0
-            self.refreshed = []
-            self.data = {}
+        def __init__(self) -> None:
+            self.added: list[Any] = []
+            self.commits: int = 0
+            self.refreshed: list[Any] = []
+            self.data: dict[Any, Any] = {}
 
-        def add_all(self, objs):
+        def add_all(self, objs: Any) -> None:
             self.added.extend(objs)
 
-        def add(self, obj):
+        def add(self, obj: Any) -> None:
             self.added.append(obj)
 
-        def commit(self):
+        def commit(self) -> None:
             self.commits += 1
 
-        def refresh(self, obj):
+        def refresh(self, obj: Any) -> None:
             self.refreshed.append(obj)
 
-        def exec(self, statement):
+        def exec(self, statement: Any) -> MagicMock:
             return MagicMock(first=lambda: None)
 
-        def get(self, model, primary_key):
+        def get(self, model: Any, primary_key: Any) -> Any:
             return self.data.get((model, primary_key), None)
 
-        def flush(self):
+        def flush(self) -> None:
             pass
 
-        def rollback(self):
+        def rollback(self) -> None:
             pass
 
     return DummySession()
 
 
 @pytest.fixture
-def mock_stripe_core_calls(mocker):
+def mock_stripe_core_calls(mocker: Any) -> None:
     product_mock = MagicMock()
     product_mock.id = "prod_mock_id"
     mocker.patch("stripe.Product.create", return_value=product_mock)
@@ -103,7 +104,7 @@ def mock_stripe_core_calls(mocker):
 
 
 @pytest.fixture(autouse=True)
-def mock_all_stripe_calls(mocker):
+def mock_all_stripe_calls(mocker: Any) -> None:
     pm = MagicMock(id="prod_mock_id")
     mocker.patch("stripe.Product.create", return_value=pm)
     mocker.patch("stripe.Product.modify", return_value=pm)
@@ -137,7 +138,7 @@ def mock_all_stripe_calls(mocker):
     ch.id = "sess_mock_id"
     ch.payment_status = "unpaid"
 
-    def checkout_get_side_effect(key, default=None):
+    def checkout_get_side_effect(key: Any, default: Any = None) -> Any:
         if key == "subscription":
             return "sub_mock_id"
         elif key == "metadata":
@@ -149,7 +150,7 @@ def mock_all_stripe_calls(mocker):
     mocker.patch("stripe.checkout.Session.retrieve", return_value=ch)
 
 
-def test_create_subscription_plan_invalid_currency(dummy_session, mock_stripe_core_calls):
+def test_create_subscription_plan_invalid_currency(dummy_session: Any) -> None:
     plan = SubscriptionPlan(
         id=uuid.uuid4(),
         name="Test Plan",
@@ -165,7 +166,7 @@ def test_create_subscription_plan_invalid_currency(dummy_session, mock_stripe_co
     assert "Invalid currency" in str(exc.value)
 
 
-def test_create_subscription_plan_success(dummy_session, mock_stripe_core_calls):
+def test_create_subscription_plan_success(dummy_session: Any) -> None:
     plan = SubscriptionPlan(
         id=uuid.uuid4(),
         name="Test Plan",
@@ -182,12 +183,12 @@ def test_create_subscription_plan_success(dummy_session, mock_stripe_core_calls)
     assert dummy_session.commits == 1
 
 
-def test_ensure_stripe_customer_already_exists(dummy_session, mock_stripe_core_calls):
+def test_ensure_stripe_customer_already_exists(dummy_session: Any) -> None:
     user = User(
         id=uuid.uuid4(),
         email="test@example.com",
         hashed_password="abc123",
-        stripe_customer_id="existing_customer_id"
+        stripe_customer_id="existing_customer_id",
     )
     dummy_session.data[(User, user.id)] = user
     r = ensure_stripe_customer(dummy_session, user)
@@ -195,16 +196,12 @@ def test_ensure_stripe_customer_already_exists(dummy_session, mock_stripe_core_c
     assert dummy_session.commits == 0
 
 
-def test_ensure_stripe_customer_new(dummy_session, mocker, mock_stripe_core_calls):
+def test_ensure_stripe_customer_new(dummy_session: Any, mocker: Any) -> None:
     c = MagicMock()
     c.id = "cust_mock_id"
     mocker.patch("stripe.Customer.create", return_value=c)
 
-    user = User(
-        id=uuid.uuid4(),
-        email="test@example.com",
-        hashed_password="abc123"
-    )
+    user = User(id=uuid.uuid4(), email="test@example.com", hashed_password="abc123")
     dummy_session.data[(User, user.id)] = user
 
     r = ensure_stripe_customer(dummy_session, user)
@@ -213,7 +210,7 @@ def test_ensure_stripe_customer_new(dummy_session, mocker, mock_stripe_core_call
     assert dummy_session.commits == 1
 
 
-def test_update_subscription_payment_no_stripe_id(dummy_session, mock_stripe_core_calls):
+def test_update_subscription_payment_no_stripe_id(dummy_session: Any) -> None:
     sub = Subscription(
         id=uuid.uuid4(),
         user_id=uuid.uuid4(),
@@ -233,7 +230,7 @@ def test_update_subscription_payment_no_stripe_id(dummy_session, mock_stripe_cor
         currency="USD",
         payment_date=datetime.now(timezone.utc),
         payment_status="pending",
-        transaction_id="trx123"
+        transaction_id="trx123",
     )
     dummy_session.data[(Subscription, sub.id)] = sub
     dummy_session.data[(Payment, pay.id)] = pay
@@ -242,7 +239,7 @@ def test_update_subscription_payment_no_stripe_id(dummy_session, mock_stripe_cor
     assert "does not have a Stripe Subscription ID" in str(exc.value)
 
 
-def test_update_subscription_payment_success(dummy_session, mocker):
+def test_update_subscription_payment_success(dummy_session: Any, mocker: Any) -> None:
     sub_mock = MagicMock()
     sub_mock.status = "active"
     sub_mock.current_period_start = 1234567890
@@ -277,7 +274,7 @@ def test_update_subscription_payment_success(dummy_session, mocker):
         currency="USD",
         payment_date=datetime.now(timezone.utc),
         payment_status="pending",
-        transaction_id="trx123"
+        transaction_id="trx123",
     )
     dummy_session.data[(Subscription, s.id)] = s
     dummy_session.data[(Payment, p.id)] = p
@@ -289,7 +286,7 @@ def test_update_subscription_payment_success(dummy_session, mocker):
     assert dummy_session.commits == 1
 
 
-def test_cancel_subscription_no_stripe_id(dummy_session):
+def test_cancel_subscription_no_stripe_id(dummy_session: Any) -> None:
     s = Subscription(
         id=uuid.uuid4(),
         user_id=uuid.uuid4(),
@@ -306,7 +303,7 @@ def test_cancel_subscription_no_stripe_id(dummy_session):
         cancel_subscription(dummy_session, s)
 
 
-def test_cancel_subscription_success(dummy_session, mocker):
+def test_cancel_subscription_success(dummy_session: Any, mocker: Any) -> None:
     mr = MagicMock()
     mr.status = "active"
     mr.ended_at = None
@@ -331,7 +328,7 @@ def test_cancel_subscription_success(dummy_session, mocker):
     assert dummy_session.commits == 1
 
 
-def test_handle_checkout_session_paid(dummy_session, mocker):
+def test_handle_checkout_session_paid(dummy_session: Any, mocker: Any) -> None:
     sm = MagicMock()
     sm.status = "active"
     sm.current_period_start = 1234567890
@@ -352,8 +349,8 @@ def test_handle_checkout_session_paid(dummy_session, mocker):
             }
         }
     }
-    sub_id = uuid.UUID(evt["data"]["object"]["metadata"]["subscription_id"])
-    pay_id = uuid.UUID(evt["data"]["object"]["metadata"]["payment_id"])
+    sub_id = uuid.UUID(evt["data"]["object"]["metadata"]["subscription_id"])  # type: ignore
+    pay_id = uuid.UUID(evt["data"]["object"]["metadata"]["payment_id"])  # type: ignore
     s = Subscription(
         id=sub_id,
         user_id=uuid.uuid4(),
@@ -373,7 +370,7 @@ def test_handle_checkout_session_paid(dummy_session, mocker):
         currency="USD",
         payment_date=datetime.now(timezone.utc),
         payment_status="pending",
-        transaction_id="trx_mock_id"
+        transaction_id="trx_mock_id",
     )
     dummy_session.data[(Subscription, s.id)] = s
     dummy_session.data[(Payment, p.id)] = p
@@ -384,7 +381,7 @@ def test_handle_checkout_session_paid(dummy_session, mocker):
     assert dummy_session.commits == 1
 
 
-def test_handle_checkout_session_unpaid(dummy_session):
+def test_handle_checkout_session_unpaid(dummy_session: Any) -> None:
     evt = {
         "data": {
             "object": {
@@ -396,7 +393,7 @@ def test_handle_checkout_session_unpaid(dummy_session):
             }
         }
     }
-    pay_id = uuid.UUID(evt["data"]["object"]["metadata"]["payment_id"])
+    pay_id = uuid.UUID(evt["data"]["object"]["metadata"]["payment_id"])  # type: ignore
     p = Payment(
         id=pay_id,
         subscription_id=uuid.uuid4(),
@@ -405,7 +402,7 @@ def test_handle_checkout_session_unpaid(dummy_session):
         currency="USD",
         payment_date=datetime.now(timezone.utc),
         payment_status="pending",
-        transaction_id="trx_mock_id"
+        transaction_id="trx_mock_id",
     )
     dummy_session.data[(Payment, p.id)] = p
     handle_checkout_session(dummy_session, evt)
@@ -413,7 +410,7 @@ def test_handle_checkout_session_unpaid(dummy_session):
     assert dummy_session.commits == 1
 
 
-def test_reactivate_subscription_canceled(dummy_session, mocker):
+def test_reactivate_subscription_canceled(dummy_session: Any, mocker: Any) -> None:
     sub_m = MagicMock()
     sub_m.status = "canceled"
     sub_m.cancel_at_period_end = False
@@ -437,7 +434,7 @@ def test_reactivate_subscription_canceled(dummy_session, mocker):
     assert dummy_session.commits == 0
 
 
-def test_reactivate_subscription_success(dummy_session, mocker):
+def test_reactivate_subscription_success(dummy_session: Any, mocker: Any) -> None:
     sub_m = MagicMock()
     sub_m.status = "active"
     sub_m.cancel_at_period_end = True
@@ -465,12 +462,18 @@ def test_reactivate_subscription_success(dummy_session, mocker):
     assert dummy_session.commits == 1
 
 
-def test_update_subscription_plan_creates_if_none(dummy_session, mocker):
-    def create_plan_side_effect(session, plan):
+def test_update_subscription_plan_creates_if_none(
+    dummy_session: Any, mocker: Any
+) -> None:
+    def create_plan_side_effect(session: Any, plan: Any) -> Any:
+        assert plan
         session.commits += 1
         return (MagicMock(), MagicMock())
 
-    mc = mocker.patch("app.integrations.stripe.create_subscription_plan", side_effect=create_plan_side_effect)
+    mc = mocker.patch(
+        "app.integrations.stripe.create_subscription_plan",
+        side_effect=create_plan_side_effect,
+    )
 
     pl = SubscriptionPlan(
         id=uuid.uuid4(),
@@ -490,7 +493,7 @@ def test_update_subscription_plan_creates_if_none(dummy_session, mocker):
     assert dummy_session.commits == 1
 
 
-def test_update_subscription_plan_update_price(dummy_session, mocker):
+def test_update_subscription_plan_update_price(dummy_session: Any, mocker: Any) -> None:
     pm = MagicMock()
     pm.id = "existing_prod_id"
     mocker.patch("stripe.Product.modify", return_value=pm)
@@ -521,7 +524,7 @@ def test_update_subscription_plan_update_price(dummy_session, mocker):
     assert dummy_session.commits == 1
 
 
-def test_update_subscription_plan_invalid_metric(dummy_session):
+def test_update_subscription_plan_invalid_metric(dummy_session: Any) -> None:
     pl = SubscriptionPlan(
         id=uuid.uuid4(),
         name="Invalid Plan",
@@ -538,7 +541,7 @@ def test_update_subscription_plan_invalid_metric(dummy_session):
     assert "Invalid metric value" in str(e.value)
 
 
-def test_deactivate_subscription_plan_success(dummy_session, mocker):
+def test_deactivate_subscription_plan_success(dummy_session: Any, mocker: Any) -> None:
     pm = MagicMock()
     pm.id = "prod_mock_deactivated"
     mocker.patch("stripe.Product.modify", return_value=pm)
@@ -553,10 +556,10 @@ def test_deactivate_subscription_plan_success(dummy_session, mocker):
     )
     dummy_session.data[(SubscriptionPlan, pl.id)] = pl
     deactivate_subscription_plan(dummy_session, pl)
-    stripe.Product.modify.assert_called_once_with("existing_prod_id", active=False)
+    stripe.Product.modify.assert_called_once_with("existing_prod_id", active=False)  # type: ignore
 
 
-def test_deactivate_subscription_plan_not_found(dummy_session):
+def test_deactivate_subscription_plan_not_found(dummy_session: Any) -> None:
     pl = SubscriptionPlan(
         id=uuid.uuid4(),
         name="Plan Without Product ID",
@@ -569,7 +572,7 @@ def test_deactivate_subscription_plan_not_found(dummy_session):
         deactivate_subscription_plan(dummy_session, pl)
 
 
-def test_create_checkout_subscription_session_missing_price(dummy_session, mocker):
+def test_create_checkout_subscription_session_missing_price(dummy_session: Any) -> None:
     pl = SubscriptionPlan(
         id=uuid.uuid4(),
         name="Plan Missing Price",
@@ -597,8 +600,12 @@ def test_create_checkout_subscription_session_missing_price(dummy_session, mocke
     assert "Subscription plan is not set up in Stripe" in str(e.value)
 
 
-def test_create_checkout_subscription_session_success(dummy_session, mocker):
-    me = mocker.patch("app.integrations.stripe.ensure_stripe_customer", return_value="cust_mock_id")
+def test_create_checkout_subscription_session_success(
+    dummy_session: Any, mocker: Any
+) -> None:
+    me = mocker.patch(
+        "app.integrations.stripe.ensure_stripe_customer", return_value="cust_mock_id"
+    )
     sess_m = MagicMock()
     sess_m.id = "sess_mock_id"
     mocker.patch("stripe.checkout.Session.create", return_value=sess_m)
@@ -632,11 +639,11 @@ def test_create_checkout_subscription_session_success(dummy_session, mocker):
     dummy_session.data[(Payment, pay.id)] = pay
     cs = create_checkout_subscription_session(dummy_session, pl, u, pay)
     me.assert_called_once_with(dummy_session, u)
-    stripe.checkout.Session.create.assert_called_once()
+    stripe.checkout.Session.create.assert_called_once()  # type: ignore
     assert cs.id == "sess_mock_id"
 
 
-def test_cancel_subscription_recurring_payment_no_id(dummy_session):
+def test_cancel_subscription_recurring_payment_no_id(dummy_session: Any) -> None:
     s = Subscription(
         id=uuid.uuid4(),
         user_id=uuid.uuid4(),
@@ -653,7 +660,9 @@ def test_cancel_subscription_recurring_payment_no_id(dummy_session):
         cancel_subscription_recurring_payment(dummy_session, s, True)
 
 
-def test_cancel_subscription_recurring_payment_already_canceled(dummy_session, mocker):
+def test_cancel_subscription_recurring_payment_already_canceled(
+    dummy_session: Any, mocker: Any
+) -> None:
     sm = MagicMock()
     sm.status = "canceled"
     mocker.patch("stripe.Subscription.retrieve", return_value=sm)
@@ -673,7 +682,9 @@ def test_cancel_subscription_recurring_payment_already_canceled(dummy_session, m
     assert "already fully canceled" in str(e.value)
 
 
-def test_cancel_subscription_recurring_payment_cancel_at_period_end_true(dummy_session, mocker):
+def test_cancel_subscription_recurring_payment_cancel_at_period_end_true(
+    dummy_session: Any, mocker: Any
+) -> None:
     sr = MagicMock()
     sr.status = "active"
     sr.cancel_at_period_end = False
@@ -703,7 +714,9 @@ def test_cancel_subscription_recurring_payment_cancel_at_period_end_true(dummy_s
     assert dummy_session.commits == 1
 
 
-def test_cancel_subscription_recurring_payment_cancel_at_period_end_false(dummy_session, mocker):
+def test_cancel_subscription_recurring_payment_cancel_at_period_end_false(
+    dummy_session: Any, mocker: Any
+) -> None:
     sr = MagicMock()
     sr.status = "active"
     sr.ended_at = None
@@ -733,7 +746,7 @@ def test_cancel_subscription_recurring_payment_cancel_at_period_end_false(dummy_
     assert dummy_session.commits == 1
 
 
-def test_handle_success_callback_not_paid(dummy_session, mocker):
+def test_handle_success_callback_not_paid(dummy_session: Any, mocker: Any) -> None:
     c = CheckoutSession(
         id=uuid.uuid4(),
         session_id="sess_123",
@@ -744,7 +757,7 @@ def test_handle_success_callback_not_paid(dummy_session, mocker):
         created_at=datetime.now(timezone.utc),
         expires_at=datetime.now(timezone.utc) + timedelta(days=1),
         updated_at=datetime.now(timezone.utc),
-        session_url="https://example.com/checkout/sess_123"
+        session_url="https://example.com/checkout/sess_123",
     )
     pl = SubscriptionPlan(id=uuid.uuid4(), name="Test Plan", price=10.0, currency="USD")
     u = User(id=uuid.uuid4(), email="user@example.com", hashed_password="abc")
@@ -757,21 +770,25 @@ def test_handle_success_callback_not_paid(dummy_session, mocker):
     dummy_session.data[(SubscriptionPlan, pl.id)] = pl
     dummy_session.data[(User, u.id)] = u
 
-    from app.integrations.stripe import handle_success_callback, BadRequest
+    from app.integrations.stripe import BadRequest, handle_success_callback
+
     with pytest.raises(BadRequest) as e:
         handle_success_callback(dummy_session, c, pl, u)
     assert "not 'paid'" in str(e.value)
 
 
-def test_handle_success_callback_paid(dummy_session, mocker):
+def test_handle_success_callback_paid(dummy_session: Any, mocker: Any) -> None:
     sm = MagicMock()
     sm.payment_status = "paid"
 
-    def sess_mock_get_side_effect(k, d=None):
+    def sess_mock_get_side_effect(k: Any, d: Any = None) -> Any:
         if k == "subscription":
             return "sub_mock_id"
         elif k == "metadata":
-            return {"payment_id": str(uuid.uuid4()), "subscription_id": str(uuid.uuid4())}
+            return {
+                "payment_id": str(uuid.uuid4()),
+                "subscription_id": str(uuid.uuid4()),
+            }
         return d
 
     sm.get.side_effect = sess_mock_get_side_effect
@@ -795,13 +812,12 @@ def test_handle_success_callback_paid(dummy_session, mocker):
     dummy_session.data[(SubscriptionPlan, pl.id)] = pl
     dummy_session.data[(User, u.id)] = u
 
-    from app.integrations.stripe import handle_success_callback
     r = handle_success_callback(dummy_session, c, pl, u)
     assert "Success callback processed" in r["message"]
     assert dummy_session.commits == 2
 
 
-def test_handle_cancel_callback_already_processed(dummy_session):
+def test_handle_cancel_callback_already_processed(dummy_session: Any) -> None:
     c = CheckoutSession(
         id=uuid.uuid4(),
         session_id="sess_123",
@@ -812,16 +828,15 @@ def test_handle_cancel_callback_already_processed(dummy_session):
         created_at=datetime.now(timezone.utc),
         expires_at=datetime.now(timezone.utc) + timedelta(days=1),
         updated_at=datetime.now(timezone.utc),
-        session_url="https://example.com/checkout/sess_123"
+        session_url="https://example.com/checkout/sess_123",
     )
     dummy_session.data[(CheckoutSession, c.id)] = c
-    from app.integrations.stripe import handle_cancel_callback
     r = handle_cancel_callback(dummy_session, c)
     assert "Already processed" in r["message"]
     assert dummy_session.commits == 0
 
 
-def test_handle_cancel_callback_not_paid(dummy_session, mocker):
+def test_handle_cancel_callback_not_paid(dummy_session: Any, mocker: Any) -> None:
     c = CheckoutSession(
         id=uuid.uuid4(),
         session_id="sess_456",
@@ -832,7 +847,7 @@ def test_handle_cancel_callback_not_paid(dummy_session, mocker):
         created_at=datetime.now(timezone.utc),
         expires_at=datetime.now(timezone.utc) + timedelta(days=1),
         updated_at=datetime.now(timezone.utc),
-        session_url="https://example.com/checkout/sess_456"
+        session_url="https://example.com/checkout/sess_456",
     )
     p = Payment(
         id=uuid.uuid4(),
@@ -850,7 +865,7 @@ def test_handle_cancel_callback_not_paid(dummy_session, mocker):
     sm = MagicMock()
     sm.payment_status = "unpaid"
 
-    def sess_mock_get_side_effect(k, d=None):
+    def sess_mock_get_side_effect(k: Any, d: Any = None) -> Any:
         if k == "metadata":
             return {"payment_id": str(p.id)}
         return d
@@ -858,7 +873,6 @@ def test_handle_cancel_callback_not_paid(dummy_session, mocker):
     sm.get.side_effect = sess_mock_get_side_effect
     mocker.patch("stripe.checkout.Session.retrieve", return_value=sm)
 
-    from app.integrations.stripe import handle_cancel_callback
     r = handle_cancel_callback(dummy_session, c)
     assert "Cancel callback processed" in r["message"]
     assert p.payment_status == "canceled"

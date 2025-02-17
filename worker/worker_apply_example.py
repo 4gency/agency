@@ -20,7 +20,7 @@ class optional_instance:
 
     def __init__(self, func):
         self.func = func
-        wraps(func)(self)
+        wraps(func)(self) # type: ignore
 
     def __get__(self, instance, owner):
         if instance is None:
