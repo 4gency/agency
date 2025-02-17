@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "lambdagency backend"
+name = "lambdagency-backend"
 version = "0.1.2"
 description = ""
 authors = ["Gustavo Carvalho <99373133+gustavosett@users.noreply.github.com>"]
