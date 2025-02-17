@@ -72,7 +72,7 @@ fastapi dev app/main.py
 
 When you start the Docker Compose stack, it uses `localhost` by default, with different ports for each service (backend, frontend, adminer, etc).
 
-When you deploy it to production (or staging), it will deploy each service in a different subdomain, like `api.example.com` for the backend and `dashboard.example.com` for the frontend.
+When you deploy it to production (or staging), it will deploy each service in a different subdomain, like `api.example.com` for the backend and `example.com` for the frontend.
 
 In the guide about [deployment](deployment.md) you can read about Traefik, the configured proxy. That's the component in charge of transmitting traffic to each service based on the subdomain.
 
