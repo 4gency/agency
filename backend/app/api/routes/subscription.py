@@ -138,8 +138,11 @@ def delete_subscription_plan(
     )
 
     if stripe.integration_enabled():
-        stripe.deactivate_subscription_plan(
-            session=session,
-            subscription_plan=subscription_plan,
-        )
+        try:
+            stripe.deactivate_subscription_plan(
+                session=session,
+                subscription_plan=subscription_plan,
+            )
+        except stripe.NotFound:
+            pass  # Subscription plan not found in Stripe
     return Message(message="Subscription plan deleted successfully")

@@ -595,9 +595,10 @@ def test_create_checkout_subscription_session_missing_price(dummy_session: Any) 
     dummy_session.data[(SubscriptionPlan, pl.id)] = pl
     dummy_session.data[(User, u.id)] = u
     dummy_session.data[(Payment, pay.id)] = pay
-    with pytest.raises(BadRequest) as e:
-        create_checkout_subscription_session(dummy_session, pl, u, pay)
-    assert "Subscription plan is not set up in Stripe" in str(e.value)
+    create_checkout_subscription_session(dummy_session, pl, u, pay)
+    # now price should be created
+    assert pl.stripe_price_id is not None
+    assert dummy_session.commits == 2
 
 
 def test_create_checkout_subscription_session_success(
