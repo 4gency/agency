@@ -32,7 +32,7 @@ lint:
 	$(call run_script,lint)
 
 test:
-	$(call run_script,test,$(ARGS))
+	$(call run_script,test-dev,$(ARGS))
 
 format:
 	$(call run_script,format)
