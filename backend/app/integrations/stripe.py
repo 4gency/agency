@@ -380,6 +380,8 @@ def create_checkout_subscription_session(
 
     if not subscription_plan.stripe_price_id:
         setup_plan_in_stripe(session, subscription_plan)
+        if not subscription_plan.stripe_price_id:
+            raise Exception("Stripe Price ID cannot be set")
 
     # Cria checkout session
     checkout_session = stripe.checkout.Session.create(
