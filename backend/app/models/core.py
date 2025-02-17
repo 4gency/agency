@@ -53,6 +53,7 @@ class UpdatePassword(SQLModel):
 class User(UserBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     hashed_password: str
+    is_subscriber: bool = Field(default=False)
     stripe_customer_id: str | None = Field(default=None)
 
     subscriptions: list["Subscription"] = Relationship(
@@ -64,6 +65,7 @@ class User(UserBase, table=True):
 # Properties to return via API, id is always required
 class UserPublic(UserBase):
     id: uuid.UUID
+    is_subscriber: bool
 
 
 class UsersPublic(SQLModel):
