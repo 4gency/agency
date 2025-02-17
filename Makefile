@@ -8,6 +8,12 @@ endef
 help:
 	@echo "make help"
 
+run:
+	docker compose up -d
+
+stop:
+	docker compose down -v --remove-orphans
+
 lint:
 	$(call run_script,lint)
 
