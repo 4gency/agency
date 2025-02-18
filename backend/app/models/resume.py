@@ -13,6 +13,7 @@ class PersonalInformation(EmbeddedModel):
     country: str = "USA"
     city: str = "New York"
     address: str = "123 Main St"
+    zip_code: str = "10001"
     phone_prefix: str = "+1"
     phone: str = "123456789"
     email: EmailStr = "john.doe@email.com"

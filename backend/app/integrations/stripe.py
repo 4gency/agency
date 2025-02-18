@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import stripe
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 from sqlmodel import Session, select
 
 from app.core.config import settings
@@ -177,12 +177,12 @@ VALID_METRIC_TYPES = ("day", "week", "month", "year")
 
 class BadRequest(HTTPException):
     def __init__(self, detail: str) -> None:
-        super().__init__(status_code=400, detail=detail)
+        super().__init__(status_code=status.HTTP_400_BAD_REQUEST, detail=detail)
 
 
 class NotFound(HTTPException):
     def __init__(self, detail: str) -> None:
-        super().__init__(status_code=404, detail=detail)
+        super().__init__(status_code=status.HTTP_404_NOT_FOUND, detail=detail)
 
 
 # --------------------------------------------------

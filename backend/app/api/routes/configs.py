@@ -1,79 +1,230 @@
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.api.deps import CurrentUser, NosqlSessionDep
+from app.api.deps import NosqlSessionDep, SessionDep, get_current_user
+from app.models.core import ErrorMessage
 from app.models.crud import config as config_crud
+from app.models.crud import subscription as subscription_crud
 from app.models.preference import ConfigPublic
 from app.models.resume import PlainTextResumePublic
 
 router = APIRouter()
 
 
-@router.get("/{subscription_id}/job-preferences", response_model=ConfigPublic)
+@router.get(
+    "/{subscription_id}/job-preferences",
+    dependencies=[Depends(get_current_user)],
+    response_model=ConfigPublic,
+    responses={
+        403: {
+            "model": ErrorMessage,
+            "description": "Authorization error",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "could_not_validate": {
+                            "summary": "Could not validate credentials",
+                            "value": {"detail": "Could not validate credentials"},
+                        }
+                    }
+                }
+            },
+        },
+        404: {
+            "model": ErrorMessage,
+            "description": "Resource not found",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "subscription_not_found": {
+                            "summary": "Subscription not found",
+                            "value": {"detail": "Subscription not found"},
+                        },
+                        "user_not_found": {
+                            "summary": "User not found",
+                            "value": {"detail": "User not found"},
+                        },
+                        "inactive_user": {
+                            "summary": "Inactive user",
+                            "value": {"detail": "Inactive user"},
+                        },
+                    }
+                }
+            },
+        },
+    },
+)
 def get_config(
-    current_user: CurrentUser,  # noqa
+    *,
     subscription_id: uuid.UUID,
     nosql_session: NosqlSessionDep,
+    session: SessionDep,
 ) -> Any:
+    subscription = subscription_crud.get_subscription_by_id(
+        session=session, id=subscription_id
+    )
+
+    if not subscription:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found"
+        )
+
     config = config_crud.get_config(
         session=nosql_session,
         subscription_id=str(subscription_id),
     )
 
     if not config:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Config not found"
+        config = config_crud.create_subscription_default_config(
+            subscription_id=str(subscription_id), nosql_session=nosql_session
         )
 
     return ConfigPublic(**config.model_dump())
 
 
-@router.get("/{subscription_id}/resume", response_model=PlainTextResumePublic)
+@router.get(
+    "/{subscription_id}/resume",
+    dependencies=[Depends(get_current_user)],
+    response_model=PlainTextResumePublic,
+    responses={
+        403: {
+            "model": ErrorMessage,
+            "description": "Authorization error",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "could_not_validate": {
+                            "summary": "Could not validate credentials",
+                            "value": {"detail": "Could not validate credentials"},
+                        }
+                    }
+                }
+            },
+        },
+        404: {
+            "model": ErrorMessage,
+            "description": "Resource not found",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "subscription_not_found": {
+                            "summary": "Subscription not found",
+                            "value": {"detail": "Subscription not found"},
+                        },
+                        "user_not_found": {
+                            "summary": "User not found",
+                            "value": {"detail": "User not found"},
+                        },
+                        "inactive_user": {
+                            "summary": "Inactive user",
+                            "value": {"detail": "Inactive user"},
+                        },
+                    }
+                }
+            },
+        },
+    },
+)
 def get_plain_text_resume(
-    current_user: CurrentUser,  # noqa
+    *,
     subscription_id: uuid.UUID,
     nosql_session: NosqlSessionDep,
+    session: SessionDep,
 ) -> Any:
+    subscription = subscription_crud.get_subscription_by_id(
+        session=session, id=subscription_id
+    )
+
+    if not subscription:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found"
+        )
+
     resume = config_crud.get_resume(
         session=nosql_session,
         subscription_id=str(subscription_id),
     )
 
     if not resume:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Resume not found"
+        resume = config_crud.create_subscription_default_resume(
+            subscription_id=str(subscription_id), nosql_session=nosql_session
         )
 
     return PlainTextResumePublic(**resume.model_dump())
 
 
-@router.patch("/{subscription_id}/job-preferences", status_code=status.HTTP_200_OK)
+@router.patch(
+    "/{subscription_id}/job-preferences",
+    dependencies=[Depends(get_current_user)],
+    status_code=status.HTTP_200_OK,
+    responses={
+        403: {
+            "model": ErrorMessage,
+            "description": "Authorization error",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "could_not_validate": {
+                            "summary": "Could not validate credentials",
+                            "value": {"detail": "Could not validate credentials"},
+                        }
+                    }
+                }
+            },
+        },
+        404: {
+            "model": ErrorMessage,
+            "description": "Resource not found",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "subscription_not_found": {
+                            "summary": "Subscription not found",
+                            "value": {"detail": "Subscription not found"},
+                        },
+                        "user_not_found": {
+                            "summary": "User not found",
+                            "value": {"detail": "User not found"},
+                        },
+                        "inactive_user": {
+                            "summary": "Inactive user",
+                            "value": {"detail": "Inactive user"},
+                        },
+                    }
+                }
+            },
+        },
+    },
+)
 def update_config(
     *,
-    current_user: CurrentUser,  # noqa
     subscription_id: uuid.UUID,
     nosql_session: NosqlSessionDep,
     config_in: ConfigPublic,
+    session: SessionDep,
 ) -> Any:
     """
     Update config.
     """
+    subscription = subscription_crud.get_subscription_by_id(
+        session=session, id=subscription_id
+    )
+
+    if not subscription:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found"
+        )
+
     config = config_crud.get_config(
         session=nosql_session,
         subscription_id=str(subscription_id),
     )
 
     if not config:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Config not found"
-        )
-
-    if config.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="User does not have access to this config",
+        config = config_crud.create_subscription_default_config(
+            subscription_id=str(subscription_id), nosql_session=nosql_session
         )
 
     config_crud.update_config(
@@ -84,32 +235,75 @@ def update_config(
 
 
 @router.patch(
-    "/{subscription_id}/resume", status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+    "/{subscription_id}/resume",
+    dependencies=[Depends(get_current_user)],
+    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+    responses={
+        403: {
+            "model": ErrorMessage,
+            "description": "Authorization error",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "could_not_validate": {
+                            "summary": "Could not validate credentials",
+                            "value": {"detail": "Could not validate credentials"},
+                        }
+                    }
+                }
+            },
+        },
+        404: {
+            "model": ErrorMessage,
+            "description": "Resource not found",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "subscription_not_found": {
+                            "summary": "Subscription not found",
+                            "value": {"detail": "Subscription not found"},
+                        },
+                        "user_not_found": {
+                            "summary": "User not found",
+                            "value": {"detail": "User not found"},
+                        },
+                        "inactive_user": {
+                            "summary": "Inactive user",
+                            "value": {"detail": "Inactive user"},
+                        },
+                    }
+                }
+            },
+        },
+    },
 )
 def update_plain_text_resume(
     *,
-    current_user: CurrentUser,  # noqa
     subscription_id: uuid.UUID,
     nosql_session: NosqlSessionDep,
     resume_in: PlainTextResumePublic,
+    session: SessionDep,
 ) -> Any:
     """
     Update plain text resume.
     """
+    subscription = subscription_crud.get_subscription_by_id(
+        session=session, id=subscription_id
+    )
+
+    if not subscription:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found"
+        )
+
     resume = config_crud.get_resume(
         session=nosql_session,
         subscription_id=str(subscription_id),
     )
 
     if not resume:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Resume not found"
-        )
-
-    if resume.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="User does not have access to this resume",
+        resume = config_crud.create_subscription_default_resume(
+            subscription_id=str(subscription_id), nosql_session=nosql_session
         )
 
     config_crud.update_resume(

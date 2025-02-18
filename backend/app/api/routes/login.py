@@ -93,7 +93,7 @@ def reset_password(session: SessionDep, body: NewPassword) -> Message:
     user = crud.get_user_by_email(session=session, email=email)
     if not user:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="The user with this email does not exist in the system.",
         )
     elif not user.is_active:

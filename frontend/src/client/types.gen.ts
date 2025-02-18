@@ -45,6 +45,8 @@ export type CheckoutSessionUpdate = {
 
 export type ConfigPublic = {
   remote?: boolean
+  hybrid?: boolean
+  onsite?: boolean
   experience_level?: ExperienceLevel
   job_types?: JobTypes
   date?: Date
@@ -54,7 +56,7 @@ export type ConfigPublic = {
   distance?: number
   company_blacklist?: Array<string>
   title_blacklist?: Array<string>
-  job_applicants_threshold?: JobApplicantsThreshold
+  location_blacklist?: Array<string>
 }
 
 export type Date = {
@@ -72,6 +74,10 @@ export type EducationDetails = {
   start_date?: string
   year_of_completion?: string
   exam?: Array<string>
+}
+
+export type ErrorMessage = {
+  detail: string
 }
 
 export type ExperienceDetail = {
@@ -95,11 +101,6 @@ export type ExperienceLevel = {
 
 export type HTTPValidationError = {
   detail?: Array<ValidationError>
-}
-
-export type JobApplicantsThreshold = {
-  min_applicants?: number
-  max_applicants?: number
 }
 
 export type JobTypes = {
@@ -152,6 +153,7 @@ export type PersonalInformation = {
   country?: string
   city?: string
   address?: string
+  zip_code?: string
   phone_prefix?: string
   phone?: string
   email?: string
