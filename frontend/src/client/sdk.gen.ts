@@ -98,7 +98,10 @@ export class CheckoutService {
         session_id: data.sessionId,
       },
       errors: {
+        403: "Authorization errors",
+        404: "Resource not found",
         422: "Validation Error",
+        500: "Subscription plan not found",
       },
     })
   }
@@ -121,6 +124,8 @@ export class CheckoutService {
         session_id: data.sessionId,
       },
       errors: {
+        403: "Could not validate credentials",
+        404: "Resource not found",
         422: "Validation Error",
       },
     })
@@ -147,6 +152,8 @@ export class CheckoutService {
       body: data.requestBody,
       mediaType: "application/json",
       errors: {
+        403: "Authorization errors",
+        404: "Resource not found",
         422: "Validation Error",
       },
     })
@@ -172,6 +179,8 @@ export class CheckoutService {
         limit: data.limit,
       },
       errors: {
+        403: "Authorization errors",
+        404: "Resource not found",
         422: "Validation Error",
       },
     })
@@ -195,6 +204,8 @@ export class CheckoutService {
         subscription_plan_id: data.subscriptionPlanId,
       },
       errors: {
+        403: "Could not validate credentials",
+        404: "Resource not found",
         422: "Validation Error",
       },
     })
@@ -240,7 +251,10 @@ export class CheckoutService {
         session_id: data.sessionId,
       },
       errors: {
+        403: "Authorization errors",
+        404: "Resource not found",
         422: "Validation Error",
+        500: "Subscription plan not found, please contact support!",
       },
     })
   }
@@ -264,6 +278,8 @@ export class ConfigsService {
         subscription_id: data.subscriptionId,
       },
       errors: {
+        403: "Authorization error",
+        404: "Resource not found",
         422: "Validation Error",
       },
     })
@@ -290,6 +306,8 @@ export class ConfigsService {
       body: data.requestBody,
       mediaType: "application/json",
       errors: {
+        403: "Authorization error",
+        404: "Resource not found",
         422: "Validation Error",
       },
     })
@@ -312,6 +330,8 @@ export class ConfigsService {
         subscription_id: data.subscriptionId,
       },
       errors: {
+        403: "Authorization error",
+        404: "Resource not found",
         422: "Validation Error",
       },
     })
@@ -337,6 +357,8 @@ export class ConfigsService {
       body: data.requestBody,
       mediaType: "application/json",
       errors: {
+        403: "Authorization error",
+        404: "Resource not found",
         422: "Validation Error",
         500: "Successful Response",
       },
