@@ -16,10 +16,6 @@ import {
   SliderTrack,
   SliderFilledTrack,
   SliderThumb,
-  RangeSlider,
-  RangeSliderTrack,
-  RangeSliderFilledTrack,
-  RangeSliderThumb,
   IconButton,
   Tag,
   TagLabel,
@@ -49,7 +45,6 @@ type JobPreferencesForm = {
   locations: string[];
   company_blacklist: string[];
   title_blacklist: string[];
-  applicants_range: [number, number];
 };
 
 /**
@@ -90,10 +85,6 @@ function transformToForm(config: ConfigPublic): JobPreferencesForm {
     locations: config.locations || [],
     company_blacklist: config.company_blacklist || [],
     title_blacklist: config.title_blacklist || [],
-    applicants_range: [
-      config.job_applicants_threshold?.min_applicants ?? 0,
-      config.job_applicants_threshold?.max_applicants ?? 10000,
-    ],
   };
 }
 
@@ -132,10 +123,6 @@ function transformFromForm(formData: JobPreferencesForm): ConfigPublic {
     locations: formData.locations,
     company_blacklist: formData.company_blacklist,
     title_blacklist: formData.title_blacklist,
-    job_applicants_threshold: {
-      min_applicants: formData.applicants_range[0],
-      max_applicants: formData.applicants_range[1],
-    },
   };
 }
 
@@ -275,7 +262,6 @@ const JobPreferencesPage: React.FC = () => {
     locations: ["USA"],
     company_blacklist: [],
     title_blacklist: [],
-    applicants_range: [0, 10000],
   };
 
   const {
@@ -337,7 +323,6 @@ const JobPreferencesPage: React.FC = () => {
   const locations = watch("locations");
   const companyBlacklist = watch("company_blacklist");
   const titleBlacklist = watch("title_blacklist");
-  const applicantsRange = watch("applicants_range");
   const experienceLevels = watch("experience_levels");
   const jobTypes = watch("job_types");
 
@@ -535,30 +520,6 @@ const JobPreferencesPage: React.FC = () => {
           onChange={(newItems) => setValue("title_blacklist", newItems)}
           placeholder="e.g. Senior, Jr"
         />
-
-        {/* APPLICANT RANGE (range slider) */}
-        <FormControl mb={4}>
-          <FormLabel>Number of Applicants Range</FormLabel>
-          <RangeSlider
-            min={0}
-            max={10000}
-            step={50}
-            value={applicantsRange}
-            onChange={(val) =>
-              setValue("applicants_range", val as [number, number])
-            }
-          >
-            <RangeSliderTrack>
-              <RangeSliderFilledTrack />
-            </RangeSliderTrack>
-            <RangeSliderThumb index={0} />
-            <RangeSliderThumb index={1} />
-          </RangeSlider>
-          <Flex justify="space-between">
-            <Text>Min: {applicantsRange[0]}</Text>
-            <Text>Max: {applicantsRange[1]}</Text>
-          </Flex>
-        </FormControl>
 
         <Button
           mt={6}
