@@ -1,5 +1,5 @@
 from odmantic import EmbeddedModel, Field, Model
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 
 class ExperienceLevel(EmbeddedModel):
@@ -25,22 +25,19 @@ class Date(EmbeddedModel):
     all_time: bool = True
     month: bool = False
     week: bool = False
-    hours: bool = False
+    hours: bool = False  # 24_hours
 
-    # @model_validator(mode="after") # TODO: uncomment this
-    # def validate_only_one_can_be_true(self) -> Self:
-    #     if sum([self.all_time, self.month, self.week, self.hours]) > 1:
-    #         raise ValueError("Only one date can be selected")
-    #     return self
-
-
-class JobApplicantsThreshold(EmbeddedModel):
-    min_applicants: int = 0
-    max_applicants: int = 10000
+    @model_validator(mode="after")
+    def validate_only_one_can_be_true(self) -> "Date":
+        if sum([self.all_time, self.month, self.week, self.hours]) != 1:
+            raise ValueError("Choose only one of all_time, month, week or 24 hours")
+        return self
 
 
 class ConfigPublic(BaseModel, extra="ignore"):
     remote: bool = True
+    hybrid: bool = True
+    onsite: bool = True
 
     experience_level: ExperienceLevel = ExperienceLevel()
     job_types: JobTypes = JobTypes()
@@ -53,12 +50,17 @@ class ConfigPublic(BaseModel, extra="ignore"):
     ]
 
     apply_once_at_company: bool = True
-    distance: int = 0
+    distance: int = 100
 
-    company_blacklist: list[str] = []
-    title_blacklist: list[str] = []
-
-    job_applicants_threshold: JobApplicantsThreshold = JobApplicantsThreshold()
+    company_blacklist: list[str] = [
+        "Wayfair",
+    ]
+    title_blacklist: list[str] = [
+        "DBA",
+    ]
+    location_blacklist: list[str] = [
+        "Brazil",
+    ]
 
 
 class Config(Model):
@@ -70,6 +72,8 @@ class Config(Model):
     # llm_api_url: str = 'https://api.pawan.krd/cosmosrp/v1'
 
     remote: bool = True
+    hybrid: bool = True
+    onsite: bool = True
 
     experience_level: ExperienceLevel = ExperienceLevel()
     job_types: JobTypes = JobTypes()
@@ -82,12 +86,17 @@ class Config(Model):
     ]
 
     apply_once_at_company: bool = True
-    distance: int = 0
+    distance: int = 100
 
-    company_blacklist: list[str] = []
-    title_blacklist: list[str] = []
-
-    job_applicants_threshold: JobApplicantsThreshold = JobApplicantsThreshold()
+    company_blacklist: list[str] = [
+        "Wayfair",
+    ]
+    title_blacklist: list[str] = [
+        "DBA",
+    ]
+    location_blacklist: list[str] = [
+        "Brazil",
+    ]
 
     model_config = {
         "collection": "configs",  # type: ignore[typeddict-unknown-key]

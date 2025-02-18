@@ -47,14 +47,28 @@ def update_resume(
     session.save(resume_instance)
 
 
-def create_subscription_default_configs(
+def create_subscription_default_config(
     subscription_id: str, nosql_session: SyncSession
-) -> None:
+) -> Config:
     default_config = Config(
         subscription_id=subscription_id,  # type: ignore
     )
+    return create_config(session=nosql_session, config=default_config)
+
+
+def create_subscription_default_resume(
+    subscription_id: str, nosql_session: SyncSession
+) -> PlainTextResume:
     default_resume = PlainTextResume(
         subscription_id=subscription_id,  # type: ignore
     )
-    create_config(session=nosql_session, config=default_config)
-    create_resume(session=nosql_session, resume=default_resume)
+    return create_resume(session=nosql_session, resume=default_resume)
+
+
+def create_subscription_default_configs(
+    subscription_id: str, nosql_session: SyncSession
+) -> tuple[Config, PlainTextResume]:
+    config = create_subscription_default_config(subscription_id, nosql_session)
+    resume = create_subscription_default_resume(subscription_id, nosql_session)
+
+    return config, resume

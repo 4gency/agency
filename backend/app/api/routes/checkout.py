@@ -12,6 +12,7 @@ from app.models.core import (
     CheckoutSession,
     CheckoutSessionPublic,
     CheckoutSessionUpdate,
+    ErrorMessage,
     Message,
     SubscriptionPlan,
 )
@@ -21,8 +22,55 @@ from app.utils import timestamp_to_datetime
 router = APIRouter()
 
 
-@router.post("/stripe/success", response_model=Message)
+@router.post(
+    "/stripe/success",
+    response_model=Message,
+    responses={
+        403: {
+            "model": ErrorMessage,
+            "description": "Authorization errors",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "credentials_error": {
+                            "summary": "Could not validate credentials",
+                            "value": {"detail": "Could not validate credentials"},
+                        },
+                        "permissions_error": {
+                            "summary": "Not enough permissions",
+                            "value": {"detail": "Not enough permissions"},
+                        },
+                    }
+                }
+            },
+        },
+        404: {
+            "model": ErrorMessage,
+            "description": "Resource not found",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "user_not_found": {
+                            "summary": "User not found",
+                            "value": {"detail": "User not found"},
+                        },
+                        "inactive_user": {
+                            "summary": "Inactive User",
+                            "value": {"detail": "Inactive User"},
+                        },
+                        "checkout_not_found": {
+                            "summary": "Checkout session not found",
+                            "value": {"detail": "Checkout session not found"},
+                        },
+                    }
+                }
+            },
+        },
+        500: {"model": ErrorMessage, "description": "Subscription plan not found"},
+    },
+)
 def stripe_success(
+    *,
     session: SessionDep,
     session_id: str,
     user: CurrentUser,
@@ -35,7 +83,9 @@ def stripe_success(
     ).first()
 
     if not checkout:
-        raise HTTPException(status_code=404, detail="Checkout session not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Checkout session not found"
+        )
 
     plan: SubscriptionPlan | None = crud_subs.get_subscription_plan_by_id(
         session=session, id=checkout.subscription_plan_id
@@ -43,13 +93,13 @@ def stripe_success(
 
     if not plan:
         raise HTTPException(
-            status_code=500,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Subscription plan not found, please contact support!",
         )
 
     if checkout.user_id != user.id:
         raise HTTPException(
-            status_code=403,
+            status_code=status.HTTP_403_FORBIDDEN,
             detail="Checkout session does not belong to the authenticated user",
         )
 
@@ -59,9 +109,39 @@ def stripe_success(
 
 
 @router.get(
-    "/stripe/checkout-session/{session_id}", response_model=CheckoutSessionPublic
+    "/stripe/checkout-session/{session_id}",
+    response_model=CheckoutSessionPublic,
+    responses={
+        403: {
+            "model": ErrorMessage,
+            "description": "Could not validate credentials",
+        },
+        404: {
+            "model": ErrorMessage,
+            "description": "Resource not found",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "user_not_found": {
+                            "summary": "User not found",
+                            "value": {"detail": "User not found"},
+                        },
+                        "inactive_user": {
+                            "summary": "Inactive User",
+                            "value": {"detail": "Inactive User"},
+                        },
+                        "checkout_not_found": {
+                            "summary": "Checkout session not found",
+                            "value": {"detail": "Checkout session not found"},
+                        },
+                    }
+                }
+            },
+        },
+    },
 )
 def get_stripe_checkout_session_by_id(
+    *,
     session: SessionDep,
     session_id: UUID,
     user: CurrentUser,
@@ -75,12 +155,56 @@ def get_stripe_checkout_session_by_id(
         )
     ).first()
     if not checkout:
-        raise HTTPException(status_code=404, detail="Checkout session not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Checkout session not found"
+        )
     return CheckoutSessionPublic.model_validate(checkout)
 
 
-@router.get("/stripe/checkout-session", response_model=list[CheckoutSessionPublic])
+@router.get(
+    "/stripe/checkout-session",
+    response_model=list[CheckoutSessionPublic],
+    responses={
+        403: {
+            "model": ErrorMessage,
+            "description": "Authorization errors",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "could_not_validate": {
+                            "summary": "Could not validate credentials",
+                            "value": {"detail": "Could not validate credentials"},
+                        },
+                        "not_enough_permissions": {
+                            "summary": "Not enough permissions",
+                            "value": {"detail": "Not enough permissions"},
+                        },
+                    }
+                }
+            },
+        },
+        404: {
+            "model": ErrorMessage,
+            "description": "Resource not found",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "user_not_found": {
+                            "summary": "User not found",
+                            "value": {"detail": "User not found"},
+                        },
+                        "inactive_user": {
+                            "summary": "Inactive User",
+                            "value": {"detail": "Inactive User"},
+                        },
+                    }
+                }
+            },
+        },
+    },
+)
 def get_stripe_checkout_sessions(
+    *,
     session: SessionDep,
     user: CurrentUser,
     skip: int = 0,
@@ -101,8 +225,40 @@ def get_stripe_checkout_sessions(
     ]
 
 
-@router.post("/stripe/checkout-session", response_model=CheckoutSessionPublic)
+@router.post(
+    "/stripe/checkout-session",
+    response_model=CheckoutSessionPublic,
+    responses={
+        403: {
+            "model": ErrorMessage,
+            "description": "Could not validate credentials",
+        },
+        404: {
+            "model": ErrorMessage,
+            "description": "Resource not found",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "user_not_found": {
+                            "summary": "User not found",
+                            "value": {"detail": "User not found"},
+                        },
+                        "inactive_user": {
+                            "summary": "Inactive User",
+                            "value": {"detail": "Inactive User"},
+                        },
+                        "subscription_plan_not_found": {
+                            "summary": "Subscription plan not found",
+                            "value": {"detail": "Subscription plan not found"},
+                        },
+                    }
+                }
+            },
+        },
+    },
+)
 def create_stripe_checkout_session(
+    *,
     session: SessionDep,
     subscription_plan_id: UUID,
     user: CurrentUser,
@@ -152,9 +308,56 @@ def create_stripe_checkout_session(
     "/stripe/checkout-session/{session_id}",
     dependencies=[Depends(get_current_active_superuser)],
     response_model=CheckoutSessionPublic,
+    responses={
+        403: {
+            "model": ErrorMessage,
+            "description": "Authorization errors",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "could_not_validate": {
+                            "summary": "Could not validate credentials",
+                            "value": {"detail": "Could not validate credentials"},
+                        },
+                        "not_enough_privileges": {
+                            "summary": "The user doesn't have enough privileges",
+                            "value": {
+                                "detail": "The user doesn't have enough privileges"
+                            },
+                        },
+                    }
+                }
+            },
+        },
+        404: {
+            "model": ErrorMessage,
+            "description": "Resource not found",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "user_not_found": {
+                            "summary": "User not found",
+                            "value": {"detail": "User not found"},
+                        },
+                        "inactive_user": {
+                            "summary": "Inactive User",
+                            "value": {"detail": "Inactive User"},
+                        },
+                        "session_not_found": {
+                            "summary": "Checkout session not found",
+                            "value": {"detail": "Checkout session not found"},
+                        },
+                    }
+                }
+            },
+        },
+    },
 )
 def update_stripe_checkout_session(
-    session: SessionDep, session_id: UUID, checkout_session: CheckoutSessionUpdate
+    *,
+    session: SessionDep,
+    session_id: UUID,
+    checkout_session: CheckoutSessionUpdate,
 ) -> Any:
     """
     Update Stripe checkout session.
@@ -163,7 +366,9 @@ def update_stripe_checkout_session(
         select(CheckoutSession).where(CheckoutSession.id == session_id)
     ).first()
     if not checkout:
-        raise HTTPException(status_code=404, detail="Checkout session not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Checkout session not found"
+        )
     checkout_data = checkout_session.model_dump(exclude_unset=True)
     checkout.sqlmodel_update(checkout_data)
     session.add(checkout)
@@ -174,6 +379,7 @@ def update_stripe_checkout_session(
 
 @router.post("/stripe/webhook", response_model=Message)
 async def stripe_webhook(
+    *,
     request: Request,
     session: SessionDep,
     stripe_signature: str = Header(None),
@@ -186,9 +392,13 @@ async def stripe_webhook(
             secret=settings.STRIPE_WEBHOOK_SECRET,
         )
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=f"Invalid payload: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid payload: {e}"
+        )
     except stripe.SignatureVerificationError as e:
-        raise HTTPException(status_code=400, detail=f"Invalid signature: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid signature: {e}"
+        )
 
     event_type = event.get("type", "")
     if event_type == "checkout.session.completed":
@@ -199,8 +409,60 @@ async def stripe_webhook(
     return {"message": "success"}
 
 
-@router.post("/stripe/cancel", response_model=Message)
+@router.post(
+    "/stripe/cancel",
+    response_model=Message,
+    responses={
+        403: {
+            "model": ErrorMessage,
+            "description": "Authorization errors",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "could_not_validate": {
+                            "summary": "Could not validate credentials",
+                            "value": {"detail": "Could not validate credentials"},
+                        },
+                        "session_not_belonging": {
+                            "summary": "Checkout session does not belong to the authenticated user",
+                            "value": {
+                                "detail": "Checkout session does not belong to the authenticated user"
+                            },
+                        },
+                    }
+                }
+            },
+        },
+        404: {
+            "model": ErrorMessage,
+            "description": "Resource not found",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "user_not_found": {
+                            "summary": "User not found",
+                            "value": {"detail": "User not found"},
+                        },
+                        "inactive_user": {
+                            "summary": "Inactive User",
+                            "value": {"detail": "Inactive User"},
+                        },
+                        "session_not_found": {
+                            "summary": "Checkout session not found",
+                            "value": {"detail": "Checkout session not found"},
+                        },
+                    }
+                }
+            },
+        },
+        500: {
+            "model": ErrorMessage,
+            "description": "Subscription plan not found, please contact support!",
+        },
+    },
+)
 def stripe_cancel(
+    *,
     session: SessionDep,
     session_id: str,
     user: CurrentUser,
