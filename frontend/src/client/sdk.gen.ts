@@ -471,7 +471,7 @@ export class LoginService {
   }
 }
 
-export class SubscriptionService {
+export class SubscriptionPlansService {
   /**
    * Read Subscription Plans
    * Retrieve subscription plans (public endpoint).
@@ -485,7 +485,7 @@ export class SubscriptionService {
   ): CancelablePromise<ReadSubscriptionPlansResponse> {
     return __request(OpenAPI, {
       method: "GET",
-      url: "/api/v1/subscription/plans",
+      url: "/api/v1/subscription-plans/",
       query: {
         only_active: data.onlyActive,
       },
@@ -508,7 +508,7 @@ export class SubscriptionService {
   ): CancelablePromise<CreateSubscriptionPlanResponse> {
     return __request(OpenAPI, {
       method: "POST",
-      url: "/api/v1/subscription/plans",
+      url: "/api/v1/subscription-plans/",
       body: data.requestBody,
       mediaType: "application/json",
       errors: {
@@ -530,7 +530,7 @@ export class SubscriptionService {
   ): CancelablePromise<ReadSubscriptionPlanResponse> {
     return __request(OpenAPI, {
       method: "GET",
-      url: "/api/v1/subscription/plans/{id}",
+      url: "/api/v1/subscription-plans/{id}",
       path: {
         id: data.id,
       },
@@ -554,7 +554,7 @@ export class SubscriptionService {
   ): CancelablePromise<UpdateSubscriptionPlanResponse> {
     return __request(OpenAPI, {
       method: "PUT",
-      url: "/api/v1/subscription/plans/{id}",
+      url: "/api/v1/subscription-plans/{id}",
       path: {
         id: data.id,
       },
@@ -579,7 +579,7 @@ export class SubscriptionService {
   ): CancelablePromise<DeleteSubscriptionPlanResponse> {
     return __request(OpenAPI, {
       method: "DELETE",
-      url: "/api/v1/subscription/plans/{id}",
+      url: "/api/v1/subscription-plans/{id}",
       path: {
         id: data.id,
       },
