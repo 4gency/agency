@@ -428,7 +428,11 @@ class BotSession(SQLModel, table=True):
 
         total_time_applies = sum([apply.total_time for apply in self.bot_applies])
         total_time_success = sum(
-            [apply.total_time for apply in self.bot_applies if apply.status == "success"]
+            [
+                apply.total_time
+                for apply in self.bot_applies
+                if apply.status == "success"
+            ]
         )
         total_time_failed = sum(
             [apply.total_time for apply in self.bot_applies if apply.status == "failed"]
