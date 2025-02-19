@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import NormalPricingCard from "./NormalPricingCard";
-import BestPricingCard from "./BestPricingCard";
+import BadgePricingCard from "./BadgePricingCard";
 import {
   SubscriptionPlanPublic,
   SubscriptionPlansPublic,
@@ -105,7 +105,8 @@ const PricingSection: React.FC = () => {
               id,
               name,
               price,
-              is_best_choice,
+              has_badge,
+              badge,
               has_discount,
               price_without_discount,
               is_active,
@@ -123,15 +124,18 @@ const PricingSection: React.FC = () => {
               disabled: !is_active,
               hasDiscount: has_discount,
               priceWithoutDiscount: price_without_discount,
+              recurrence: metric_type,
             };
 
-            if (is_best_choice) {
-              return <BestPricingCard {...commonProps} />;
+            if (has_badge) {
+              return <BadgePricingCard 
+                  {...commonProps}
+                  badge={badge}
+                />;
             } else {
               return (
                 <NormalPricingCard
                   {...commonProps}
-                  recurrence={metric_type}
                 />
               );
             }

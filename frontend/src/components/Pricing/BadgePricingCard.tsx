@@ -1,7 +1,8 @@
 import React from "react";
 
-interface BestPricingCardProps {
+interface BadgePricingCardProps {
   title: string;
+  badge: string;
   price: number;
   benefits: string[];
   buttonText: string;
@@ -10,8 +11,9 @@ interface BestPricingCardProps {
   priceWithoutDiscount?: number;
 }
 
-const BestPricingCard: React.FC<BestPricingCardProps> = ({
+const BadgePricingCard: React.FC<BadgePricingCardProps> = ({
   title,
+  badge,
   price,
   benefits,
   buttonText,
@@ -49,7 +51,7 @@ const BestPricingCard: React.FC<BestPricingCardProps> = ({
           fontWeight: 600,
         }}
       >
-        Best Choice
+        {badge}
       </div>
       <div>
         <h3
@@ -139,4 +141,4 @@ const BestPricingCard: React.FC<BestPricingCardProps> = ({
   );
 };
 
-export default BestPricingCard;
+export default BadgePricingCard;
