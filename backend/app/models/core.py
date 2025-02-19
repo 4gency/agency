@@ -87,7 +87,8 @@ class SubscriptionPlanBenefit(SQLModel, table=True):
 class SubscriptionPlanBase(SQLModel):
     name: str
     price: float
-    is_best_choice: bool = Field(default=False)
+    has_badge: bool = Field(default=False)
+    badge: str = Field(default="", max_length=50)
     has_discount: bool = Field(default=False)
     price_without_discount: float = Field(default=0.0)
     currency: str = Field(default="USD", max_length=10)
@@ -104,7 +105,8 @@ class SubscriptionPlanCreate(SubscriptionPlanBase):
 class SubscriptionPlanUpdate(SQLModel):
     name: str | None = None
     price: float | None = None
-    is_best_choice: bool | None = None
+    has_badge: bool | None = None
+    badge: str | None = None
     has_discount: bool | None = None
     price_without_discount: float | None = None
     currency: str | None = None
@@ -127,7 +129,8 @@ class SubscriptionPlan(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     name: str
     price: float
-    is_best_choice: bool = Field(default=False)
+    has_badge: bool = Field(default=False)
+    badge: str = Field(default="", max_length=50)
     has_discount: bool = Field(default=False)
     price_without_discount: float = Field(default=0.0)
     currency: str = Field(default="USD", max_length=10)
@@ -362,7 +365,8 @@ class SubscriptionPlanPublic(SQLModel):
     id: uuid.UUID
     name: str
     price: float
-    is_best_choice: bool
+    has_badge: bool = Field(default=False)
+    badge: str
     has_discount: bool
     price_without_discount: float
     currency: str
