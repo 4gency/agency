@@ -26,17 +26,16 @@ def read_subscription_plans(
     """
     Retrieve subscription plans (public endpoint).
     """
-    sps_public: list[SubscriptionPlanPublic] = []
-    subscription_plans = crud_subs.get_subscription_plans(
-        session=session,
-    )
+    subscription_plans = crud_subs.get_subscription_plans(session=session)
 
-    # Serialize subscription plans
-    for sp in subscription_plans:
-        if only_active and not sp.is_active:
-            continue
-        sp_temp = SubscriptionPlanPublic.model_validate(sp)
-        sps_public.append(sp_temp)
+    if only_active:
+        subscription_plans = [sp for sp in subscription_plans if sp.is_active]
+
+    # Order the subscription plans by price
+    ordered_sub_plans = sorted(subscription_plans, key=lambda sp: sp.price)
+
+    # Serialize the subscription plans
+    sps_public = [SubscriptionPlanPublic.model_validate(sp) for sp in ordered_sub_plans]
 
     return SubscriptionPlansPublic(plans=sps_public)
 
