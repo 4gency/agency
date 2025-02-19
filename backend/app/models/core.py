@@ -199,7 +199,7 @@ class Subscription(SQLModel, table=True):
     user: User = Relationship(back_populates="subscriptions")
     subscription_plan: SubscriptionPlan = Relationship(back_populates="subscriptions")
     payments: list["Payment"] = Relationship(back_populates="subscription")
-    worker_sessions: list["WorkerSession"] = Relationship(back_populates="subscription")
+    bot_sessions: list["BotSession"] = Relationship(back_populates="subscription")
 
     def need_to_deactivate(self) -> bool:
         """
@@ -371,12 +371,14 @@ class SubscriptionPlansPublic(SQLModel):
     plans: list[SubscriptionPlanPublic] = []
 
 
-class WorkerSession(SQLModel, table=True):
-    __tablename__ = "worker_session"
+class BotSession(SQLModel, table=True):
+    __tablename__ = "bot_session"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     subscription_id: uuid.UUID = Field(foreign_key="subscription.id")
     status: str = Field(default="starting", max_length=10)
+
+    bot_config_id: uuid.UUID = Field(foreign_key="bot_config.id")
 
     # Metrics
     calculated_metrics: bool = False
@@ -393,9 +395,16 @@ class WorkerSession(SQLModel, table=True):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     finished_at: datetime | None = Field(nullable=True)
 
-    subscription: Subscription = Relationship(back_populates="worker_sessions")
-    applies: list["Apply"] = Relationship(
-        back_populates="worker_session", cascade_delete=True
+    subscription: Subscription = Relationship(back_populates="bot_sessions")
+    bot_config: "BotConfig" = Relationship(back_populates="bot_sessions")
+    bot_applies: list["BotApply"] = Relationship(
+        back_populates="bot_session", cascade_delete=True
+    )
+    bot_events: list["BotEvent"] = Relationship(
+        back_populates="bot_session", cascade_delete=True
+    )
+    bot_notifications: list["BotNotification"] = Relationship(
+        back_populates="bot_session", cascade_delete=True
     )
 
     def update_metrics(self) -> None:
@@ -436,20 +445,89 @@ class WorkerSession(SQLModel, table=True):
         )
 
 
-class Apply(SQLModel, table=True):
-    __tablename__ = "apply"
+class BotConfig(SQLModel, table=True):
+    __tablename__ = "bot_config"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    cloud_provider: str = Field("https://br-se1.magaluobjects.com", max_length=50)
+
+    config_bucket: str = Field("configs", max_length=50)
+    config_yaml_key: str = Field(max_length=1000)
+    config_yaml_created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
+
+    resume_bucket: str = Field("resumes", max_length=50)
+    resume_yaml_key: str = Field(max_length=1000)
+    resume_yaml_created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
+
+    bot_sessions: list[BotSession] = Relationship(back_populates="bot_config")
+
+
+class BotApply(SQLModel, table=True):
+    __tablename__ = "bot_apply"
 
     id: int = Field(primary_key=True)
-    session_id: uuid.UUID = Field(foreign_key="worker_session.id")
+    session_id: uuid.UUID = Field(foreign_key="bot_session.id")
     started_at: datetime
     total_time: int  # in seconds
     status: str = Field(
         max_length=10
     )  # Literal["awaiting", "started", "success", "failed"]
-    pdf_text: str | None = Field(max_length=10000, nullable=True)
+
+    resume_bucket: str = Field(max_length=50)
+    resume_pdf: str | None = Field(max_length=100, nullable=True)
+
     failed: bool = False
     failed_reason: str | None = Field(max_length=10000, nullable=True)
     company_name: str | None = Field(max_length=255, nullable=True)
     linkedin_url: str | None = Field(max_length=255, nullable=True)
 
-    worker_session: WorkerSession = Relationship(back_populates="applies")
+    bot_session: BotSession = Relationship(back_populates="applies")
+
+
+class BotEvent(SQLModel, table=True):
+    __tablename__ = "bot_event"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    bot_session_id: uuid.UUID = Field(foreign_key="bot_session.id")
+    type: str = Field(max_length=50)  # notification, command, token_request, etc.
+    message: str = Field(max_length=1000)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    bot_session: BotSession = Relationship(back_populates="bot_events")
+
+
+class BotNotification(SQLModel, table=True):
+    __tablename__ = "bot_notification"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    bot_session_id: uuid.UUID = Field(foreign_key="bot_session.id")
+    title: str = Field(max_length=255)
+    message: str = Field(max_length=1000)
+
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    sent_at: datetime | None = Field(nullable=True)
+
+    bot_session: BotSession = Relationship(back_populates="bot_notifications")
+    notification_channels: list["BotNotificationChannel"] = Relationship(
+        back_populates="bot_notification"
+    )
+
+
+class BotNotificationChannel(SQLModel, table=True):
+    __tablename__ = "bot_notification_channel"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    bot_notification_id: uuid.UUID = Field(foreign_key="bot_notification.id")
+    channel: str = Field(max_length=50)
+    status: str = Field(max_length=50)  # sent, failed, pending, etc.
+
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    sent_at: datetime | None = Field(nullable=True)
+
+    bot_notification: BotNotification = Relationship(
+        back_populates="notification_channels"
+    )
