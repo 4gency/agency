@@ -414,24 +414,24 @@ class BotSession(SQLModel, table=True):
         if not self.finished_at or not isinstance(self.finished_at, datetime):
             raise ValueError("Session must be finished to calculate metrics")
 
-        self.total_applied = len(self.applies)
+        self.total_applied = len(self.bot_applies)
         self.total_success = len(
-            [apply for apply in self.applies if apply.status == "success"]
+            [apply for apply in self.bot_applies if apply.status == "success"]
         )
         self.total_failed = len(
-            [apply for apply in self.applies if apply.status == "failed"]
+            [apply for apply in self.bot_applies if apply.status == "failed"]
         )
         self.success_rate = (
             self.total_success / self.total_applied if self.total_applied > 0 else 0.0
         )
         self.total_time = int((self.finished_at - self.created_at).total_seconds())
 
-        total_time_applies = sum([apply.total_time for apply in self.applies])
+        total_time_applies = sum([apply.total_time for apply in self.bot_applies])
         total_time_success = sum(
-            [apply.total_time for apply in self.applies if apply.status == "success"]
+            [apply.total_time for apply in self.bot_applies if apply.status == "success"]
         )
         total_time_failed = sum(
-            [apply.total_time for apply in self.applies if apply.status == "failed"]
+            [apply.total_time for apply in self.bot_applies if apply.status == "failed"]
         )
 
         self.average_time_per_apply = (
