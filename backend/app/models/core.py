@@ -485,7 +485,7 @@ class BotApply(SQLModel, table=True):
     company_name: str | None = Field(max_length=255, nullable=True)
     linkedin_url: str | None = Field(max_length=255, nullable=True)
 
-    bot_session: BotSession = Relationship(back_populates="applies")
+    bot_session: BotSession = Relationship(back_populates="bot_applies")
 
 
 class BotEvent(SQLModel, table=True):
