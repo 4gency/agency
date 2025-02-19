@@ -3,7 +3,8 @@ from datetime import datetime, timezone
 from enum import Enum
 
 from pydantic import EmailStr, field_validator
-from sqlmodel import Field, Relationship, SQLModel
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
+from sqlmodel import Column, Field, ForeignKey, Relationship, SQLModel
 
 
 class SubscriptionMetric(Enum):
@@ -186,7 +187,13 @@ class Subscription(SQLModel, table=True):
     __tablename__ = "subscription"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    user_id: uuid.UUID = Field(foreign_key="user.id")
+    user_id: uuid.UUID = Field(
+        sa_column=Column(
+            PGUUID(as_uuid=True),
+            ForeignKey("user.id", ondelete="CASCADE"),
+            nullable=False,
+        )
+    )
     subscription_plan_id: uuid.UUID = Field(foreign_key="subscription_plan.id")
     start_date: datetime
     end_date: datetime

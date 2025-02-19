@@ -36,3 +36,6 @@ test:
 
 format:
 	$(call run_script,format)
+
+console:
+	$(DOCKER_COMPOSE) exec $(BACKEND) bash

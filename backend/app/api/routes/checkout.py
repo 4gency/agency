@@ -97,7 +97,7 @@ def stripe_success(
             detail="Subscription plan not found, please contact support!",
         )
 
-    if checkout.user_id != user.id:
+    if checkout.user_id != user.id and not user.is_superuser:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Checkout session does not belong to the authenticated user",
@@ -490,7 +490,7 @@ def stripe_cancel(
             detail="Subscription plan not found, please contact support!",
         )
 
-    if checkout.user_id != user.id:
+    if checkout.user_id != user.id and not user.is_superuser:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Checkout session does not belong to the authenticated user",
