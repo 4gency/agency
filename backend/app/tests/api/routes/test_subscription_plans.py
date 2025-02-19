@@ -11,7 +11,8 @@ from app.core.config import settings
 subscription_plan_payload: dict[str, Any] = {
     "name": "Test Plan",
     "price": 10.0,
-    "is_best_choice": False,
+    "has_badge": False,
+    "badge": "",
     "has_discount": False,
     "price_without_discount": 0.0,
     "currency": "USD",
