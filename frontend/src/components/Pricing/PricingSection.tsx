@@ -4,7 +4,7 @@ import BestPricingCard from "./BestPricingCard";
 import {
   SubscriptionPlanPublic,
   SubscriptionPlansPublic,
-  SubscriptionService,
+  SubscriptionPlansService,
 } from "../../client";
 
 const PricingSection: React.FC = () => {
@@ -13,7 +13,7 @@ const PricingSection: React.FC = () => {
   const [error, setError] = useState<string>("");
 
   useEffect(() => {
-    SubscriptionService.readSubscriptionPlans({ onlyActive: false })
+    SubscriptionPlansService.readSubscriptionPlans({ onlyActive: false })
       .then((response: SubscriptionPlansPublic) => {
         if (response.plans) {
           setPlans(response.plans);
