@@ -17,7 +17,7 @@ from app.models.crud import subscription as crud_subs
 router = APIRouter()
 
 
-@router.get("/plans", response_model=SubscriptionPlansPublic)
+@router.get("/", response_model=SubscriptionPlansPublic)
 def read_subscription_plans(
     *,
     session: SessionDep,
@@ -41,7 +41,7 @@ def read_subscription_plans(
     return SubscriptionPlansPublic(plans=sps_public)
 
 
-@router.get("/plans/{id}", response_model=SubscriptionPlanPublic)
+@router.get("/{id}", response_model=SubscriptionPlanPublic)
 def read_subscription_plan(
     *,
     session: SessionDep,
@@ -59,7 +59,7 @@ def read_subscription_plan(
 
 
 @router.post(
-    "/plans",
+    "/",
     response_model=SubscriptionPlanPublic,
     dependencies=[Depends(get_current_active_superuser)],
 )
@@ -83,7 +83,7 @@ def create_subscription_plan(
 
 
 @router.put(
-    "/plans/{id}",
+    "/{id}",
     response_model=Message,
     dependencies=[Depends(get_current_active_superuser)],
 )
@@ -115,7 +115,7 @@ def update_subscription_plan(
 
 
 @router.delete(
-    "/plans/{id}",
+    "/{id}",
     dependencies=[Depends(get_current_active_superuser)],
     response_model=Message,
 )
