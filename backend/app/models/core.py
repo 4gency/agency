@@ -62,6 +62,16 @@ class User(UserBase, table=True):
     )
     payments: list["Payment"] = Relationship(back_populates="user", cascade_delete=True)
 
+    def get_active_subscriptions(self) -> list["Subscription"]:
+        """
+        return active subscriptions
+        """
+        return [
+            subscription
+            for subscription in self.subscriptions
+            if subscription.is_active
+        ]
+
 
 # Properties to return via API, id is always required
 class UserPublic(UserBase):

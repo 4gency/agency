@@ -396,6 +396,8 @@ export type UpdatePlainTextResumeData = {
   subscriptionId: string
 }
 
+export type UpdatePlainTextResumeResponse = unknown
+
 export type LoginAccessTokenData = {
   formData: Body_login_login_access_token
 }

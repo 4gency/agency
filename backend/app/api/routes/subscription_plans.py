@@ -3,7 +3,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.api.deps import SessionDep, get_current_active_superuser
+from app.api.deps import OptionalCurrentUser, SessionDep, get_current_active_superuser
 from app.integrations import stripe
 from app.models.core import (
     Message,
@@ -19,25 +19,52 @@ router = APIRouter()
 
 @router.get("/", response_model=SubscriptionPlansPublic)
 def read_subscription_plans(
-    *,
-    session: SessionDep,
-    only_active: bool = True,
+    *, session: SessionDep, only_active: bool = True, user: OptionalCurrentUser
 ) -> Any:
     """
     Retrieve subscription plans (public endpoint).
     """
+
+    # 1) Retrieve subscription plans
     subscription_plans = crud_subs.get_subscription_plans(session=session)
 
+    # 2) Optionally filter to only active plans
     if only_active:
-        subscription_plans = [sp for sp in subscription_plans if sp.is_active]
+        subscription_plans = [plan for plan in subscription_plans if plan.is_active]
 
-    # Order the subscription plans by price
-    ordered_sub_plans = sorted(subscription_plans, key=lambda sp: sp.price)
+    # 3) Convert each plan to its public schema
+    public_plans = [
+        SubscriptionPlanPublic.model_validate(plan) for plan in subscription_plans
+    ]
 
-    # Serialize the subscription plans
-    sps_public = [SubscriptionPlanPublic.model_validate(sp) for sp in ordered_sub_plans]
+    # 4) If the user is a subscriber, attach badges or add any plans not already in the list
+    if user and user.is_subscriber:
+        active_subscriptions = user.get_active_subscriptions()
 
-    return SubscriptionPlansPublic(plans=sps_public)
+        for active_sub in active_subscriptions:
+            # Find if this plan is already in our public list
+            matched_plan = next(
+                (p for p in public_plans if p.id == active_sub.subscription_plan_id),
+                None,
+            )
+            if matched_plan:
+                matched_plan.has_badge = True
+                matched_plan.badge = "Your Plan"
+            else:
+                # Create a new public plan entry
+                plan_public = SubscriptionPlanPublic.model_validate(
+                    active_sub.subscription_plan
+                )
+                plan_public.has_badge = True
+                plan_public.badge = "Your Plan"
+                plan_public.is_active = True
+                public_plans.append(plan_public)
+
+    # 5) Sort the *final* list of subscription plans by price
+    public_plans.sort(key=lambda plan: plan.price)
+
+    # 6) Return the collection of public subscription plans
+    return SubscriptionPlansPublic(plans=public_plans)
 
 
 @router.get("/{id}", response_model=SubscriptionPlanPublic)

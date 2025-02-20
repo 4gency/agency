@@ -187,7 +187,7 @@ def test_create_subscription_default_config(nosql_session: SyncSession) -> None:
     # The create_subscription_default_config function creates a Config without explicitly providing user_id.
     # Because of our monkey-patch, user_id will default to "dummy_user".
     config = create_subscription_default_config(
-        subscription_id=sub_id, nosql_session=nosql_session
+        subscription_id=sub_id, user_id=str(uuid.uuid4()), nosql_session=nosql_session
     )
     assert config.subscription_id == sub_id
 
@@ -199,7 +199,7 @@ def test_create_subscription_default_resume(nosql_session: SyncSession) -> None:
     sub_id = random_subscription_id()
     # Similarly, create_subscription_default_resume will use the default for user_id.
     resume = create_subscription_default_resume(
-        subscription_id=sub_id, nosql_session=nosql_session
+        subscription_id=sub_id, user_id=str(uuid.uuid4()), nosql_session=nosql_session
     )
     assert resume.subscription_id == sub_id
 
@@ -210,7 +210,7 @@ def test_create_subscription_default_resume(nosql_session: SyncSession) -> None:
 def test_create_subscription_default_configs(nosql_session: SyncSession) -> None:
     sub_id = random_subscription_id()
     config, resume = create_subscription_default_configs(
-        subscription_id=sub_id, nosql_session=nosql_session
+        subscription_id=sub_id, user_id=str(uuid.uuid4()), nosql_session=nosql_session
     )
     assert config.subscription_id == sub_id
     assert resume.subscription_id == sub_id
