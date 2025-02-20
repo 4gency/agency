@@ -1,5 +1,5 @@
 from collections.abc import Generator
-from typing import Annotated
+from typing import Annotated, Optional
 
 import jwt
 from fastapi import Depends, HTTPException, status
@@ -17,6 +17,11 @@ from app.models.core import TokenPayload, User
 
 reusable_oauth2 = OAuth2PasswordBearer(
     tokenUrl=f"{settings.API_V1_STR}/login/access-token"
+)
+
+optional_oauth2 = OAuth2PasswordBearer(
+    tokenUrl=f"{settings.API_V1_STR}/login/access-token",
+    auto_error=False,
 )
 
 
@@ -58,6 +63,29 @@ def get_current_user(session: SessionDep, token: TokenDep) -> User:
     return user
 
 
+def get_optional_current_user(
+    session: SessionDep,
+    token: str | None = Depends(optional_oauth2),
+) -> User | None:
+    if token is None:
+        return None
+
+    try:
+        payload = jwt.decode(
+            token, settings.SECRET_KEY, algorithms=[security.ALGORITHM]
+        )
+        token_data = TokenPayload(**payload)
+    except (InvalidTokenError, ValidationError):
+        return None  # Invalid or malformed token
+
+    user = session.get(User, token_data.sub)
+    if not user or not user.is_active:
+        return None
+
+    return user
+
+
+OptionalCurrentUser = Annotated[Optional[User], Depends(get_optional_current_user)]
 CurrentUser = Annotated[User, Depends(get_current_user)]
 
 
