@@ -78,7 +78,9 @@ def get_config(
 
     if not config:
         config = config_crud.create_subscription_default_config(
-            subscription_id=str(subscription_id), nosql_session=nosql_session
+            subscription_id=str(subscription_id),
+            user_id=str(subscription.user_id),
+            nosql_session=nosql_session,
         )
 
     return ConfigPublic(**config.model_dump())
@@ -149,7 +151,9 @@ def get_plain_text_resume(
 
     if not resume:
         resume = config_crud.create_subscription_default_resume(
-            subscription_id=str(subscription_id), nosql_session=nosql_session
+            subscription_id=str(subscription_id),
+            user_id=str(subscription.user_id),
+            nosql_session=nosql_session,
         )
 
     return PlainTextResumePublic(**resume.model_dump())
@@ -158,7 +162,7 @@ def get_plain_text_resume(
 @router.patch(
     "/{subscription_id}/job-preferences",
     dependencies=[Depends(get_current_user)],
-    status_code=status.HTTP_200_OK,
+    status_code=status.HTTP_202_ACCEPTED,
     responses={
         403: {
             "model": ErrorMessage,
@@ -224,7 +228,9 @@ def update_config(
 
     if not config:
         config = config_crud.create_subscription_default_config(
-            subscription_id=str(subscription_id), nosql_session=nosql_session
+            subscription_id=str(subscription_id),
+            user_id=str(subscription.user_id),
+            nosql_session=nosql_session,
         )
 
     config_crud.update_config(
@@ -237,7 +243,7 @@ def update_config(
 @router.patch(
     "/{subscription_id}/resume",
     dependencies=[Depends(get_current_user)],
-    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+    status_code=status.HTTP_202_ACCEPTED,
     responses={
         403: {
             "model": ErrorMessage,
@@ -303,7 +309,9 @@ def update_plain_text_resume(
 
     if not resume:
         resume = config_crud.create_subscription_default_resume(
-            subscription_id=str(subscription_id), nosql_session=nosql_session
+            subscription_id=str(subscription_id),
+            user_id=str(subscription.user_id),
+            nosql_session=nosql_session,
         )
 
     config_crud.update_resume(

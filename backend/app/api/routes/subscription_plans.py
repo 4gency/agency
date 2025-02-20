@@ -19,10 +19,7 @@ router = APIRouter()
 
 @router.get("/", response_model=SubscriptionPlansPublic)
 def read_subscription_plans(
-    *,
-    session: SessionDep,
-    only_active: bool = True,
-    user: OptionalCurrentUser
+    *, session: SessionDep, only_active: bool = True, user: OptionalCurrentUser
 ) -> Any:
     """
     Retrieve subscription plans (public endpoint).
@@ -36,7 +33,9 @@ def read_subscription_plans(
         subscription_plans = [plan for plan in subscription_plans if plan.is_active]
 
     # 3) Convert each plan to its public schema
-    public_plans = [SubscriptionPlanPublic.model_validate(plan) for plan in subscription_plans]
+    public_plans = [
+        SubscriptionPlanPublic.model_validate(plan) for plan in subscription_plans
+    ]
 
     # 4) If the user is a subscriber, attach badges or add any plans not already in the list
     if user and user.is_subscriber:
@@ -44,13 +43,18 @@ def read_subscription_plans(
 
         for active_sub in active_subscriptions:
             # Find if this plan is already in our public list
-            matched_plan = next((p for p in public_plans if p.id == active_sub.subscription_plan_id), None)
+            matched_plan = next(
+                (p for p in public_plans if p.id == active_sub.subscription_plan_id),
+                None,
+            )
             if matched_plan:
                 matched_plan.has_badge = True
                 matched_plan.badge = "Your Plan"
             else:
                 # Create a new public plan entry
-                plan_public = SubscriptionPlanPublic.model_validate(active_sub.subscription_plan)
+                plan_public = SubscriptionPlanPublic.model_validate(
+                    active_sub.subscription_plan
+                )
                 plan_public.has_badge = True
                 plan_public.badge = "Your Plan"
                 plan_public.is_active = True
