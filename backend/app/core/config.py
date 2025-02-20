@@ -73,6 +73,11 @@ class Settings(BaseSettings):
     MONGODB_USER: str
     MONGODB_PASSWORD: str
 
+    S3_ENDPOINT_URL: str
+    S3_ACCESS_KEY_ID: str
+    S3_SECRET_ACCESS_KEY: str
+    S3_CONFIGS_BUCKET: str = "configs"
+
     @computed_field  # type: ignore[prop-decorator]
     @property
     def MONGODB_URI(self) -> MultiHostUrl:
