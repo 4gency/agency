@@ -85,7 +85,7 @@ def get_optional_current_user(
     return user
 
 
-OptionalCurrentUser = Annotated[Optional[User], Depends(get_optional_current_user)]
+OptionalCurrentUser = Annotated[User | None, Depends(get_optional_current_user)]
 CurrentUser = Annotated[User, Depends(get_current_user)]
 
 
