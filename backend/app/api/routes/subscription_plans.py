@@ -2,7 +2,6 @@ import uuid
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi_cache.decorator import cache
 
 from app.api.deps import OptionalCurrentUser, SessionDep, get_current_active_superuser
 from app.integrations import stripe
@@ -19,7 +18,6 @@ router = APIRouter()
 
 
 @router.get("/", response_model=SubscriptionPlansPublic)
-@cache(expire=600)
 def read_subscription_plans(
     *,
     session: SessionDep,

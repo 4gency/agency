@@ -1,7 +1,3 @@
-from contextlib import asynccontextmanager
-from typing import AsyncIterator
-from fastapi_cache import FastAPICache
-from fastapi_cache.backends.inmemory import InMemoryBackend
 import sentry_sdk
 import stripe
 from fastapi import FastAPI
@@ -39,16 +35,11 @@ if settings.STRIPE_SECRET_KEY:
 elif settings.ENVIRONMENT != "local":
     raise ValueError("Stripe secret key is not set")
 
-@asynccontextmanager
-async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-    FastAPICache.init(InMemoryBackend(), prefix="fastapi-cache")
-    yield
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     generate_unique_id_function=custom_generate_unique_id,
-    lifespan=lifespan,
 )
 
 # Set all CORS enabled origins
