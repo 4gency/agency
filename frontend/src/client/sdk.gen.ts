@@ -25,6 +25,7 @@ import type {
   GetPlainTextResumeData,
   GetPlainTextResumeResponse,
   UpdatePlainTextResumeData,
+  UpdatePlainTextResumeResponse,
   LoginAccessTokenData,
   LoginAccessTokenResponse,
   TestTokenResponse,
@@ -343,11 +344,12 @@ export class ConfigsService {
    * @param data The data for the request.
    * @param data.subscriptionId
    * @param data.requestBody
+   * @returns unknown Successful Response
    * @throws ApiError
    */
   public static updatePlainTextResume(
     data: UpdatePlainTextResumeData,
-  ): CancelablePromise<void> {
+  ): CancelablePromise<UpdatePlainTextResumeResponse> {
     return __request(OpenAPI, {
       method: "PATCH",
       url: "/api/v1/configs/{subscription_id}/resume",
@@ -360,7 +362,6 @@ export class ConfigsService {
         403: "Authorization error",
         404: "Resource not found",
         422: "Validation Error",
-        500: "Successful Response",
       },
     })
   }
