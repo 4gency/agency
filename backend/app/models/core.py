@@ -217,7 +217,7 @@ class Subscription(SQLModel, table=True):
         )
     )
     start_date: datetime
-    end_date: datetime | None = Field(nullable=True)
+    end_date: datetime | None = Field(None, nullable=True)
     is_active: bool = Field(default=True)
     metric_type: SubscriptionMetric
     metric_status: int
@@ -365,6 +365,23 @@ class Payment(SQLModel, table=True):
 
     subscription: Subscription = Relationship(back_populates="payments")
     user: User = Relationship(back_populates="payments")
+
+
+class PaymentPublic(SQLModel):
+    id: uuid.UUID
+    subscription_id: uuid.UUID
+    user_id: uuid.UUID
+    amount: float
+    currency: str
+    payment_date: datetime
+    payment_status: str
+    payment_gateway: str
+    transaction_id: str
+
+
+class PaymentsPublic(SQLModel):
+    data: list[PaymentPublic]
+    count: int
 
 
 class CheckoutSession(SQLModel, table=True):

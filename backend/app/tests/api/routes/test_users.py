@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime, timezone
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
@@ -7,7 +8,14 @@ from sqlmodel import Session, select
 from app.core.config import settings
 from app.core.security import verify_password
 from app.models import crud
-from app.models.core import User, UserCreate
+from app.models.core import (
+    Payment,
+    Subscription,
+    SubscriptionMetric,
+    SubscriptionPlan,
+    User,
+    UserCreate,
+)
 from app.tests.utils.utils import random_email, random_lower_string
 
 
@@ -484,3 +492,164 @@ def test_delete_user_without_privileges(
     )
     assert r.status_code == 403
     assert r.json()["detail"] == "The user doesn't have enough privileges"
+
+
+def test_payments_user(
+    client: TestClient, superuser_token_headers: dict[str, str], db: Session
+) -> None:
+    username = random_email()
+    password = random_lower_string()
+    user_in = UserCreate(email=username, password=password)
+    user = crud.create_user(session=db, user_create=user_in)
+
+    subscription_plan = SubscriptionPlan(
+        name="basic",
+        price=10.0,
+    )
+    db.add(subscription_plan)
+    db.commit()
+    db.refresh(subscription_plan)
+
+    assert subscription_plan.id
+    assert subscription_plan.name == "basic"
+    assert subscription_plan.price == 10.0
+
+    subscription = Subscription(
+        subscription_plan_id=subscription_plan.id,
+        user_id=user.id,
+        start_date=datetime.now(timezone.utc),
+        metric_type=SubscriptionMetric.MONTH,
+        metric_status=1,
+        end_date=None,
+    )
+    db.add(subscription)
+    db.commit()
+    db.refresh(subscription)
+
+    assert subscription.id
+    assert subscription.subscription_plan_id == subscription_plan.id
+    assert subscription.user_id == user.id
+    assert subscription.start_date
+    assert subscription.metric_type == SubscriptionMetric.MONTH
+    assert subscription.metric_status == 1
+    assert subscription.end_date is None
+
+    payment = Payment(
+        user_id=user.id,
+        amount=10.0,
+        currency="usd",
+        subscription_id=subscription.id,
+        payment_date=datetime.now(timezone.utc),
+        transaction_id=uuid.uuid4().hex,
+    )
+    db.add(payment)
+    db.commit()
+    db.refresh(payment)
+
+    assert payment.id
+    assert payment.user_id == user.id
+    assert payment.amount == 10.0
+    assert payment.currency == "usd"
+    assert payment.subscription_id == subscription.id
+    assert payment.payment_date
+    assert payment.transaction_id
+
+    r = client.get(
+        f"{settings.API_V1_STR}/users/{user.id}/payments",
+        headers=superuser_token_headers,
+    )
+    assert r.status_code == 200
+    payments = r.json()
+    assert payments
+    assert payments["count"] == 1
+    assert payments["data"]
+    assert len(payments["data"]) == 1
+    assert payments["data"][0]["id"] == str(payment.id)
+    assert payments["data"][0]["amount"] == 10.0
+    assert payments["data"][0]["currency"] == "usd"
+    assert payments["data"][0]["subscription_id"] == str(subscription.id)
+    assert payments["data"][0]["payment_date"]
+    assert payments["data"][0]["transaction_id"]
+    assert payments["data"][0]["user_id"] == str(user.id)
+
+
+def test_payments_me(
+    client: TestClient, superuser_token_headers: dict[str, str], db: Session
+) -> None:
+    r = client.get(f"{settings.API_V1_STR}/users/me", headers=superuser_token_headers)
+    current_user = r.json()
+    statement = select(User).where(User.email == current_user["email"])
+    user = db.exec(statement).first()
+
+    assert user is not None
+    assert user.id
+
+    subscription_plan = SubscriptionPlan(
+        name="basic",
+        price=10.0,
+    )
+    db.add(subscription_plan)
+    db.commit()
+    db.refresh(subscription_plan)
+
+    assert subscription_plan.id
+    assert subscription_plan.name == "basic"
+    assert subscription_plan.price == 10.0
+
+    subscription = Subscription(
+        subscription_plan_id=subscription_plan.id,
+        user_id=user.id,
+        start_date=datetime.now(timezone.utc),
+        metric_type=SubscriptionMetric.MONTH,
+        metric_status=1,
+        end_date=None,
+    )
+    db.add(subscription)
+    db.commit()
+    db.refresh(subscription)
+
+    assert subscription.id
+    assert subscription.subscription_plan_id == subscription_plan.id
+    assert subscription.user_id == user.id
+    assert subscription.start_date
+    assert subscription.metric_type == SubscriptionMetric.MONTH
+    assert subscription.metric_status == 1
+    assert subscription.end_date is None
+
+    payment = Payment(
+        user_id=user.id,
+        amount=10.0,
+        currency="usd",
+        subscription_id=subscription.id,
+        payment_date=datetime.now(timezone.utc),
+        transaction_id=uuid.uuid4().hex,
+    )
+    db.add(payment)
+    db.commit()
+    db.refresh(payment)
+
+    assert payment.id
+    assert payment.user_id == user.id
+    assert payment.amount == 10.0
+    assert payment.currency == "usd"
+    assert payment.subscription_id == subscription.id
+    assert payment.payment_date
+    assert payment.transaction_id
+
+    r = client.get(
+        f"{settings.API_V1_STR}/users/me/payments",
+        headers=superuser_token_headers,
+    )
+    assert r.status_code == 200
+    payments = r.json()
+    assert payments
+    assert payments["data"]
+    assert len(payments["data"]) == 1
+    assert payments["count"] == 1
+    assert payments["data"][0]["id"] == str(payment.id)
+    assert payments["data"][0]["amount"] == 10.0
+    assert payments["data"][0]["currency"] == "usd"
+    assert payments["data"][0]["subscription_id"] == str(subscription.id)
+    assert payments["data"][0]["payment_date"]
+    assert payments["data"][0]["transaction_id"]
+    assert payments["data"][0]["user_id"] == str(user.id)

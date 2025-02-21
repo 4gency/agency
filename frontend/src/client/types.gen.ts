@@ -146,6 +146,23 @@ export type NewPassword = {
   new_password: string
 }
 
+export type PaymentPublic = {
+  id: string
+  subscription_id: string
+  user_id: string
+  amount: number
+  currency: string
+  payment_date: string
+  payment_status: string
+  payment_gateway: string
+  transaction_id: string
+}
+
+export type PaymentsPublic = {
+  data: Array<PaymentPublic>
+  count: number
+}
+
 export type PersonalInformation = {
   name?: string
   surname?: string
@@ -424,6 +441,28 @@ export type RecoverPasswordHtmlContentData = {
 
 export type RecoverPasswordHtmlContentResponse = string
 
+export type ReadPaymentsByCurrentUserData = {
+  limit?: number
+  skip?: number
+}
+
+export type ReadPaymentsByCurrentUserResponse = PaymentsPublic
+
+export type ReadPaymentsByUserIdData = {
+  limit?: number
+  skip?: number
+  userId: string
+}
+
+export type ReadPaymentsByUserIdResponse = PaymentsPublic
+
+export type ReadPaymentsData = {
+  limit?: number
+  skip?: number
+}
+
+export type ReadPaymentsResponse = PaymentsPublic
+
 export type ReadSubscriptionPlansData = {
   onlyActive?: boolean
 }
@@ -454,6 +493,45 @@ export type DeleteSubscriptionPlanData = {
 }
 
 export type DeleteSubscriptionPlanResponse = Message
+
+export type GetUserSubscriptionsData = {
+  onlyActive?: boolean | null
+}
+
+export type GetUserSubscriptionsResponse = Array<SubscriptionPublic>
+
+export type GetUserSubscriptionsByIdData = {
+  onlyActive?: boolean | null
+  userId: string
+}
+
+export type GetUserSubscriptionsByIdResponse = Array<SubscriptionPublic>
+
+export type CancelUserSubscriptionData = {
+  subscriptionId: string
+}
+
+export type CancelUserSubscriptionResponse = Message
+
+export type ReactivateUserSubscriptionData = {
+  subscriptionId: string
+}
+
+export type ReactivateUserSubscriptionResponse = Message
+
+export type CancelUserSubscriptionByIdData = {
+  subscriptionId: string
+  userId: string
+}
+
+export type CancelUserSubscriptionByIdResponse = Message
+
+export type ReactivateUserSubscriptionByIdData = {
+  subscriptionId: string
+  userId: string
+}
+
+export type ReactivateUserSubscriptionByIdResponse = Message
 
 export type ReadUsersData = {
   limit?: number
@@ -508,45 +586,6 @@ export type DeleteUserData = {
 }
 
 export type DeleteUserResponse = Message
-
-export type GetUserSubscriptionsData = {
-  onlyActive?: boolean | null
-}
-
-export type GetUserSubscriptionsResponse = Array<SubscriptionPublic>
-
-export type GetUserSubscriptionsByIdData = {
-  onlyActive?: boolean | null
-  userId: string
-}
-
-export type GetUserSubscriptionsByIdResponse = Array<SubscriptionPublic>
-
-export type CancelUserSubscriptionData = {
-  subscriptionId: string
-}
-
-export type CancelUserSubscriptionResponse = Message
-
-export type ReactivateUserSubscriptionData = {
-  subscriptionId: string
-}
-
-export type ReactivateUserSubscriptionResponse = Message
-
-export type CancelUserSubscriptionByIdData = {
-  subscriptionId: string
-  userId: string
-}
-
-export type CancelUserSubscriptionByIdResponse = Message
-
-export type ReactivateUserSubscriptionByIdData = {
-  subscriptionId: string
-  userId: string
-}
-
-export type ReactivateUserSubscriptionByIdResponse = Message
 
 export type TestEmailData = {
   emailTo: string

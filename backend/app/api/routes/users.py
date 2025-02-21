@@ -19,6 +19,9 @@ from app.models import crud
 from app.models.core import (
     # Item,
     Message,
+    Payment,
+    PaymentPublic,
+    PaymentsPublic,
     Subscription,
     SubscriptionPublic,
     UpdatePassword,
@@ -222,7 +225,11 @@ def update_user(
     return db_user
 
 
-@router.delete("/{user_id}", dependencies=[Depends(get_current_active_superuser)])
+@router.delete(
+    "/{user_id}",
+    dependencies=[Depends(get_current_active_superuser)],
+    response_model=Message,
+)
 def delete_user(
     session: SessionDep, current_user: CurrentUser, user_id: uuid.UUID
 ) -> Message:
@@ -246,7 +253,9 @@ def delete_user(
     return Message(message="User deleted successfully")
 
 
-@router.get("/me/subscriptions", response_model=list[SubscriptionPublic])
+@router.get(
+    "/me/subscriptions", response_model=list[SubscriptionPublic], tags=["subscriptions"]
+)
 def get_user_subscriptions(
     user: CurrentUser,
     only_active: bool | None = True,
@@ -268,6 +277,7 @@ def get_user_subscriptions(
     "/{user_id}/subscriptions",
     dependencies=[Depends(get_current_active_superuser)],
     response_model=list[SubscriptionPublic],
+    tags=["subscriptions"],
 )
 def get_user_subscriptions_by_id(
     user_id: uuid.UUID,
@@ -292,7 +302,11 @@ def get_user_subscriptions_by_id(
     return subscriptions
 
 
-@router.delete("/me/subscriptions/{subscription_id}/cancel", response_model=Message)
+@router.delete(
+    "/me/subscriptions/{subscription_id}/cancel",
+    response_model=Message,
+    tags=["subscriptions"],
+)
 def cancel_user_subscription(
     user: CurrentUser,
     subscription_id: uuid.UUID,
@@ -318,7 +332,11 @@ def cancel_user_subscription(
     return Message(message="Recurring payment cancelled successfully")
 
 
-@router.post("/me/subscriptions/{subscription_id}/reactivate", response_model=Message)
+@router.post(
+    "/me/subscriptions/{subscription_id}/reactivate",
+    response_model=Message,
+    tags=["subscriptions"],
+)
 def reactivate_user_subscription(
     user: CurrentUser,
     subscription_id: uuid.UUID,
@@ -346,6 +364,7 @@ def reactivate_user_subscription(
     "/{user_id}/subscriptions/{subscription_id}/cancel",
     dependencies=[Depends(get_current_active_superuser)],
     response_model=Message,
+    tags=["subscriptions"],
 )
 def cancel_user_subscription_by_id(
     user_id: uuid.UUID,
@@ -387,6 +406,7 @@ def cancel_user_subscription_by_id(
     "/{user_id}/subscriptions/{subscription_id}/reactivate",
     dependencies=[Depends(get_current_active_superuser)],
     response_model=Message,
+    tags=["subscriptions"],
 )
 def reactivate_user_subscription_by_id(
     user_id: uuid.UUID,
@@ -414,3 +434,50 @@ def reactivate_user_subscription_by_id(
     reactivate_subscription(session, subscription)
 
     return Message(message="Subscription reactivated successfully")
+
+
+@router.get("/me/payments", response_model=PaymentsPublic, tags=["payments"])
+def read_payments_by_current_user(
+    user: CurrentUser, session: SessionDep, skip: int = 0, limit: int = 100
+) -> Any:
+    """
+    Retrieve payments for the current user.
+    """
+    count_statement = (
+        select(func.count()).select_from(Payment).where(Payment.user_id == user.id)
+    )
+    count = session.exec(count_statement).one()
+
+    statement = (
+        select(Payment).where(Payment.user_id == user.id).offset(skip).limit(limit)
+    )
+    payments = session.exec(statement).all()
+    payments_public = [PaymentPublic.model_validate(p) for p in payments]
+
+    return PaymentsPublic(data=payments_public, count=count)
+
+
+@router.get(
+    "/{user_id}/payments",
+    dependencies=[Depends(get_current_active_superuser)],
+    response_model=PaymentsPublic,
+    tags=["payments"],
+)
+def read_payments_by_user_id(
+    user_id: uuid.UUID, session: SessionDep, skip: int = 0, limit: int = 100
+) -> Any:
+    """
+    Retrieve payments by user id.
+    """
+    count_statement = (
+        select(func.count()).select_from(Payment).where(Payment.user_id == user_id)
+    )
+    count = session.exec(count_statement).one()
+
+    statement = (
+        select(Payment).where(Payment.user_id == user_id).offset(skip).limit(limit)
+    )
+    payments = session.exec(statement).all()
+    payments_public = [PaymentPublic.model_validate(p) for p in payments]
+
+    return PaymentsPublic(data=payments_public, count=count)
