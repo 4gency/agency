@@ -273,18 +273,10 @@ def create_stripe_checkout_session(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Subscription plan not found"
         )
-    sub, payment = crud_subs.create_sub_payment(
-        session=session,
-        user=user,
-        sub_plan=sub_plan,
-        payment_status="pending",
-        payment_gateway="stripe",
-    )
     data = stripe_controller.create_checkout_subscription_session(
         session=session,
         subscription_plan=sub_plan,
         user=user,
-        payment=payment,
     )
 
     checkout = CheckoutSession(

@@ -1,7 +1,8 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 
+from dateutil.relativedelta import relativedelta
 from pydantic import EmailStr, field_validator
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlmodel import Column, Field, ForeignKey, Relationship, SQLModel
@@ -156,7 +157,8 @@ class SubscriptionPlan(SQLModel, table=True):
         back_populates="subscription_plan", cascade_delete=True
     )
     subscriptions: list["Subscription"] = Relationship(
-        back_populates="subscription_plan"
+        back_populates="subscription_plan",
+        cascade_delete=True,
     )
     checkout_sessions: list["CheckoutSession"] = Relationship(back_populates="plan")
 
@@ -207,9 +209,15 @@ class Subscription(SQLModel, table=True):
             nullable=False,
         )
     )
-    subscription_plan_id: uuid.UUID = Field(foreign_key="subscription_plan.id")
+    subscription_plan_id: uuid.UUID = Field(
+        sa_column=Column(
+            PGUUID(as_uuid=True),
+            ForeignKey("subscription_plan.id", ondelete="CASCADE"),
+            nullable=False,
+        )
+    )
     start_date: datetime
-    end_date: datetime
+    end_date: datetime | None = Field(nullable=True)
     is_active: bool = Field(default=True)
     metric_type: SubscriptionMetric
     metric_status: int
@@ -221,6 +229,68 @@ class Subscription(SQLModel, table=True):
     payments: list["Payment"] = Relationship(back_populates="subscription")
     bot_sessions: list["BotSession"] = Relationship(back_populates="subscription")
 
+    def extend_subscription(self, plan: SubscriptionPlan | None = None) -> None:
+        """
+        Extende a assinatura para um novo plano (caso fornecido) ou renova o atual.
+        Depois de renovar métricas, recalcula a data de término.
+        """
+        # Caso seja fornecido um plano diferente, atualiza o plano da assinatura
+        if plan and plan != self.subscription_plan:
+            self.subscription_plan = plan
+
+        # Atualiza métricas de acordo com o self.subscription_plan
+        self.renew_metrics()
+
+        # Recalcula a data de término com base nas métricas atualizadas
+        self.calculate_end_date()
+
+    def renew_metrics(self) -> None:
+        """
+        Renova as métricas da assinatura com base em self.subscription_plan.
+
+        Regras genéricas:
+          1. Se o tipo de métrica do plano for diferente do atual,
+             zera o tipo para o novo e define o status como o valor base do plano.
+          2. Se o tipo de métrica for o mesmo, checa se a assinatura já expirou:
+             - Se estiver expirada, reseta o metric_status com o valor base do plano.
+             - Se ainda estiver ativa, soma o valor base do plano ao metric_status atual.
+          3. Garante que metric_status nunca fique negativo.
+        """
+        plan = self.subscription_plan
+
+        # Se a métrica do plano for diferente da métrica atual, “resetamos” tudo
+        if plan.metric_type != self.metric_type:
+            self.metric_type = plan.metric_type
+            self.metric_status = max(0, plan.metric_value)
+            return
+
+        # A métrica é a mesma do plano
+        # Verificamos se a assinatura já deveria estar desativada
+        if self.need_to_deactivate():
+            # Se já expirou ou não tem créditos, reiniciamos o 'metric_status'
+            self.metric_status = max(0, plan.metric_value)
+        else:
+            # Se ainda está ativa, simplesmente acumulamos
+            if self.metric_status < 0:
+                self.metric_status = 0
+            self.metric_status += plan.metric_value
+
+    def calculate_end_date(self) -> None:
+        """
+        Calcula a data de término da assinatura baseado no tipo de métrica.
+        ATENÇÃO: Caso for renovar as métricas, fazer apenas APÓS a renovação das métricas.
+        """
+        if self.metric_type == SubscriptionMetric.DAY:
+            self.end_date = self.start_date + timedelta(days=self.metric_status)
+        elif self.metric_type == SubscriptionMetric.WEEK:
+            self.end_date = self.start_date + timedelta(weeks=self.metric_status)
+        elif self.metric_type == SubscriptionMetric.MONTH:
+            self.end_date = self.start_date + relativedelta(months=self.metric_status)
+        elif self.metric_type == SubscriptionMetric.YEAR:
+            self.end_date = self.start_date + relativedelta(years=self.metric_status)
+        elif self.metric_type == SubscriptionMetric.APPLIES:
+            self.end_date = None
+
     def need_to_deactivate(self) -> bool:
         """
         Verifica se a assinatura precisa ser desativada baseado no tipo de métrica.
@@ -231,22 +301,20 @@ class Subscription(SQLModel, table=True):
           - Para métrica APPLIES, o metric_status seja menor que 1 (por exemplo, sem créditos).
         Caso contrário, retorna False.
         """
-
-        # Momento atual em UTC
         now_utc = datetime.now(timezone.utc)
 
-        # Se a métrica for baseada em tempo (dia, semana, mês, ano),
-        # basta checar se já passou da end_date
+        # Métricas baseadas em tempo
         if self.metric_type in [
             SubscriptionMetric.DAY,
             SubscriptionMetric.WEEK,
             SubscriptionMetric.MONTH,
             SubscriptionMetric.YEAR,
         ]:
-            if self.end_date < now_utc:
+            # Se não há end_date ou já passou, precisa desativar
+            if self.end_date is None or self.end_date < now_utc:
                 return True
 
-        # Se a métrica for APPLIES, checa se ainda há "créditos"
+        # Métrica baseada em crédito
         elif self.metric_type == SubscriptionMetric.APPLIES:
             if self.metric_status < 1:
                 return True

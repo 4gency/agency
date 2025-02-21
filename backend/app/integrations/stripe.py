@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Any
 
 import stripe
@@ -11,7 +11,6 @@ from app.models.core import (
     CheckoutSession,
     Payment,
     Subscription,
-    SubscriptionMetric,
     SubscriptionPlan,
     User,
 )
@@ -369,7 +368,6 @@ def create_checkout_subscription_session(
     session: Session,
     subscription_plan: SubscriptionPlan,
     user: User,
-    payment: Payment,
 ) -> stripe.checkout.Session:
     """
     Cria uma sessão de checkout (Stripe Checkout) para assinar um plano.
@@ -392,10 +390,8 @@ def create_checkout_subscription_session(
         success_url=f"{settings.FRONTEND_HOST}/stripe/success?session_id={{CHECKOUT_SESSION_ID}}",
         cancel_url=f"{settings.FRONTEND_HOST}/stripe/cancel?session_id={{CHECKOUT_SESSION_ID}}",
         metadata={
-            "payment_id": str(payment.id),
-            "subscription_id": str(payment.subscription_id),
             "user_id": str(user.id),
-            "transaction_id": str(payment.transaction_id),
+            "plan_id": str(subscription_plan.id),
         },
     )
 
@@ -532,81 +528,8 @@ def reactivate_subscription(session: Session, subscription: Subscription) -> Non
 
 
 # --------------------------------------------------
-# 6) Helpers de Datas e Extensão
-# --------------------------------------------------
-
-
-def _calculate_end_date(
-    plan: SubscriptionPlan, base_date: datetime | None = None
-) -> datetime:
-    """Calcula a data de término com base na metric_type e metric_value do plano."""
-    if not base_date:
-        base_date = datetime.now(timezone.utc)
-
-    if plan.metric_type == SubscriptionMetric.DAY:
-        return base_date + timedelta(days=plan.metric_value)
-    elif plan.metric_type == SubscriptionMetric.WEEK:
-        return base_date + timedelta(weeks=plan.metric_value)
-    elif plan.metric_type == SubscriptionMetric.MONTH:
-        return base_date + timedelta(days=30 * plan.metric_value)
-    elif plan.metric_type == SubscriptionMetric.YEAR:
-        return base_date + timedelta(days=365 * plan.metric_value)
-    return base_date
-
-
-def _extend_subscription(subscription: Subscription, plan: SubscriptionPlan) -> None:
-    """
-    Se a sub já expirou, redefine start_date para agora.
-    Se ainda está ativa, soma a nova duração ao end_date atual.
-    """
-    now_utc = datetime.now(timezone.utc)
-
-    # Garante que end_date esteja em UTC
-    if subscription.end_date.tzinfo is None:
-        subscription.end_date = subscription.end_date.replace(tzinfo=timezone.utc)
-
-    if subscription.end_date < now_utc:
-        subscription.start_date = now_utc
-        subscription.end_date = _calculate_end_date(plan, base_date=now_utc)
-    else:
-        subscription.end_date = _calculate_end_date(
-            plan, base_date=subscription.end_date
-        )
-
-    subscription.is_active = True
-
-
-# --------------------------------------------------
 # 7) Webhooks e Callbacks
 # --------------------------------------------------
-
-
-def handle_checkout_session(session: Session, event: dict[Any, Any]) -> None:
-    """
-    Webhook handler para 'checkout.session.completed'.
-    Decide se foi um 'success' ou 'cancel' e chama a lógica unificada.
-    """
-    checkout_obj = event["data"]["object"]
-    # session_id = checkout_obj["id"]
-    payment_status = checkout_obj.get("payment_status")  # 'paid' ou 'unpaid'
-    stripe_subscription_id = checkout_obj.get("subscription")
-    metadata = checkout_obj.get("metadata", {})
-
-    # Busca local
-    payment_id = metadata.get("payment_id")
-    local_sub_id = metadata.get("subscription_id")
-
-    payment = session.get(Payment, uuid.UUID(payment_id)) if payment_id else None
-    subscription = (
-        session.get(Subscription, uuid.UUID(local_sub_id)) if local_sub_id else None
-    )
-
-    # Se pagamento_status='paid', chamamos _common_success_logic
-    # caso contrário, pode ser um 'cancel' ou 'unpaid'
-    if payment_status == "paid":
-        _common_success_logic(session, subscription, payment, stripe_subscription_id)
-    elif payment_status == "unpaid":
-        _common_cancel_logic(session, payment)
 
 
 def handle_success_callback(
@@ -619,24 +542,49 @@ def handle_success_callback(
     stripe_sess = stripe.checkout.Session.retrieve(checkout.session_id)
 
     if stripe_sess.payment_status == "paid":
-        # Carrega local
-        stripe_subscription_id = stripe_sess.get("subscription")
-        payment_id = stripe_sess.get("metadata", {}).get("payment_id")
-        local_sub_id = stripe_sess.get("metadata", {}).get("subscription_id")
+        stripe_subscription_id = stripe_sess.get("subscription", "")
 
-        payment = session.get(Payment, uuid.UUID(payment_id)) if payment_id else None
-        subscription = (
-            session.get(Subscription, uuid.UUID(local_sub_id)) if local_sub_id else None
+        _validate_success_callback(
+            session, checkout, plan, user, stripe_subscription_id
         )
-
-        _common_success_logic(session, subscription, payment, stripe_subscription_id)
-        # Também chamamos _validate_success_callback para criar/estender se não existir
-        # mas podemos unificar essa ideia dentro de _common_success_logic
-        _validate_success_callback(session, checkout, plan, user)
 
         return {"message": "Success callback processed"}
     else:
         raise BadRequest("Checkout session payment status is not 'paid'")
+
+
+def handle_checkout_session(session: Session, event: dict[Any, Any]) -> None:
+    """
+    Webhook handler para 'checkout.session.completed'.
+    Decide se foi um 'success' ou 'cancel' e chama a lógica unificada.
+    """
+    checkout_obj = event["data"]["object"]
+    # session_id = checkout_obj["id"]
+    payment_status = checkout_obj.get("payment_status")  # 'paid' ou 'unpaid'
+
+    metadata = checkout_obj.get("metadata", {})
+    checkout = session.exec(
+        select(CheckoutSession).where(CheckoutSession.session_id == checkout_obj["id"])
+    ).first()
+    if not checkout:
+        raise Exception("Checkout not found")
+    plan = session.exec(
+        select(SubscriptionPlan).where(
+            SubscriptionPlan.id == uuid.UUID(metadata.get("plan_id"))
+        )
+    ).first()
+    if not plan:
+        raise Exception("Plan not found")
+    user = session.exec(
+        select(User).where(User.id == uuid.UUID(metadata.get("user_id")))
+    ).first()
+    if not user:
+        raise Exception("User not found")
+
+    if payment_status == "paid":
+        handle_success_callback(session, checkout, plan, user)
+    elif payment_status == "unpaid":
+        handle_cancel_callback(session, checkout)
 
 
 def handle_cancel_callback(
@@ -653,13 +601,6 @@ def handle_cancel_callback(
 
     # Se não está pago, chamamos a lógica de cancel
     if stripe_sess.payment_status != "paid":
-        payment_id = stripe_sess.get("metadata", {}).get("payment_id")
-
-        payment = session.get(Payment, uuid.UUID(payment_id)) if payment_id else None
-
-        _common_cancel_logic(session, payment)
-
-        # Marcar o checkout também como cancelado
         checkout.status = "canceled"
         checkout.payment_status = "unpaid"
         checkout.updated_at = datetime.now(timezone.utc)
@@ -674,82 +615,16 @@ def handle_cancel_callback(
 
 
 #
-# LÓGICA COMPARTILHADA DE SUCESSO / CANCEL
-#
-
-
-def _common_success_logic(
-    session: Session,
-    subscription: Subscription | None,
-    payment: Payment | None,
-    stripe_subscription_id: str | None,
-) -> None:
-    """
-    Lógica de 'success' usada tanto pelo webhook checkout.session.completed
-    (caso payment_status='paid'), quanto pelo callback success do usuário.
-    - Marca 'payment_status' como 'paid'
-    - Atribui 'stripe_subscription_id' se ainda não tiver
-    - Marca subscription como ativa
-    - Ajusta datas
-    """
-    if subscription:
-        if not subscription.stripe_subscription_id and stripe_subscription_id:
-            subscription.stripe_subscription_id = stripe_subscription_id
-        subscription.is_active = True
-
-        # Se quisermos puxar datas exatas da Stripe:
-        if subscription.stripe_subscription_id:
-            stripe_sub = stripe.Subscription.retrieve(
-                subscription.stripe_subscription_id
-            )
-            subscription.start_date = datetime.fromtimestamp(
-                stripe_sub.current_period_start
-            )
-            subscription.end_date = datetime.fromtimestamp(
-                stripe_sub.current_period_end
-            )
-
-    if payment:
-        payment.payment_status = "paid"
-
-    session.add_all([subscription, payment])
-    session.commit()
-    if subscription:
-        session.refresh(subscription)
-    if payment:
-        session.refresh(payment)
-
-
-def _common_cancel_logic(
-    session: Session,
-    # subscription: Subscription | None,
-    payment: Payment | None,
-) -> None:
-    """
-    Lógica de 'cancel' usada tanto pelo webhook (se por acaso recebesse um evento 'canceled')
-    quanto pela rota callback de cancel:
-    - Marca payment como 'unpaid' ou 'canceled'
-    """
-    if payment and payment.payment_status not in ("paid", "refunded"):
-        payment.payment_status = "canceled"
-
-    session.add_all(
-        [
-            payment,
-        ]
-    )
-    session.commit()
-    if payment:
-        session.refresh(payment)
-
-
-#
 # VALIDATE SUCCESS
 #
 
 
 def _validate_success_callback(
-    session: Session, checkout: CheckoutSession, plan: SubscriptionPlan, user: User
+    session: Session,
+    checkout: CheckoutSession,
+    plan: SubscriptionPlan,
+    user: User,
+    stripe_subscription_id: str,
 ) -> Subscription | None:
     """
     Marca checkout como 'complete' + 'paid'.
@@ -766,59 +641,35 @@ def _validate_success_callback(
         checkout.updated_at = datetime.now(timezone.utc)
         session.add(checkout)
 
-        # 2) Verifica se já existe sub ativa para o mesmo plano
-        existing_sub = session.exec(
-            select(Subscription)
-            .where(Subscription.user_id == user.id)
-            .where(Subscription.subscription_plan_id == plan.id)
-            .where(Subscription.is_active is True)
-        ).first()
-
-        # 3) Cria ou atualiza a sub
-        if existing_sub:
-            # _extend_subscription seria outra função para somar dias/meses
-            existing_sub.end_date = datetime.now(timezone.utc)  # Exemplo
-            subscription = existing_sub
-        else:
-            subscription = Subscription(
-                user_id=user.id,
-                subscription_plan_id=plan.id,
-                start_date=datetime.now(timezone.utc),
-                end_date=datetime.now(timezone.utc) + timedelta(days=30),  # Exemplo
-                is_active=True,
-                metric_type=plan.metric_type,
-                metric_status=1,
-                stripe_subscription_id=None,  # pode ser setado depois
-            )
-            session.add(subscription)
-            session.flush()
+        subscription = Subscription(
+            user_id=user.id,
+            subscription_plan_id=plan.id,
+            start_date=datetime.now(timezone.utc),
+            is_active=True,
+            metric_type=plan.metric_type,
+            metric_status=1,
+            stripe_subscription_id=stripe_subscription_id,
+            end_date=None,
+        )
+        subscription.calculate_end_date()
+        session.add(subscription)
+        session.flush()
 
         user.is_subscriber = True
         session.add(user)
 
-        # 4) Verifica Payment
-        existing_payment = session.exec(
-            select(Payment).where(Payment.transaction_id == checkout.session_id)
-        ).first()
-
-        if not existing_payment:
-            new_payment = Payment(
-                subscription_id=subscription.id,
-                user_id=user.id,
-                amount=plan.price,
-                currency=plan.currency,
-                payment_date=datetime.now(timezone.utc),
-                payment_status="paid",
-                payment_gateway="stripe",
-                transaction_id=checkout.session_id,
-            )
-            session.add(new_payment)
-            session.flush()
-        else:
-            existing_payment.payment_status = "paid"
-            existing_payment.payment_date = datetime.now(timezone.utc)
-            session.add(existing_payment)
-            session.flush()
+        new_payment = Payment(
+            subscription_id=subscription.id,
+            user_id=user.id,
+            amount=plan.price,
+            currency=plan.currency,
+            payment_date=datetime.now(timezone.utc),
+            payment_status="paid",
+            payment_gateway="stripe",
+            transaction_id=checkout.session_id,
+        )
+        session.add(new_payment)
+        session.flush()
 
         session.commit()
         return subscription
