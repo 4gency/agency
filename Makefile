@@ -34,6 +34,9 @@ lint:
 test:
 	$(call run_script,test-dev,$(ARGS))
 
+test-prod:
+	$(call run_script,test)
+
 format:
 	$(call run_script,format)
 
