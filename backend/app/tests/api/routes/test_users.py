@@ -643,9 +643,9 @@ def test_payments_me(
     assert r.status_code == 200
     payments = r.json()
     assert payments
-    assert payments["count"] == 1
     assert payments["data"]
     assert len(payments["data"]) == 1
+    assert payments["count"] == 1
     assert payments["data"][0]["id"] == str(payment.id)
     assert payments["data"][0]["amount"] == 10.0
     assert payments["data"][0]["currency"] == "usd"
