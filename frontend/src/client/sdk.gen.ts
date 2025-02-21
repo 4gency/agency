@@ -35,6 +35,12 @@ import type {
   ResetPasswordResponse,
   RecoverPasswordHtmlContentData,
   RecoverPasswordHtmlContentResponse,
+  ReadPaymentsByCurrentUserData,
+  ReadPaymentsByCurrentUserResponse,
+  ReadPaymentsByUserIdData,
+  ReadPaymentsByUserIdResponse,
+  ReadPaymentsData,
+  ReadPaymentsResponse,
   ReadSubscriptionPlansData,
   ReadSubscriptionPlansResponse,
   CreateSubscriptionPlanData,
@@ -45,6 +51,18 @@ import type {
   UpdateSubscriptionPlanResponse,
   DeleteSubscriptionPlanData,
   DeleteSubscriptionPlanResponse,
+  GetUserSubscriptionsData,
+  GetUserSubscriptionsResponse,
+  GetUserSubscriptionsByIdData,
+  GetUserSubscriptionsByIdResponse,
+  CancelUserSubscriptionData,
+  CancelUserSubscriptionResponse,
+  ReactivateUserSubscriptionData,
+  ReactivateUserSubscriptionResponse,
+  CancelUserSubscriptionByIdData,
+  CancelUserSubscriptionByIdResponse,
+  ReactivateUserSubscriptionByIdData,
+  ReactivateUserSubscriptionByIdResponse,
   ReadUsersData,
   ReadUsersResponse,
   CreateUserData,
@@ -63,18 +81,6 @@ import type {
   UpdateUserResponse,
   DeleteUserData,
   DeleteUserResponse,
-  GetUserSubscriptionsData,
-  GetUserSubscriptionsResponse,
-  GetUserSubscriptionsByIdData,
-  GetUserSubscriptionsByIdResponse,
-  CancelUserSubscriptionData,
-  CancelUserSubscriptionResponse,
-  ReactivateUserSubscriptionData,
-  ReactivateUserSubscriptionResponse,
-  CancelUserSubscriptionByIdData,
-  CancelUserSubscriptionByIdResponse,
-  ReactivateUserSubscriptionByIdData,
-  ReactivateUserSubscriptionByIdResponse,
   TestEmailData,
   TestEmailResponse,
   HealthCheckResponse,
@@ -472,6 +478,87 @@ export class LoginService {
   }
 }
 
+export class PaymentsService {
+  /**
+   * Read Payments By Current User
+   * Retrieve payments for the current user.
+   * @param data The data for the request.
+   * @param data.skip
+   * @param data.limit
+   * @returns PaymentsPublic Successful Response
+   * @throws ApiError
+   */
+  public static readPaymentsByCurrentUser(
+    data: ReadPaymentsByCurrentUserData = {},
+  ): CancelablePromise<ReadPaymentsByCurrentUserResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/users/me/payments",
+      query: {
+        skip: data.skip,
+        limit: data.limit,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Read Payments By User Id
+   * Retrieve payments by user id.
+   * @param data The data for the request.
+   * @param data.userId
+   * @param data.skip
+   * @param data.limit
+   * @returns PaymentsPublic Successful Response
+   * @throws ApiError
+   */
+  public static readPaymentsByUserId(
+    data: ReadPaymentsByUserIdData,
+  ): CancelablePromise<ReadPaymentsByUserIdResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/users/{user_id}/payments",
+      path: {
+        user_id: data.userId,
+      },
+      query: {
+        skip: data.skip,
+        limit: data.limit,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Read Payments
+   * Retrieve all payments.
+   * @param data The data for the request.
+   * @param data.skip
+   * @param data.limit
+   * @returns PaymentsPublic Successful Response
+   * @throws ApiError
+   */
+  public static readPayments(
+    data: ReadPaymentsData = {},
+  ): CancelablePromise<ReadPaymentsResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/payments/",
+      query: {
+        skip: data.skip,
+        limit: data.limit,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+}
+
 export class SubscriptionPlansService {
   /**
    * Read Subscription Plans
@@ -583,6 +670,154 @@ export class SubscriptionPlansService {
       url: "/api/v1/subscription-plans/{id}",
       path: {
         id: data.id,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+}
+
+export class SubscriptionsService {
+  /**
+   * Get User Subscriptions
+   * Get user subscription.
+   * @param data The data for the request.
+   * @param data.onlyActive
+   * @returns SubscriptionPublic Successful Response
+   * @throws ApiError
+   */
+  public static getUserSubscriptions(
+    data: GetUserSubscriptionsData = {},
+  ): CancelablePromise<GetUserSubscriptionsResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/users/me/subscriptions",
+      query: {
+        only_active: data.onlyActive,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Get User Subscriptions By Id
+   * Get user subscription by id.
+   * @param data The data for the request.
+   * @param data.userId
+   * @param data.onlyActive
+   * @returns SubscriptionPublic Successful Response
+   * @throws ApiError
+   */
+  public static getUserSubscriptionsById(
+    data: GetUserSubscriptionsByIdData,
+  ): CancelablePromise<GetUserSubscriptionsByIdResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/users/{user_id}/subscriptions",
+      path: {
+        user_id: data.userId,
+      },
+      query: {
+        only_active: data.onlyActive,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Cancel User Subscription
+   * Cancel user subscription (recurring payment).
+   * @param data The data for the request.
+   * @param data.subscriptionId
+   * @returns Message Successful Response
+   * @throws ApiError
+   */
+  public static cancelUserSubscription(
+    data: CancelUserSubscriptionData,
+  ): CancelablePromise<CancelUserSubscriptionResponse> {
+    return __request(OpenAPI, {
+      method: "DELETE",
+      url: "/api/v1/users/me/subscriptions/{subscription_id}/cancel",
+      path: {
+        subscription_id: data.subscriptionId,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Reactivate User Subscription
+   * Reactivate user subscription if still in 'cancel_at_period_end' window.
+   * @param data The data for the request.
+   * @param data.subscriptionId
+   * @returns Message Successful Response
+   * @throws ApiError
+   */
+  public static reactivateUserSubscription(
+    data: ReactivateUserSubscriptionData,
+  ): CancelablePromise<ReactivateUserSubscriptionResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/users/me/subscriptions/{subscription_id}/reactivate",
+      path: {
+        subscription_id: data.subscriptionId,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Cancel User Subscription By Id
+   * Cancel user subscription by id (recurring payment on Stripe).
+   * @param data The data for the request.
+   * @param data.userId
+   * @param data.subscriptionId
+   * @returns Message Successful Response
+   * @throws ApiError
+   */
+  public static cancelUserSubscriptionById(
+    data: CancelUserSubscriptionByIdData,
+  ): CancelablePromise<CancelUserSubscriptionByIdResponse> {
+    return __request(OpenAPI, {
+      method: "DELETE",
+      url: "/api/v1/users/{user_id}/subscriptions/{subscription_id}/cancel",
+      path: {
+        user_id: data.userId,
+        subscription_id: data.subscriptionId,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Reactivate User Subscription By Id
+   * Reactivate user subscription by id.
+   * @param data The data for the request.
+   * @param data.userId
+   * @param data.subscriptionId
+   * @returns Message Successful Response
+   * @throws ApiError
+   */
+  public static reactivateUserSubscriptionById(
+    data: ReactivateUserSubscriptionByIdData,
+  ): CancelablePromise<ReactivateUserSubscriptionByIdResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/users/{user_id}/subscriptions/{subscription_id}/reactivate",
+      path: {
+        user_id: data.userId,
+        subscription_id: data.subscriptionId,
       },
       errors: {
         422: "Validation Error",
@@ -942,6 +1177,60 @@ export class UsersService {
       path: {
         user_id: data.userId,
         subscription_id: data.subscriptionId,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Read Payments By Current User
+   * Retrieve payments for the current user.
+   * @param data The data for the request.
+   * @param data.skip
+   * @param data.limit
+   * @returns PaymentsPublic Successful Response
+   * @throws ApiError
+   */
+  public static readPaymentsByCurrentUser(
+    data: ReadPaymentsByCurrentUserData = {},
+  ): CancelablePromise<ReadPaymentsByCurrentUserResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/users/me/payments",
+      query: {
+        skip: data.skip,
+        limit: data.limit,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Read Payments By User Id
+   * Retrieve payments by user id.
+   * @param data The data for the request.
+   * @param data.userId
+   * @param data.skip
+   * @param data.limit
+   * @returns PaymentsPublic Successful Response
+   * @throws ApiError
+   */
+  public static readPaymentsByUserId(
+    data: ReadPaymentsByUserIdData,
+  ): CancelablePromise<ReadPaymentsByUserIdResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/users/{user_id}/payments",
+      path: {
+        user_id: data.userId,
+      },
+      query: {
+        skip: data.skip,
+        limit: data.limit,
       },
       errors: {
         422: "Validation Error",
