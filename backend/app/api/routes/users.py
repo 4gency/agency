@@ -443,7 +443,9 @@ def read_payments_by_current_user(
     """
     Retrieve payments for the current user.
     """
-    count_statement = select(func.count()).select_from(Payment).where(Payment.user_id == user.id)
+    count_statement = (
+        select(func.count()).select_from(Payment).where(Payment.user_id == user.id)
+    )
     count = session.exec(count_statement).one()
 
     statement = (
@@ -467,7 +469,9 @@ def read_payments_by_user_id(
     """
     Retrieve payments by user id.
     """
-    count_statement = select(func.count()).select_from(Payment).where(Payment.user_id == user_id)
+    count_statement = (
+        select(func.count()).select_from(Payment).where(Payment.user_id == user_id)
+    )
     count = session.exec(count_statement).one()
 
     statement = (
