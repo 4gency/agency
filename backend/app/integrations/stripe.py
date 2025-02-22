@@ -1,5 +1,4 @@
 import logging
-import uuid
 from datetime import datetime, timezone
 
 import stripe
@@ -629,7 +628,10 @@ def handle_cancel_callback(
 
 
 def update_subscription_payment(
-    session: Session, subscription: Subscription, payment: Payment
+    session: Session,
+    subscription: Subscription,
+    payment: Payment,
+    stripe_sub: stripe.Subscription,
 ) -> None:
     """
     Atualiza a subscription e o Payment com os dados mais recentes da Stripe.
@@ -637,12 +639,8 @@ def update_subscription_payment(
     Consulta a subscription na Stripe para atualizar o status, datas e, a partir da última invoice,
     atualiza os detalhes do pagamento.
     """
-    if not subscription.stripe_subscription_id:
-        raise NotFound("Subscription does not have a Stripe Subscription ID.")
-
     try:
         # Recupera os dados atualizados da subscription na Stripe
-        stripe_sub = stripe.Subscription.retrieve(subscription.stripe_subscription_id)
         subscription_status = stripe_sub.status
         subscription.is_active = subscription_status in ["active", "trialing"]
         subscription.start_date = datetime.fromtimestamp(
@@ -692,49 +690,39 @@ def handle_invoice_payment_succeeded(session: Session, event: stripe.Event) -> N
     """
     try:
         with _begin_transaction(session):
-            invoice_obj = event["data"]["object"]
-            payment_intent_id = invoice_obj.get("payment_intent")
-            stripe_subscription_id = invoice_obj.get("subscription")
-            amount_paid = invoice_obj.get("amount_paid")
-            currency = invoice_obj.get("currency")
-            metadata = invoice_obj.get("metadata", {})
+            stripe_invoice = stripe.Invoice.retrieve(event["data"]["object"]["id"])
+            stripe_subscription = stripe.Subscription.retrieve(
+                stripe_invoice.subscription
+            )  # type: ignore
+            stripe_subscription_id = stripe_subscription.id
+            stripe_plan = stripe.Plan.retrieve(stripe_subscription.plan.id)  # type: ignore
 
-            # Validação dos metadados obrigatórios
-            checkout_session_id = metadata.get("checkout_session_id")
-            plan_id = metadata.get("plan_id")
-            user_id = metadata.get("user_id")
-            if not all([checkout_session_id, plan_id, user_id]):
-                logger.error("Metadata incompleta no invoice: %s", metadata)
-                raise ValueError("Incomplete Invoice metadata.")
+            amount_paid = stripe_invoice.amount_paid
+            currency = stripe_invoice.currency
 
-            # Recupera a CheckoutSession, User e SubscriptionPlan
-            checkout = session.exec(
-                select(CheckoutSession).where(
-                    CheckoutSession.session_id == checkout_session_id
-                )
-            ).first()
-            if not checkout:
-                logger.error(
-                    "CheckoutSession não encontrada para session_id: %s",
-                    checkout_session_id,
-                )
-                raise Exception("CheckoutSession not found.")
+            if not all([stripe_subscription, stripe_plan]):
+                logger.error("Subscription ou Plan não encontrados na Stripe.")
+                raise Exception("Subscription or Plan not found.")
 
             user = session.exec(
-                select(User).where(User.id == uuid.UUID(user_id))
+                select(User).where(User.stripe_customer_id == stripe_invoice.customer)
             ).first()
             if not user:
-                logger.error("User não encontrado para user_id: %s", user_id)
+                logger.error(
+                    "User não encontrado para stripe_customer_id: %s",
+                    stripe_invoice.customer,
+                )
                 raise Exception("User not found.")
 
             plan = session.exec(
                 select(SubscriptionPlan).where(
-                    SubscriptionPlan.id == uuid.UUID(plan_id)
+                    SubscriptionPlan.stripe_product_id == stripe_plan.product.id  # type: ignore
                 )
             ).first()
             if not plan:
                 logger.error(
-                    "SubscriptionPlan não encontrada para plan_id: %s", plan_id
+                    "SubscriptionPlan não encontrada para plan_id: %s",
+                    stripe_plan.product.id,  # type: ignore
                 )
                 raise Exception("SubscriptionPlan not found.")
 
@@ -752,7 +740,7 @@ def handle_invoice_payment_succeeded(session: Session, event: stripe.Event) -> N
                     is_active=True,
                     metric_type=plan.metric_type,
                     metric_status=plan.metric_value,
-                    stripe_subscription_id=stripe_subscription_id,
+                    stripe_subscription_id=stripe_subscription_id,  # type: ignore
                     end_date=None,
                 )
                 session.add(subscription)
@@ -774,43 +762,35 @@ def handle_invoice_payment_succeeded(session: Session, event: stripe.Event) -> N
 
             # Verifica se o Payment já existe (idempotência)
             existing_payment = session.exec(
-                select(Payment).where(Payment.transaction_id == payment_intent_id)
+                select(Payment).where(Payment.transaction_id == stripe_invoice.id)
             ).first()
             if not existing_payment:
                 payment = Payment(
                     subscription_id=subscription.id,
                     user_id=user.id,
                     amount=amount_paid / 100.0,
-                    currency=currency.upper() if currency else "usd",
+                    currency=currency.upper() if currency else "USD",
                     payment_date=datetime.now(timezone.utc),
-                    payment_status="paid",
+                    payment_status=stripe_invoice.status or "unknown",
                     payment_gateway="stripe",
-                    transaction_id=payment_intent_id,
+                    transaction_id=stripe_invoice.id,  # type: ignore
                 )
                 session.add(payment)
                 logger.info(
-                    "Criado novo Payment para transaction_id %s", payment_intent_id
+                    "Criado novo Payment para transaction_id %s", stripe_invoice.id
                 )
             else:
                 payment = existing_payment
                 logger.info(
-                    "Payment já existe para transaction_id %s", payment_intent_id
+                    "Payment já existe para transaction_id %s", stripe_invoice.id
                 )
 
             session.flush()
 
             # Atualiza a Subscription com dados atualizados da Stripe
-            update_subscription_payment(session, subscription, payment)
-
-            # Atualiza o CheckoutSession, se ainda não estiver completa
-            if checkout.status != "complete":
-                checkout.status = "complete"
-                checkout.payment_status = "paid"
-                checkout.updated_at = datetime.now(timezone.utc)
-                session.add(checkout)
-                logger.info(
-                    "CheckoutSession %s marcado como complete.", checkout.session_id
-                )
+            update_subscription_payment(
+                session, subscription, payment, stripe_subscription
+            )
     except Exception as e:
         session.rollback()
         logger.exception(
