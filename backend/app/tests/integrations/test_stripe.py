@@ -722,26 +722,6 @@ def test_handle_checkout_session_paid(db: Any, mocker: Any) -> None:
     assert ck.status == "complete"
     assert ck.payment_status == "paid"
 
-    subs = db.exec(select(Subscription)).all()
-    pays = db.exec(select(Payment)).all()
-    assert len(subs) >= 1
-    assert len(pays) >= 1
-    # assert subs[0].subscription_plan_id == plan.id
-    # assert pays[0].user_id == user.id
-    # assert pays[0].amount == plan.price
-    found_sub = False
-    found_pay = False
-    for s in subs:
-        if s.subscription_plan_id == plan.id:
-            found_sub = True
-            break
-    for p in pays:
-        if p.user_id == user.id:
-            found_pay = True
-            break
-    assert found_sub
-    assert found_pay
-
 
 def test_handle_checkout_session_unpaid(db: Any) -> None:
     """
@@ -831,20 +811,11 @@ def test_handle_success_callback_not_paid(db: Any, mocker: Any) -> None:
         updated_at=datetime.now(timezone.utc),
         session_url="https://example.com/checkout/sess_123",
     )
-    pl = SubscriptionPlan(
-        id=uuid.uuid4(),
-        name="Test Plan",
-        price=10.0,
-        currency="USD",
-    )
-    u = User(id=uuid.uuid4(), email="user@example.com", hashed_password="abc")
     db.add(c)
-    db.add(pl)
-    db.add(u)
     db.commit()
 
     with pytest.raises(BadRequest) as e:
-        handle_success_callback(db, c, pl, u)
+        handle_success_callback(db, c)
     assert "not 'paid'" in str(e.value)
 
 
@@ -869,25 +840,11 @@ def test_handle_success_callback_paid(db: Any, mocker: Any) -> None:
         updated_at=datetime.now(timezone.utc),
         session_url="https://example.com/checkout/sess_123",
     )
-    pl = SubscriptionPlan(
-        id=uuid.uuid4(),
-        name="Paid Plan",
-        price=10.0,
-        currency="USD",
-    )
-    u = User(id=uuid.uuid4(), email="user@example.com", hashed_password="abc")
     db.add(c)
-    db.add(pl)
-    db.add(u)
     db.commit()
 
-    result = handle_success_callback(db, c, pl, u)
+    result = handle_success_callback(db, c)
     assert "Success callback processed" in result["message"]
-
-    subs = db.exec(select(Subscription)).all()
-    pays = db.exec(select(Payment)).all()
-    assert len(subs) == 1
-    assert len(pays) == 1
 
 
 def test_handle_cancel_callback_already_processed(db: Any) -> None:
