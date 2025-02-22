@@ -741,7 +741,9 @@ def handle_invoice_payment_succeeded(session: Session, event: stripe.Event) -> N
                     metric_type=plan.metric_type,
                     metric_status=plan.metric_value,
                     stripe_subscription_id=stripe_subscription_id,  # type: ignore
-                    end_date=None,
+                    end_date=datetime.fromtimestamp(
+                        stripe_subscription.current_period_end, tz=timezone.utc
+                    ),
                 )
                 session.add(subscription)
                 session.flush()  # para obter o ID da subscription
