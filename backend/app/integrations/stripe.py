@@ -716,7 +716,7 @@ def handle_invoice_payment_succeeded(session: Session, event: stripe.Event) -> N
 
             plan = session.exec(
                 select(SubscriptionPlan).where(
-                    SubscriptionPlan.stripe_product_id == stripe_plan.product.id  # type: ignore
+                    SubscriptionPlan.stripe_product_id == stripe_plan.product  # type: ignore
                 )
             ).first()
             if not plan:
