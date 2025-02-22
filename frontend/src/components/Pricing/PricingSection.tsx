@@ -117,7 +117,7 @@ const PricingSection: React.FC = () => {
             const commonProps = {
               key: id,
               title: name,
-              price,
+              price: price,
               benefits: benefits ? benefits.map((b) => b.name) : [],
               buttonText: "Get Started",
               buttonLink: "/signup",

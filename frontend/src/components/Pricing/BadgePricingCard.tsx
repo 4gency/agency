@@ -9,6 +9,7 @@ interface BadgePricingCardProps {
   buttonLink: string;
   hasDiscount?: boolean;
   priceWithoutDiscount?: number;
+  recurrence: string;
 }
 
 const BadgePricingCard: React.FC<BadgePricingCardProps> = ({
@@ -20,6 +21,7 @@ const BadgePricingCard: React.FC<BadgePricingCardProps> = ({
   buttonLink,
   hasDiscount = false,
   priceWithoutDiscount,
+  recurrence,
 }) => {
   return (
     <div
@@ -84,7 +86,7 @@ const BadgePricingCard: React.FC<BadgePricingCardProps> = ({
             color: "#00766c",
           }}
         >
-          ${price.toFixed(2)}/month
+          ${price.toFixed(2)}/{recurrence}
         </p>
         <ul
           style={{
