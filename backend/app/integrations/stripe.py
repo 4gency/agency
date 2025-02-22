@@ -667,8 +667,6 @@ def update_subscription_payment(
         session.add(subscription)
         session.add(payment)
         session.commit()
-        session.refresh(subscription)
-        session.refresh(payment)
         logger.info(
             "Subscription %s e Payment %s atualizados com sucesso.",
             subscription.id,
