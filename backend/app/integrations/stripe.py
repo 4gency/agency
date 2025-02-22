@@ -667,11 +667,6 @@ def update_subscription_payment(
         session.add(subscription)
         session.add(payment)
         session.commit()
-        logger.info(
-            "Subscription %s e Payment %s atualizados com sucesso.",
-            subscription.id,
-            payment.id,
-        )
     except Exception as e:
         session.rollback()
         logger.exception("Erro ao atualizar subscription/payment: %s", str(e))
