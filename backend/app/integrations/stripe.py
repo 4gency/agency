@@ -1,9 +1,10 @@
+import logging
 import uuid
 from datetime import datetime, timezone
-from typing import Any
 
 import stripe
 from fastapi import HTTPException, status
+from sqlalchemy.orm.session import SessionTransaction
 from sqlmodel import Session, select
 
 from app.core.config import settings
@@ -172,6 +173,7 @@ VALID_CURRENCIES = (
     "mro",
 )
 VALID_METRIC_TYPES = ("day", "week", "month", "year")
+logger = logging.getLogger(__name__)
 
 
 class BadRequest(HTTPException):
@@ -182,6 +184,12 @@ class BadRequest(HTTPException):
 class NotFound(HTTPException):
     def __init__(self, detail: str) -> None:
         super().__init__(status_code=status.HTTP_404_NOT_FOUND, detail=detail)
+
+
+def _begin_transaction(session: Session) -> SessionTransaction:
+    if session.in_transaction():
+        return session.begin_nested()
+    return session.begin()
 
 
 # --------------------------------------------------
@@ -403,42 +411,6 @@ def create_checkout_subscription_session(
 # --------------------------------------------------
 
 
-def update_subscription_payment(
-    session: Session,
-    subscription: Subscription,
-    payment: Payment,
-) -> None:
-    """
-    Puxa dados da subscription na Stripe e atualiza:
-    - subscription (status, datas)
-    - payment (invoice, amounts)
-    """
-    if not subscription.stripe_subscription_id:
-        raise NotFound("Subscription does not have a Stripe Subscription ID.")
-
-    stripe_sub = stripe.Subscription.retrieve(subscription.stripe_subscription_id)
-    subscription_status = stripe_sub.status
-    subscription.is_active = subscription_status in ["active", "trialing"]
-    subscription.start_date = datetime.fromtimestamp(stripe_sub.current_period_start)
-    subscription.end_date = datetime.fromtimestamp(stripe_sub.current_period_end)
-
-    # Atualiza pagamento a partir da latest_invoice
-    latest_invoice_id = stripe_sub.latest_invoice
-    if latest_invoice_id:
-        invoice = stripe.Invoice.retrieve(str(latest_invoice_id))
-        payment.payment_status = invoice.status if invoice.status else "unknown"
-        payment.payment_date = datetime.fromtimestamp(invoice.created)
-        payment.amount = (invoice.amount_paid or 0) / 100
-        payment.currency = invoice.currency.upper()
-        payment.transaction_id = str(invoice.payment_intent)
-
-    session.add(subscription)
-    session.add(payment)
-    session.commit()
-    session.refresh(subscription)
-    session.refresh(payment)
-
-
 def cancel_subscription(session: Session, subscription: Subscription) -> None:
     """
     Cancela (deleta) completamente a assinatura na Stripe,
@@ -533,85 +505,122 @@ def reactivate_subscription(session: Session, subscription: Subscription) -> Non
 
 
 def handle_success_callback(
-    session: Session, checkout: CheckoutSession, plan: SubscriptionPlan, user: User
+    session: Session, checkout: CheckoutSession
 ) -> dict[str, str]:
     """
-    Rota de sucesso. Verifica no Stripe se está pago e chama a mesma
-    função de sucesso unificada (se ainda não tiver processado).
+    Callback acionado pelo usuário informando que concluiu o processo.
+    Atualiza o CheckoutSession para 'complete', após validar o status pago no Stripe.
+    Essa função NÃO cria ou atualiza a subscription, pois isso já é feito pelo handle_invoice_payment_succeeded.
     """
-    stripe_sess = stripe.checkout.Session.retrieve(checkout.session_id)
+    try:
+        stripe_sess = stripe.checkout.Session.retrieve(checkout.session_id)
+        if stripe_sess.payment_status == "paid":
+            with _begin_transaction(session):
+                if checkout.status != "complete":
+                    checkout.status = "complete"
+                    checkout.payment_status = "paid"
+                    checkout.updated_at = datetime.now(timezone.utc)
+                    session.add(checkout)
+                    logger.info(
+                        "Success callback: CheckoutSession %s marcado como complete",
+                        checkout.session_id,
+                    )
+            return {"message": "Success callback processed"}
+        else:
+            logger.error(
+                "CheckoutSession %s não está com payment_status 'paid'",
+                checkout.session_id,
+            )
+            raise BadRequest("Checkout session payment status is not 'paid'")
+    except Exception as e:
+        session.rollback()
+        logger.exception("Falha no processamento do success callback: %s", str(e))
+        raise e
 
-    if stripe_sess.payment_status == "paid":
-        stripe_subscription_id = stripe_sess.get("subscription", "")
 
-        _validate_success_callback(
-            session, checkout, plan, user, stripe_subscription_id
-        )
-
-        return {"message": "Success callback processed"}
-    else:
-        raise BadRequest("Checkout session payment status is not 'paid'")
-
-
-def handle_checkout_session(session: Session, event: dict[Any, Any]) -> None:
+def handle_checkout_session(session: Session, event: stripe.Event) -> None:
     """
     Webhook handler para 'checkout.session.completed'.
-    Decide se foi um 'success' ou 'cancel' e chama a lógica unificada.
+    Finaliza os dados do checkout, marcando-o como complete (para payment_status 'paid')
+    ou delegando ao cancelamento (para 'unpaid').
     """
-    checkout_obj = event["data"]["object"]
-    # session_id = checkout_obj["id"]
-    payment_status = checkout_obj.get("payment_status")  # 'paid' ou 'unpaid'
+    try:
+        with _begin_transaction(session):
+            checkout_obj = event["data"]["object"]
+            checkout_session_id = checkout_obj.get("id")
+            payment_status = checkout_obj.get("payment_status")
 
-    metadata = checkout_obj.get("metadata", {})
-    checkout = session.exec(
-        select(CheckoutSession).where(CheckoutSession.session_id == checkout_obj["id"])
-    ).first()
-    if not checkout:
-        raise Exception("Checkout not found")
-    plan = session.exec(
-        select(SubscriptionPlan).where(
-            SubscriptionPlan.id == uuid.UUID(metadata.get("plan_id"))
+            checkout = session.exec(
+                select(CheckoutSession).where(
+                    CheckoutSession.session_id == checkout_session_id
+                )
+            ).first()
+            if not checkout:
+                logger.error(
+                    "CheckoutSession não encontrado para session_id: %s",
+                    checkout_session_id,
+                )
+                raise Exception("CheckoutSession not found.")
+
+            if payment_status == "paid":
+                if checkout.status != "complete":
+                    checkout.status = "complete"
+                    checkout.payment_status = "paid"
+                    checkout.updated_at = datetime.now(timezone.utc)
+                    session.add(checkout)
+                    logger.info(
+                        "CheckoutSession %s marcado como complete (payment_status paid)",
+                        checkout_session_id,
+                    )
+            elif payment_status == "unpaid":
+                handle_cancel_callback(session, checkout)
+            else:
+                logger.warning(
+                    "Status de pagamento desconhecido (%s) para CheckoutSession %s",
+                    payment_status,
+                    checkout_session_id,
+                )
+
+    except Exception as e:
+        session.rollback()
+        logger.exception(
+            "Falha no processamento de checkout.session.completed: %s", str(e)
         )
-    ).first()
-    if not plan:
-        raise Exception("Plan not found")
-    user = session.exec(
-        select(User).where(User.id == uuid.UUID(metadata.get("user_id")))
-    ).first()
-    if not user:
-        raise Exception("User not found")
-
-    if payment_status == "paid":
-        handle_success_callback(session, checkout, plan, user)
-    elif payment_status == "unpaid":
-        handle_cancel_callback(session, checkout)
+        raise e
 
 
 def handle_cancel_callback(
     session: Session, checkout: CheckoutSession
 ) -> dict[str, str]:
     """
-    Rota de cancelamento. Se não estiver pago, marcamos como cancelado.
-    Caso já tenha sido pago, ignoramos.
+    Callback de cancelamento.
+    Caso a CheckoutSession ainda não esteja paga, marca-a como 'canceled' e 'unpaid'.
     """
-    stripe_sess = stripe.checkout.Session.retrieve(checkout.session_id)
+    try:
+        stripe_sess = stripe.checkout.Session.retrieve(checkout.session_id)
+        if checkout.status == "complete":
+            return {"message": "Already processed"}
 
-    if checkout.status == "complete":
-        return {"message": "Already processed"}
-
-    # Se não está pago, chamamos a lógica de cancel
-    if stripe_sess.payment_status != "paid":
-        checkout.status = "canceled"
-        checkout.payment_status = "unpaid"
-        checkout.updated_at = datetime.now(timezone.utc)
-        session.add(checkout)
-        session.commit()
-        session.refresh(checkout)
-
-        return {"message": "Cancel callback processed"}
-    else:
-        # Se já está pago, não dá para cancelar
-        return {"message": "Payment already done, cannot cancel"}
+        if stripe_sess.payment_status != "paid":
+            with _begin_transaction(session):
+                checkout.status = "canceled"
+                checkout.payment_status = "unpaid"
+                checkout.updated_at = datetime.now(timezone.utc)
+                session.add(checkout)
+                logger.info(
+                    "CheckoutSession %s marcado como canceled", checkout.session_id
+                )
+            return {"message": "Cancel callback processed"}
+        else:
+            logger.info(
+                "Pagamento já efetuado para CheckoutSession %s; cancelamento não permitido",
+                checkout.session_id,
+            )
+            return {"message": "Payment already done, cannot cancel"}
+    except Exception as e:
+        session.rollback()
+        logger.exception("Falha no processamento do cancel callback: %s", str(e))
+        raise e
 
 
 #
@@ -619,60 +628,322 @@ def handle_cancel_callback(
 #
 
 
-def _validate_success_callback(
-    session: Session,
-    checkout: CheckoutSession,
-    plan: SubscriptionPlan,
-    user: User,
-    stripe_subscription_id: str,
-) -> Subscription | None:
+def update_subscription_payment(
+    session: Session, subscription: Subscription, payment: Payment
+) -> None:
     """
-    Marca checkout como 'complete' + 'paid'.
-    Cria ou estende assinatura localmente para esse user + plan,
-    cria Payment se ainda não existir, etc.
+    Atualiza a subscription e o Payment com os dados mais recentes da Stripe.
+
+    Consulta a subscription na Stripe para atualizar o status, datas e, a partir da última invoice,
+    atualiza os detalhes do pagamento.
     """
-    if checkout.status == "complete":
-        return None  # já processou
+    if not subscription.stripe_subscription_id:
+        raise NotFound("Subscription does not have a Stripe Subscription ID.")
 
     try:
-        # 1) Atualiza status do CheckoutSession
-        checkout.status = "complete"
-        checkout.payment_status = "paid"
-        checkout.updated_at = datetime.now(timezone.utc)
-        session.add(checkout)
-
-        subscription = Subscription(
-            user_id=user.id,
-            subscription_plan_id=plan.id,
-            start_date=datetime.now(timezone.utc),
-            is_active=True,
-            metric_type=plan.metric_type,
-            metric_status=1,
-            stripe_subscription_id=stripe_subscription_id,
-            end_date=None,
+        # Recupera os dados atualizados da subscription na Stripe
+        stripe_sub = stripe.Subscription.retrieve(subscription.stripe_subscription_id)
+        subscription_status = stripe_sub.status
+        subscription.is_active = subscription_status in ["active", "trialing"]
+        subscription.start_date = datetime.fromtimestamp(
+            stripe_sub.current_period_start, tz=timezone.utc
         )
-        subscription.calculate_end_date()
+        subscription.end_date = datetime.fromtimestamp(
+            stripe_sub.current_period_end, tz=timezone.utc
+        )
+
+        # Atualiza o Payment com base na última invoice
+        latest_invoice_id = stripe_sub.latest_invoice
+        if latest_invoice_id:
+            invoice = stripe.Invoice.retrieve(str(latest_invoice_id))
+            payment.payment_status = invoice.status or "unknown"
+            payment.payment_date = datetime.fromtimestamp(
+                invoice.created, tz=timezone.utc
+            )
+            payment.amount = (
+                invoice.amount_paid or 0
+            ) / 100.0  # converte de centavos para valor unitário
+            payment.currency = invoice.currency.upper() if invoice.currency else "USD"
+            payment.transaction_id = str(invoice.payment_intent)
+
         session.add(subscription)
-        session.flush()
-
-        user.is_subscriber = True
-        session.add(user)
-
-        new_payment = Payment(
-            subscription_id=subscription.id,
-            user_id=user.id,
-            amount=plan.price,
-            currency=plan.currency,
-            payment_date=datetime.now(timezone.utc),
-            payment_status="paid",
-            payment_gateway="stripe",
-            transaction_id=checkout.session_id,
-        )
-        session.add(new_payment)
-        session.flush()
-
+        session.add(payment)
         session.commit()
-        return subscription
+        session.refresh(subscription)
+        session.refresh(payment)
+        logger.info(
+            "Subscription %s e Payment %s atualizados com sucesso.",
+            subscription.id,
+            payment.id,
+        )
     except Exception as e:
         session.rollback()
+        logger.exception("Erro ao atualizar subscription/payment: %s", str(e))
+        raise e
+
+
+def handle_invoice_payment_succeeded(session: Session, event: stripe.Event) -> None:
+    """
+    Webhook handler para 'invoice.payment_succeeded'.
+
+    Cria ou atualiza a Subscription com os dados da Stripe e registra o Payment.
+    Essa função é idempotente e garante a consistência dos dados, utilizando os metadados
+    enviados no invoice (checkout_session_id, plan_id e user_id).
+    """
+    try:
+        with _begin_transaction(session):
+            invoice_obj = event["data"]["object"]
+            payment_intent_id = invoice_obj.get("payment_intent")
+            stripe_subscription_id = invoice_obj.get("subscription")
+            amount_paid = invoice_obj.get("amount_paid")
+            currency = invoice_obj.get("currency")
+            metadata = invoice_obj.get("metadata", {})
+
+            # Validação dos metadados obrigatórios
+            checkout_session_id = metadata.get("checkout_session_id")
+            plan_id = metadata.get("plan_id")
+            user_id = metadata.get("user_id")
+            if not all([checkout_session_id, plan_id, user_id]):
+                logger.error("Metadata incompleta no invoice: %s", metadata)
+                raise ValueError("Incomplete Invoice metadata.")
+
+            # Recupera a CheckoutSession, User e SubscriptionPlan
+            checkout = session.exec(
+                select(CheckoutSession).where(
+                    CheckoutSession.session_id == checkout_session_id
+                )
+            ).first()
+            if not checkout:
+                logger.error(
+                    "CheckoutSession não encontrada para session_id: %s",
+                    checkout_session_id,
+                )
+                raise Exception("CheckoutSession not found.")
+
+            user = session.exec(
+                select(User).where(User.id == uuid.UUID(user_id))
+            ).first()
+            if not user:
+                logger.error("User não encontrado para user_id: %s", user_id)
+                raise Exception("User not found.")
+
+            plan = session.exec(
+                select(SubscriptionPlan).where(
+                    SubscriptionPlan.id == uuid.UUID(plan_id)
+                )
+            ).first()
+            if not plan:
+                logger.error(
+                    "SubscriptionPlan não encontrada para plan_id: %s", plan_id
+                )
+                raise Exception("SubscriptionPlan not found.")
+
+            # Busca a Subscription pela stripe_subscription_id; se não existir, cria nova
+            subscription = session.exec(
+                select(Subscription).where(
+                    Subscription.stripe_subscription_id == stripe_subscription_id
+                )
+            ).first()
+            if not subscription:
+                subscription = Subscription(
+                    user_id=user.id,
+                    subscription_plan_id=plan.id,
+                    start_date=datetime.now(timezone.utc),
+                    is_active=True,
+                    metric_type=plan.metric_type,
+                    metric_status=plan.metric_value,
+                    stripe_subscription_id=stripe_subscription_id,
+                    end_date=None,
+                )
+                session.add(subscription)
+                session.flush()  # para obter o ID da subscription
+                logger.info(
+                    "Criada nova Subscription para user %s com stripe_subscription_id %s",
+                    user.id,
+                    stripe_subscription_id,
+                )
+            else:
+                # Opcional: atualizar o plano se diferente do atual
+                if subscription.subscription_plan_id != plan.id:
+                    subscription.subscription_plan_id = plan.id
+                    logger.info(
+                        "Subscription %s atualizada para o novo plano %s",
+                        subscription.id,
+                        plan.id,
+                    )
+
+            # Verifica se o Payment já existe (idempotência)
+            existing_payment = session.exec(
+                select(Payment).where(Payment.transaction_id == payment_intent_id)
+            ).first()
+            if not existing_payment:
+                payment = Payment(
+                    subscription_id=subscription.id,
+                    user_id=user.id,
+                    amount=amount_paid / 100.0,
+                    currency=currency.upper() if currency else "usd",
+                    payment_date=datetime.now(timezone.utc),
+                    payment_status="paid",
+                    payment_gateway="stripe",
+                    transaction_id=payment_intent_id,
+                )
+                session.add(payment)
+                logger.info(
+                    "Criado novo Payment para transaction_id %s", payment_intent_id
+                )
+            else:
+                payment = existing_payment
+                logger.info(
+                    "Payment já existe para transaction_id %s", payment_intent_id
+                )
+
+            session.flush()
+
+            # Atualiza a Subscription com dados atualizados da Stripe
+            update_subscription_payment(session, subscription, payment)
+
+            # Atualiza o CheckoutSession, se ainda não estiver completa
+            if checkout.status != "complete":
+                checkout.status = "complete"
+                checkout.payment_status = "paid"
+                checkout.updated_at = datetime.now(timezone.utc)
+                session.add(checkout)
+                logger.info(
+                    "CheckoutSession %s marcado como complete.", checkout.session_id
+                )
+    except Exception as e:
+        session.rollback()
+        logger.exception(
+            "Erro no processamento de invoice.payment_succeeded: %s", str(e)
+        )
+        raise e
+
+
+def handle_checkout_session_expired(session: Session, event: stripe.Event) -> None:
+    """
+    Webhook handler para 'checkout.session.expired'.
+    Marca a CheckoutSession como 'expired' e 'unpaid'.
+    """
+    try:
+        with _begin_transaction(session):
+            checkout_obj = event["data"]["object"]
+            checkout_session_id = checkout_obj.get("id")
+
+            checkout = session.exec(
+                select(CheckoutSession).where(
+                    CheckoutSession.session_id == checkout_session_id
+                )
+            ).first()
+            if not checkout:
+                logger.error(
+                    "CheckoutSession não encontrado para session_id: %s",
+                    checkout_session_id,
+                )
+                raise Exception("CheckoutSession not found.")
+
+            if checkout.status != "complete":
+                checkout.status = "expired"
+                checkout.payment_status = "unpaid"
+                checkout.updated_at = datetime.now(timezone.utc)
+                session.add(checkout)
+                logger.info(
+                    "CheckoutSession %s marcado como expired", checkout.session_id
+                )
+    except Exception as e:
+        session.rollback()
+        logger.exception(
+            "Falha no processamento de checkout.session.expired: %s", str(e)
+        )
+        raise e
+
+
+def handle_checkout_session_async_payment_failed(
+    session: Session, event: stripe.Event
+) -> None:
+    """
+    Webhook handler para 'checkout.session.async_payment_failed'.
+    Marca a CheckoutSession como 'failed' e 'unpaid'.
+    """
+    try:
+        with _begin_transaction(session):
+            checkout_obj = event["data"]["object"]
+            checkout_session_id = checkout_obj.get("id")
+
+            checkout = session.exec(
+                select(CheckoutSession).where(
+                    CheckoutSession.session_id == checkout_session_id
+                )
+            ).first()
+            if not checkout:
+                logger.error(
+                    "CheckoutSession não encontrado para session_id: %s",
+                    checkout_session_id,
+                )
+                raise Exception("CheckoutSession not found.")
+
+            if checkout.status != "complete":
+                checkout.status = "failed"
+                checkout.payment_status = "unpaid"
+                checkout.updated_at = datetime.now(timezone.utc)
+                session.add(checkout)
+                logger.info(
+                    "CheckoutSession %s marcado como failed", checkout.session_id
+                )
+    except Exception as e:
+        session.rollback()
+        logger.exception(
+            "Falha no processamento de checkout.session.async_payment_failed: %s",
+            str(e),
+        )
+        raise e
+
+
+def handle_charge_dispute_created(session: Session, event: stripe.Event) -> None:
+    """
+    Webhook handler para 'charge.dispute.created'.
+    Marca a Subscription como 'disputed' e 'unpaid'.
+    """
+    try:
+        with _begin_transaction(session):
+            charge_obj = event["data"]["object"]
+            payment_intent_id = charge_obj.get("payment_intent")
+
+            payment = session.exec(
+                select(Payment).where(Payment.transaction_id == payment_intent_id)
+            ).first()
+            if not payment:
+                logger.error(
+                    "Payment não encontrado para transaction_id: %s",
+                    payment_intent_id,
+                )
+                raise Exception("Payment not found.")
+
+            subscription = session.exec(
+                select(Subscription).where(Subscription.id == payment.subscription_id)
+            ).first()
+            if not subscription:
+                logger.error(
+                    "Subscription não encontrada para payment_id: %s",
+                    payment.id,
+                )
+                raise Exception("Subscription not found.")
+
+            if subscription.is_active:
+                subscription.is_active = False
+                subscription.updated_at = datetime.now(timezone.utc)
+                session.add(subscription)
+                logger.info("Subscription %s marcada como disputed", subscription.id)
+
+            user = session.exec(select(User).where(User.id == payment.user_id)).first()
+
+            user.is_active = False
+            session.add(user)
+            session.commit()
+
+            logger.exception(
+                "Subscription %s marcada como disputed!!!!!", subscription.id
+            )
+    except Exception as e:
+        session.rollback()
+        logger.exception("Falha no processamento de charge.dispute.created: %s", str(e))
         raise e

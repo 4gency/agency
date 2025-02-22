@@ -378,23 +378,29 @@ async def stripe_webhook(
 ) -> Any:
     payload = await request.body()
     try:
-        event: stripe.Event = stripe.Webhook.construct_event(  # type: ignore[no-untyped-call]
+        event: stripe.Event = stripe.Webhook.construct_event(
             payload=payload,
             sig_header=stripe_signature,
             secret=settings.STRIPE_WEBHOOK_SECRET,
         )
-    except ValueError as e:
+    except (ValueError, stripe.SignatureVerificationError) as e:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid payload: {e}"
-        )
-    except stripe.SignatureVerificationError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid signature: {e}"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid payload or signature: {e}",
         )
 
     event_type = event.get("type", "")
-    if event_type == "checkout.session.completed":
-        stripe_controller.handle_checkout_session(session, event)
+    handlers = {
+        "checkout.session.completed": stripe_controller.handle_checkout_session,
+        "checkout.session.async_payment_succeeded": stripe_controller.handle_checkout_session,
+        "invoice.paid": stripe_controller.handle_invoice_payment_succeeded,
+        "charge.dispute.created": stripe_controller.handle_charge_dispute_created,
+        "checkout.session.expired": stripe_controller.handle_checkout_session_expired,
+        "checkout.session.async_payment_failed": stripe_controller.handle_checkout_session_async_payment_failed,
+    }
+
+    if handler := handlers.get(event_type):
+        handler(session, event)
     else:
         print(f"Unhandled event type: {event_type}")
 
