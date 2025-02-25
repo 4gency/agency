@@ -45,6 +45,11 @@ type JobPreferencesForm = {
   locations: string[];
   company_blacklist: string[];
   title_blacklist: string[];
+  in_person_work: boolean;
+  open_to_relocation: boolean;
+  willing_to_complete_assessments: boolean;
+  willing_to_undergo_drug_tests: boolean;
+  willing_to_undergo_background_checks: boolean;
 };
 
 /**
@@ -85,6 +90,11 @@ function transformToForm(config: ConfigPublic): JobPreferencesForm {
     locations: config.locations || [],
     company_blacklist: config.company_blacklist || [],
     title_blacklist: config.title_blacklist || [],
+    in_person_work: config.work_preferences?.in_person_work ?? false,
+    open_to_relocation: config.work_preferences?.open_to_relocation ?? false,
+    willing_to_complete_assessments: config.work_preferences?.willing_to_complete_assessments ?? false,
+    willing_to_undergo_drug_tests: config.work_preferences?.willing_to_undergo_drug_tests ?? false,
+    willing_to_undergo_background_checks: config.work_preferences?.willing_to_undergo_background_checks ?? false,
   };
 }
 
@@ -123,6 +133,13 @@ function transformFromForm(formData: JobPreferencesForm): ConfigPublic {
     locations: formData.locations,
     company_blacklist: formData.company_blacklist,
     title_blacklist: formData.title_blacklist,
+    work_preferences: {
+      in_person_work: formData.in_person_work,
+      open_to_relocation: formData.open_to_relocation,
+      willing_to_complete_assessments: formData.willing_to_complete_assessments,
+      willing_to_undergo_drug_tests: formData.willing_to_undergo_drug_tests,
+      willing_to_undergo_background_checks: formData.willing_to_undergo_background_checks,
+    },
   };
 }
 
@@ -262,6 +279,11 @@ const JobPreferencesPage: React.FC = () => {
     locations: ["USA"],
     company_blacklist: [],
     title_blacklist: [],
+    in_person_work: false,
+    open_to_relocation: false,
+    willing_to_complete_assessments: false,
+    willing_to_undergo_drug_tests: false,
+    willing_to_undergo_background_checks: false,
   };
 
   const {
@@ -520,6 +542,131 @@ const JobPreferencesPage: React.FC = () => {
           onChange={(newItems) => setValue("title_blacklist", newItems)}
           placeholder="e.g. Senior, Jr"
         />
+
+        {/* IN PERSON WORK */}
+        <FormControl mb={4}>
+          <FormLabel>In Person Work</FormLabel>
+          <Input type="hidden" {...register("in_person_work")} />
+          <Button
+            bg={
+              watch("in_person_work")
+                ? "#00766C"
+                : useColorModeValue("white", "gray.800")
+            }
+            color={
+              watch("in_person_work") ? "white" : useColorModeValue("black", "white")
+            }
+            border="1px solid #00766C"
+            _hover={{
+              bg: watch("in_person_work")
+                ? "#00655D"
+                : useColorModeValue("gray.100", "gray.700"),
+            }}
+            onClick={() => setValue("in_person_work", !watch("in_person_work"))}
+          >
+            {watch("in_person_work") ? "In Person Work Allowed" : "In Person Work Not Allowed"}
+          </Button>
+        </FormControl>
+
+        {/* OPEN TO RELOCATION */}
+        <FormControl mb={4}>
+          <FormLabel>Open to Relocation</FormLabel>
+          <Input type="hidden" {...register("open_to_relocation")} />
+          <Button
+            bg={
+              watch("open_to_relocation")
+                ? "#00766C"
+                : useColorModeValue("white", "gray.800")
+            }
+            color={
+              watch("open_to_relocation") ? "white" : useColorModeValue("black", "white")
+            }
+            border="1px solid #00766C"
+            _hover={{
+              bg: watch("open_to_relocation")
+                ? "#00655D"
+                : useColorModeValue("gray.100", "gray.700"),
+            }}
+            onClick={() => setValue("open_to_relocation", !watch("open_to_relocation"))}
+          >
+            {watch("open_to_relocation") ? "Open to Relocation" : "Not Open to Relocation"}
+          </Button>
+        </FormControl>
+
+        {/* WILLING TO COMPLETE ASSESSMENTS */}
+        <FormControl mb={4}>
+          <FormLabel>Willing to Complete Assessments</FormLabel>
+          <Input type="hidden" {...register("willing_to_complete_assessments")} />
+          <Button
+            bg={
+              watch("willing_to_complete_assessments")
+                ? "#00766C"
+                : useColorModeValue("white", "gray.800")
+            }
+            color={
+              watch("willing_to_complete_assessments") ? "white" : useColorModeValue("black", "white")
+            }
+            border="1px solid #00766C"
+            _hover={{
+              bg: watch("willing_to_complete_assessments")
+                ? "#00655D"
+                : useColorModeValue("gray.100", "gray.700"),
+            }}
+            onClick={() => setValue("willing_to_complete_assessments", !watch("willing_to_complete_assessments"))}
+          >
+            {watch("willing_to_complete_assessments") ? "Willing to Complete Assessments" : "Not Willing to Complete Assessments"}
+          </Button>
+        </FormControl>
+
+        {/* WILLING TO UNDERGO DRUG TESTS */}
+        <FormControl mb={4}>
+          <FormLabel>Willing to Undergo Drug Tests</FormLabel>
+          <Input type="hidden" {...register("willing_to_undergo_drug_tests")} />
+          <Button
+            bg={
+              watch("willing_to_undergo_drug_tests")
+                ? "#00766C"
+                : useColorModeValue("white", "gray.800")
+            }
+            color={
+              watch("willing_to_undergo_drug_tests") ? "white" : useColorModeValue("black", "white")
+            }
+            border="1px solid #00766C"
+            _hover={{
+              bg: watch("willing_to_undergo_drug_tests")
+                ? "#00655D"
+                : useColorModeValue("gray.100", "gray.700"),
+            }}
+            onClick={() => setValue("willing_to_undergo_drug_tests", !watch("willing_to_undergo_drug_tests"))}
+          >
+            {watch("willing_to_undergo_drug_tests") ? "Willing to Undergo Drug Tests" : "Not Willing to Undergo Drug Tests"}
+          </Button>
+        </FormControl>
+
+        {/* WILLING TO UNDERGO BACKGROUND CHECKS */}
+        <FormControl mb={4}>
+          <FormLabel>Willing to Undergo Background Checks</FormLabel>
+          <Input type="hidden" {...register("willing_to_undergo_background_checks")} />
+          <Button
+            bg={
+              watch("willing_to_undergo_background_checks")
+                ? "#00766C"
+                : useColorModeValue("white", "gray.800")
+            }
+            color={
+              watch("willing_to_undergo_background_checks") ? "white" : useColorModeValue("black", "white")
+            }
+            border="1px solid #00766C"
+            _hover={{
+              bg: watch("willing_to_undergo_background_checks")
+                ? "#00655D"
+                : useColorModeValue("gray.100", "gray.700"),
+            }}
+            onClick={() => setValue("willing_to_undergo_background_checks", !watch("willing_to_undergo_background_checks"))}
+          >
+            {watch("willing_to_undergo_background_checks") ? "Willing to Undergo Background Checks" : "Not Willing to Undergo Background Checks"}
+          </Button>
+        </FormControl>
 
         <Button
           mt={6}
