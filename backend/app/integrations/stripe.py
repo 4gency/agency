@@ -768,6 +768,15 @@ def handle_invoice_payment_succeeded_in_checkout_callback(
             logger.error("Invoice não encontrado na Stripe.")
             raise Exception("Invoice not found.")
 
+        payment = session.exec(
+            select(Payment).where(Payment.transaction_id == stripe_invoice.id)
+        ).first()
+
+        if payment:
+            # Payment já existe, não precisa processar novamente
+            logger.info("Payment já existe para transaction_id %s", stripe_invoice.id)
+            return
+
         stripe_subscription: stripe.Subscription = stripe.Subscription.retrieve(
             str(stripe_invoice.subscription)
         )
