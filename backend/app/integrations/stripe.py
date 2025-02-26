@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime, timezone
+from typing import Optional
 
 import stripe
 from fastapi import HTTPException, status
@@ -673,30 +674,105 @@ def update_subscription_payment(
         raise e
 
 
+def process_invoice_payment_succeeded(
+    session: Session,
+    stripe_invoice: stripe.Invoice,
+    stripe_subscription: stripe.Subscription,
+    user: User,
+    plan: SubscriptionPlan,
+    subscription: Optional[Subscription] = None,
+) -> None:
+    """
+    Processa o pagamento da invoice, criando ou atualizando a Subscription e registrando o Payment.
+    Essa função é reutilizável e assume que todas as instâncias necessárias já foram obtidas.
+    """
+    stripe_subscription_id = stripe_subscription.id
+    amount_paid = stripe_invoice.amount_paid
+    currency = stripe_invoice.currency
+
+    # Cria ou atualiza a Subscription
+    if not subscription:
+        subscription = Subscription(
+            user_id=user.id,
+            subscription_plan_id=plan.id,
+            start_date=datetime.now(timezone.utc),
+            is_active=True,
+            metric_type=plan.metric_type,
+            metric_status=plan.metric_value,
+            stripe_subscription_id=stripe_subscription_id,
+            end_date=datetime.fromtimestamp(
+                stripe_subscription.current_period_end, tz=timezone.utc
+            ),
+        )
+        session.add(subscription)
+        session.flush()  # para obter o ID da subscription
+        logger.info(
+            "Criada nova Subscription para user %s com stripe_subscription_id %s",
+            user.id,
+            stripe_subscription_id,
+        )
+    else:
+        # Opcional: atualizar o plano se diferente do atual
+        if subscription.subscription_plan_id != plan.id:
+            subscription.subscription_plan_id = plan.id
+            logger.info(
+                "Subscription %s atualizada para o novo plano %s",
+                subscription.id,
+                plan.id,
+            )
+
+    # Verifica se o Payment já existe (idempotência)
+    existing_payment = session.exec(
+        select(Payment).where(Payment.transaction_id == stripe_invoice.id)
+    ).first()
+    if not existing_payment:
+        payment = Payment(
+            subscription_id=subscription.id,
+            user_id=user.id,
+            amount=amount_paid / 100.0,
+            currency=currency.upper() if currency else "USD",
+            payment_date=datetime.now(timezone.utc),
+            payment_status=stripe_invoice.status or "unknown",
+            payment_gateway="stripe",
+            transaction_id=stripe_invoice.id,
+        )
+        session.add(payment)
+        logger.info(
+            "Criado novo Payment para transaction_id %s", stripe_invoice.id
+        )
+    else:
+        payment = existing_payment
+        logger.info(
+            "Payment já existe para transaction_id %s", stripe_invoice.id
+        )
+
+    session.flush()
+
+    # Atualiza a Subscription com dados atualizados da Stripe
+    update_subscription_payment(session, subscription, payment, stripe_subscription)
+
+
 def handle_invoice_payment_succeeded(session: Session, event: stripe.Event) -> None:
     """
     Webhook handler para 'invoice.payment_succeeded'.
-
-    Cria ou atualiza a Subscription com os dados da Stripe e registra o Payment.
-    Essa função é idempotente e garante a consistência dos dados, utilizando os metadados
-    enviados no invoice (checkout_session_id, plan_id e user_id).
+    
+    Junta todos os dados necessários e chama a função process_invoice_payment_succeeded para
+    criar/atualizar a Subscription e registrar o Payment.
     """
     try:
         with _begin_transaction(session):
+            # Recupera os dados da Stripe
             stripe_invoice = stripe.Invoice.retrieve(event["data"]["object"]["id"])
             stripe_subscription = stripe.Subscription.retrieve(
                 stripe_invoice.subscription
-            )  # type: ignore
-            stripe_subscription_id = stripe_subscription.id
-            stripe_plan = stripe.Plan.retrieve(stripe_subscription.plan.id)  # type: ignore
-
-            amount_paid = stripe_invoice.amount_paid
-            currency = stripe_invoice.currency
+            )
+            stripe_plan = stripe.Plan.retrieve(stripe_subscription.plan.id)
 
             if not all([stripe_subscription, stripe_plan]):
                 logger.error("Subscription ou Plan não encontrados na Stripe.")
                 raise Exception("Subscription or Plan not found.")
 
+            # Busca o usuário no banco de dados
             user = session.exec(
                 select(User).where(User.stripe_customer_id == stripe_invoice.customer)
             ).first()
@@ -707,84 +783,34 @@ def handle_invoice_payment_succeeded(session: Session, event: stripe.Event) -> N
                 )
                 raise Exception("User not found.")
 
+            # Busca o SubscriptionPlan associado
             plan = session.exec(
                 select(SubscriptionPlan).where(
-                    SubscriptionPlan.stripe_product_id == stripe_plan.product  # type: ignore
+                    SubscriptionPlan.stripe_product_id == stripe_plan.product
                 )
             ).first()
             if not plan:
                 logger.error(
                     "SubscriptionPlan não encontrada para plan_id: %s",
-                    stripe_plan.product.id,  # type: ignore
+                    stripe_plan.product.id,
                 )
                 raise Exception("SubscriptionPlan not found.")
 
-            # Busca a Subscription pela stripe_subscription_id; se não existir, cria nova
+            # Busca a Subscription existente, se houver
             subscription = session.exec(
                 select(Subscription).where(
-                    Subscription.stripe_subscription_id == stripe_subscription_id
+                    Subscription.stripe_subscription_id == stripe_subscription.id
                 )
             ).first()
-            if not subscription:
-                subscription = Subscription(
-                    user_id=user.id,
-                    subscription_plan_id=plan.id,
-                    start_date=datetime.now(timezone.utc),
-                    is_active=True,
-                    metric_type=plan.metric_type,
-                    metric_status=plan.metric_value,
-                    stripe_subscription_id=stripe_subscription_id,  # type: ignore
-                    end_date=datetime.fromtimestamp(
-                        stripe_subscription.current_period_end, tz=timezone.utc
-                    ),
-                )
-                session.add(subscription)
-                session.flush()  # para obter o ID da subscription
-                logger.info(
-                    "Criada nova Subscription para user %s com stripe_subscription_id %s",
-                    user.id,
-                    stripe_subscription_id,
-                )
-            else:
-                # Opcional: atualizar o plano se diferente do atual
-                if subscription.subscription_plan_id != plan.id:
-                    subscription.subscription_plan_id = plan.id
-                    logger.info(
-                        "Subscription %s atualizada para o novo plano %s",
-                        subscription.id,
-                        plan.id,
-                    )
 
-            # Verifica se o Payment já existe (idempotência)
-            existing_payment = session.exec(
-                select(Payment).where(Payment.transaction_id == stripe_invoice.id)
-            ).first()
-            if not existing_payment:
-                payment = Payment(
-                    subscription_id=subscription.id,
-                    user_id=user.id,
-                    amount=amount_paid / 100.0,
-                    currency=currency.upper() if currency else "USD",
-                    payment_date=datetime.now(timezone.utc),
-                    payment_status=stripe_invoice.status or "unknown",
-                    payment_gateway="stripe",
-                    transaction_id=stripe_invoice.id,  # type: ignore
-                )
-                session.add(payment)
-                logger.info(
-                    "Criado novo Payment para transaction_id %s", stripe_invoice.id
-                )
-            else:
-                payment = existing_payment
-                logger.info(
-                    "Payment já existe para transaction_id %s", stripe_invoice.id
-                )
-
-            session.flush()
-
-            # Atualiza a Subscription com dados atualizados da Stripe
-            update_subscription_payment(
-                session, subscription, payment, stripe_subscription
+            # Processa o pagamento e a subscription com a função reutilizável
+            process_invoice_payment_succeeded(
+                session=session,
+                stripe_invoice=stripe_invoice,
+                stripe_subscription=stripe_subscription,
+                user=user,
+                plan=plan,
+                subscription=subscription,
             )
     except Exception as e:
         session.rollback()
@@ -792,6 +818,7 @@ def handle_invoice_payment_succeeded(session: Session, event: stripe.Event) -> N
             "Erro no processamento de invoice.payment_succeeded: %s", str(e)
         )
         raise e
+
 
 
 def handle_checkout_session_expired(session: Session, event: stripe.Event) -> None:
