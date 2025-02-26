@@ -22,6 +22,11 @@ from app.integrations.stripe import (
     handle_success_callback,
     reactivate_subscription,
     update_subscription_plan,
+    update_subscription_payment,
+    handle_invoice_payment_succeeded,
+    handle_checkout_session_expired,
+    handle_checkout_session_async_payment_failed,
+    handle_charge_dispute_created,
 )
 from app.models.core import (
     CheckoutSession,
@@ -567,70 +572,61 @@ def test_reactivate_subscription_success(db: Any, mocker: Any) -> None:
     assert s_db.is_active is True
 
 
-# def test_update_subscription_payment_success(db: Any, mocker: Any) -> None:
-#     sub_mock = mocker.MagicMock()
-#     sub_mock.status = "active"
-#     sub_mock.current_period_start = 1234567890
-#     sub_mock.current_period_end = 1234567890
-#     sub_mock.latest_invoice = "inv_mock_id"
-#     mocker.patch("stripe.Subscription.retrieve", return_value=sub_mock)
+def test_update_subscription_payment(db: Any, mocker: Any) -> None:
+    sub_mock = mocker.MagicMock()
+    sub_mock.status = "active"
+    sub_mock.current_period_start = 1234567890
+    sub_mock.current_period_end = 1234567890
+    sub_mock.latest_invoice = "inv_mock_id"
+    mocker.patch("stripe.Subscription.retrieve", return_value=sub_mock)
 
-#     inv_mock = mocker.MagicMock()
-#     inv_mock.status = "paid"
-#     inv_mock.created = 1234567890
-#     inv_mock.amount_paid = 10000
-#     inv_mock.currency = "usd"
-#     inv_mock.payment_intent = "pi_mock_id"
-#     mocker.patch("stripe.Invoice.retrieve", return_value=inv_mock)
+    inv_mock = mocker.MagicMock()
+    inv_mock.status = "paid"
+    inv_mock.created = 1234567890
+    inv_mock.amount_paid = 10000
+    inv_mock.currency = "usd"
+    inv_mock.payment_intent = "pi_mock_id"
+    mocker.patch("stripe.Invoice.retrieve", return_value=inv_mock)
 
-#     s = Subscription(
-#         id=uuid.uuid4(),
-#         user_id=uuid.uuid4(),
-#         subscription_plan_id=uuid.uuid4(),
-#         start_date=datetime.now(timezone.utc),
-#         end_date=datetime.now(timezone.utc) + timedelta(days=30),
-#         is_active=False,
-#         metric_type=SubscriptionMetric.MONTH,
-#         metric_status=1,
-#         stripe_subscription_id="sub_mock_id",
-#     )
-#     p = Payment(
-#         id=uuid.uuid4(),
-#         subscription_id=s.id,
-#         user_id=s.user_id,
-#         amount=9.99,
-#         currency="USD",
-#         payment_date=datetime.now(timezone.utc),
-#         payment_status="pending",
-#         transaction_id="trx123",
-#     )
-#     db.add(s)
-#     db.add(p)
-#     db.commit()
+    s = Subscription(
+        id=uuid.uuid4(),
+        user_id=uuid.uuid4(),
+        subscription_plan_id=uuid.uuid4(),
+        start_date=datetime.now(timezone.utc),
+        end_date=datetime.now(timezone.utc) + timedelta(days=30),
+        is_active=False,
+        metric_type=SubscriptionMetric.MONTH,
+        metric_status=1,
+        stripe_subscription_id="sub_mock_id",
+    )
+    p = Payment(
+        id=uuid.uuid4(),
+        subscription_id=s.id,
+        user_id=s.user_id,
+        amount=9.99,
+        currency="USD",
+        payment_date=datetime.now(timezone.utc),
+        payment_status="pending",
+        transaction_id="trx123",
+    )
+    db.add(s)
+    db.add(p)
+    db.commit()
 
-#     #mock stripe.Subscription:
-#     mock = mocker.MagicMock()
-#     mock.end_date = 1234567890
-#     mocker.patch("stripe.Subscription.delete", return_value=mock)
-#     stripe_subscription = stripe.Subscription.retrieve("sub_mock_id")
-
-#     update_subscription_payment(db, s, p, stripe_subscription)
-#     s_db = db.get(Subscription, s.id)
-#     p_db = db.get(Payment, p.id)
-#     assert s_db.is_active is True
-#     assert p_db.payment_status == "paid"
-#     assert p_db.transaction_id == "pi_mock_id"
+    update_subscription_payment(db, s, p, sub_mock)
+    s_db = db.get(Subscription, s.id)
+    p_db = db.get(Payment, p.id)
+    assert s_db.is_active is True
+    assert p_db.payment_status == "paid"
+    assert p_db.transaction_id == "pi_mock_id"
 
 
-def test_handle_checkout_session_paid(db: Any, mocker: Any) -> None:
-    """
-    If payment_status == 'paid', handle_checkout_session calls handle_success_callback,
-    which creates Subscription + Payment.
-    """
+def test_handle_invoice_payment_succeeded(db: Any, mocker: Any) -> None:
     user = User(
         email=f"test{uuid.uuid4().hex}@example.com",
         hashed_password="abc123",
         is_active=True,
+        stripe_customer_id="cust_mock_id",
     )
     db.add(user)
     db.commit()
@@ -642,67 +638,49 @@ def test_handle_checkout_session_paid(db: Any, mocker: Any) -> None:
         currency="USD",
         metric_type=SubscriptionMetric.MONTH,
         metric_value=1,
+        stripe_product_id="prod_mock_id",
     )
     db.add(plan)
     db.commit()
     db.refresh(plan)
 
-    session_id = f"sess_mock_id_{uuid.uuid4().hex}"
-
     evt = {
         "data": {
             "object": {
-                "id": session_id,
-                "payment_status": "paid",
-                "metadata": {
-                    "plan_id": str(plan.id),
-                    "user_id": str(user.id),
-                },
+                "id": "inv_mock_id",
+                "subscription": "sub_mock_id",
+                "customer": user.stripe_customer_id,
             }
         }
     }
 
-    # Mimic a real Stripe session dict
-    mock_session_data = {
-        "id": "sess_mock_id",
-        "subscription": "sub_mock_id",
-        "payment_status": "paid",
-    }
-    mock_session_create = MagicMock()
-    mock_session_create.__getitem__.side_effect = mock_session_data.__getitem__
-    mock_session_create.get.side_effect = mock_session_data.get
-    # Ensure we set these as attributes so the code checks them properly
-    mock_session_create.payment_status = "paid"
-    mock_session_create.subscription = "sub_mock_id"
-    mocker.patch("stripe.checkout.Session.retrieve", return_value=mock_session_create)
+    sub_mock = mocker.MagicMock()
+    sub_mock.id = "sub_mock_id"
+    sub_mock.status = "active"
+    sub_mock.current_period_start = 1234567890
+    sub_mock.current_period_end = 1234567890
+    sub_mock.latest_invoice = "inv_mock_id"
+    mocker.patch("stripe.Subscription.retrieve", return_value=sub_mock)
 
-    ck = CheckoutSession(
-        session_id=session_id,
-        status="open",
-        payment_status="unpaid",
-        user_id=user.id,
-        subscription_plan_id=plan.id,
-        created_at=datetime.now(timezone.utc),
-        expires_at=datetime.now(timezone.utc) + timedelta(days=1),
-        updated_at=datetime.now(timezone.utc),
-        session_url="https://example.com/checkout/sess_mock_id",
-    )
-    db.add(ck)
-    db.commit()
-    db.refresh(ck)
+    inv_mock = mocker.MagicMock()
+    inv_mock.status = "paid"
+    inv_mock.created = 1234567890
+    inv_mock.amount_paid = 10000
+    inv_mock.currency = "usd"
+    inv_mock.payment_intent = "pi_mock_id"
+    mocker.patch("stripe.Invoice.retrieve", return_value=inv_mock)
 
-    handle_checkout_session(db, evt)  # type: ignore
-    db.refresh(ck)
-    assert ck.status == "complete"
-    assert ck.payment_status == "paid"
+    handle_invoice_payment_succeeded(db, evt)  # type: ignore
+
+    subs = db.exec(select(Subscription)).all()
+    pays = db.exec(select(Payment)).all()
+    assert len(subs) == 1
+    assert len(pays) == 1
+    assert subs[0].is_active is True
+    assert pays[0].payment_status == "paid"
 
 
-def test_handle_checkout_session_unpaid(db: Any) -> None:
-    """
-    If payment_status == 'unpaid', handle_checkout_session calls handle_cancel_callback,
-    marking CheckoutSession as 'canceled'.
-    """
-
+def test_handle_checkout_session_expired(db: Any, mocker: Any) -> None:
     user = User(
         email=f"test{uuid.uuid4().hex}@example.com",
         hashed_password="abc123",
@@ -753,125 +731,131 @@ def test_handle_checkout_session_unpaid(db: Any) -> None:
     db.commit()
     db.refresh(ck)
 
-    handle_checkout_session(db, evt)  # type: ignore
+    handle_checkout_session_expired(db, evt)  # type: ignore
     db.refresh(ck)
-    assert ck.status == "canceled"
+    assert ck.status == "expired"
     assert ck.payment_status == "unpaid"
 
-    # Verify Subscription and Payment creation
-    subs = db.exec(select(Subscription)).all()
-    pays = db.exec(select(Payment)).all()
-    assert len(subs) == 0
-    assert len(pays) == 0
 
+def test_handle_checkout_session_async_payment_failed(db: Any, mocker: Any) -> None:
+    user = User(
+        email=f"test{uuid.uuid4().hex}@example.com",
+        hashed_password="abc123",
+        is_active=True,
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
 
-def test_handle_success_callback_not_paid(db: Any, mocker: Any) -> None:
-    """
-    If the checkout session isn't 'paid' on Stripe, raise BadRequest.
-    """
-    sm = mocker.MagicMock()
-    sm.payment_status = "unpaid"
-    mocker.patch("stripe.checkout.Session.retrieve", return_value=sm)
+    plan = SubscriptionPlan(
+        name="Test Plan",
+        price=10.0,
+        currency="USD",
+        metric_type=SubscriptionMetric.MONTH,
+        metric_value=1,
+    )
+    db.add(plan)
+    db.commit()
+    db.refresh(plan)
 
-    c = CheckoutSession(
-        id=uuid.uuid4(),
-        session_id="sess_123",
+    session_id = f"sess_mock_id_{uuid.uuid4().hex}"
+
+    evt = {
+        "data": {
+            "object": {
+                "id": session_id,
+                "payment_status": "unpaid",
+                "metadata": {
+                    "plan_id": str(plan.id),
+                    "user_id": str(user.id),
+                },
+            }
+        }
+    }
+
+    ck = CheckoutSession(
+        session_id=session_id,
         status="open",
         payment_status="unpaid",
-        user_id=uuid.uuid4(),
-        subscription_plan_id=uuid.uuid4(),
+        user_id=user.id,
+        subscription_plan_id=plan.id,
         created_at=datetime.now(timezone.utc),
         expires_at=datetime.now(timezone.utc) + timedelta(days=1),
         updated_at=datetime.now(timezone.utc),
-        session_url="https://example.com/checkout/sess_123",
+        session_url="https://example.com/checkout/sess_mock_id",
     )
-    db.add(c)
+    db.add(ck)
     db.commit()
+    db.refresh(ck)
 
-    with pytest.raises(BadRequest) as e:
-        handle_success_callback(db, c)
-    assert "not 'paid'" in str(e.value)
+    handle_checkout_session_async_payment_failed(db, evt)  # type: ignore
+    db.refresh(ck)
+    assert ck.status == "failed"
+    assert ck.payment_status == "unpaid"
 
 
-def test_handle_success_callback_paid(db: Any, mocker: Any) -> None:
-    sm = mocker.MagicMock()
-    sm.payment_status = "paid"
-    # If "subscription" key is looked up, return "sub_mock_id"
-    sm.get.side_effect = (
-        lambda key, default=None: "sub_mock_id" if key == "subscription" else default
+def test_handle_charge_dispute_created(db: Any, mocker: Any) -> None:
+    user = User(
+        email=f"test{uuid.uuid4().hex}@example.com",
+        hashed_password="abc123",
+        is_active=True,
     )
-    mocker.patch("stripe.checkout.Session.retrieve", return_value=sm)
-
-    c = CheckoutSession(
-        id=uuid.uuid4(),
-        session_id="sess_123",
-        status="open",
-        payment_status="unpaid",
-        user_id=uuid.uuid4(),
-        subscription_plan_id=uuid.uuid4(),
-        created_at=datetime.now(timezone.utc),
-        expires_at=datetime.now(timezone.utc) + timedelta(days=1),
-        updated_at=datetime.now(timezone.utc),
-        session_url="https://example.com/checkout/sess_123",
-    )
-    db.add(c)
+    db.add(user)
     db.commit()
+    db.refresh(user)
 
-    result = handle_success_callback(db, c)
-    assert "Success callback processed" in result["message"]
+    plan = SubscriptionPlan(
+        name="Test Plan",
+        price=10.0,
+        currency="USD",
+        metric_type=SubscriptionMetric.MONTH,
+        metric_value=1,
+    )
+    db.add(plan)
+    db.commit()
+    db.refresh(plan)
 
-
-def test_handle_cancel_callback_already_processed(db: Any) -> None:
-    """
-    If the checkout is already 'complete' or 'paid',
-    handle_cancel_callback returns "Already processed".
-    """
-    c = CheckoutSession(
+    s = Subscription(
         id=uuid.uuid4(),
-        session_id="sess_123",
-        status="complete",
+        user_id=user.id,
+        subscription_plan_id=plan.id,
+        start_date=datetime.now(timezone.utc),
+        end_date=datetime.now(timezone.utc) + timedelta(days=30),
+        is_active=True,
+        metric_type=SubscriptionMetric.MONTH,
+        metric_status=1,
+        stripe_subscription_id="sub_mock_id",
+    )
+    db.add(s)
+    db.commit()
+    db.refresh(s)
+
+    p = Payment(
+        id=uuid.uuid4(),
+        subscription_id=s.id,
+        user_id=user.id,
+        amount=9.99,
+        currency="USD",
+        payment_date=datetime.now(timezone.utc),
         payment_status="paid",
-        user_id=uuid.uuid4(),
-        subscription_plan_id=uuid.uuid4(),
-        created_at=datetime.now(timezone.utc),
-        expires_at=datetime.now(timezone.utc) + timedelta(days=1),
-        updated_at=datetime.now(timezone.utc),
-        session_url="https://example.com/checkout/sess_123",
+        transaction_id="trx123",
     )
-    db.add(c)
+    db.add(p)
     db.commit()
+    db.refresh(p)
 
-    resp = handle_cancel_callback(db, c)
-    assert "Already processed" in resp["message"]
-    # Check that no changes were made if you like
+    evt = {
+        "data": {
+            "object": {
+                "id": "evt_mock_id",
+                "payment_intent": p.transaction_id,
+            }
+        }
+    }
 
+    handle_charge_dispute_created(db, evt)  # type: ignore
 
-def test_handle_cancel_callback_not_paid(db: Any, mocker: Any) -> None:
-    """
-    If not paid, mark CheckoutSession as 'canceled'.
-    """
-    c = CheckoutSession(
-        id=uuid.uuid4(),
-        session_id="sess_456",
-        status="open",
-        payment_status="unpaid",
-        user_id=uuid.uuid4(),
-        subscription_plan_id=uuid.uuid4(),
-        created_at=datetime.now(timezone.utc),
-        expires_at=datetime.now(timezone.utc) + timedelta(days=1),
-        updated_at=datetime.now(timezone.utc),
-        session_url="https://example.com/checkout/sess_456",
-    )
-    db.add(c)
-    db.commit()
-
-    sm = mocker.MagicMock()
-    sm.payment_status = "unpaid"
-    mocker.patch("stripe.checkout.Session.retrieve", return_value=sm)
-
-    resp = handle_cancel_callback(db, c)
-    assert "Cancel callback processed" in resp["message"]
-
-    db.refresh(c)
-    assert c.status == "canceled"
-    assert c.payment_status == "unpaid"
+    db.refresh(s)
+    db.refresh(user)
+    assert s.is_active is False
+    assert user.is_active is False

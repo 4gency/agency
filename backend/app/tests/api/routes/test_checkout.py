@@ -312,3 +312,133 @@ def test_stripe_cancel(
         data: dict[str, Any] = response.json()
         assert data["message"] == "Cancel callback processed", "Cancel message mismatch"
         mock_handle_cancel.assert_called_once()
+
+
+def test_update_subscription_payment(
+    client: TestClient,
+    db: Session,
+    superuser_token_headers: dict[str, str],
+    checkout_base_url: str,
+) -> None:
+    """
+    Test the update_subscription_payment function.
+    """
+    plan_id = uuid.uuid4()
+    _ = create_dummy_subscription_plan(db, plan_id)
+    checkout = create_dummy_checkout_session(
+        db, "update-subscription-payment", plan_id, dummy_user.id
+    )
+    with patch("app.integrations.stripe.update_subscription_payment") as mock_update:
+        response = client.post(
+            f"{checkout_base_url}/update-subscription-payment",
+            headers=superuser_token_headers,
+            params={"session_id": checkout.session_id},
+        )
+        assert response.status_code == 200, f"Response: {response.text}"
+        data: dict[str, Any] = response.json()
+        assert data["message"] == "Subscription payment updated", "Update message mismatch"
+        mock_update.assert_called_once()
+
+
+def test_handle_invoice_payment_succeeded(
+    client: TestClient,
+    db: Session,
+    superuser_token_headers: dict[str, str],
+    checkout_base_url: str,
+) -> None:
+    """
+    Test the handle_invoice_payment_succeeded function.
+    """
+    plan_id = uuid.uuid4()
+    _ = create_dummy_subscription_plan(db, plan_id)
+    checkout = create_dummy_checkout_session(
+        db, "handle-invoice-payment-succeeded", plan_id, dummy_user.id
+    )
+    with patch("app.integrations.stripe.handle_invoice_payment_succeeded") as mock_handle:
+        response = client.post(
+            f"{checkout_base_url}/handle-invoice-payment-succeeded",
+            headers=superuser_token_headers,
+            params={"session_id": checkout.session_id},
+        )
+        assert response.status_code == 200, f"Response: {response.text}"
+        data: dict[str, Any] = response.json()
+        assert data["message"] == "Invoice payment succeeded", "Handle message mismatch"
+        mock_handle.assert_called_once()
+
+
+def test_handle_checkout_session_expired(
+    client: TestClient,
+    db: Session,
+    superuser_token_headers: dict[str, str],
+    checkout_base_url: str,
+) -> None:
+    """
+    Test the handle_checkout_session_expired function.
+    """
+    plan_id = uuid.uuid4()
+    _ = create_dummy_subscription_plan(db, plan_id)
+    checkout = create_dummy_checkout_session(
+        db, "handle-checkout-session-expired", plan_id, dummy_user.id
+    )
+    with patch("app.integrations.stripe.handle_checkout_session_expired") as mock_handle:
+        response = client.post(
+            f"{checkout_base_url}/handle-checkout-session-expired",
+            headers=superuser_token_headers,
+            params={"session_id": checkout.session_id},
+        )
+        assert response.status_code == 200, f"Response: {response.text}"
+        data: dict[str, Any] = response.json()
+        assert data["message"] == "Checkout session expired", "Handle message mismatch"
+        mock_handle.assert_called_once()
+
+
+def test_handle_checkout_session_async_payment_failed(
+    client: TestClient,
+    db: Session,
+    superuser_token_headers: dict[str, str],
+    checkout_base_url: str,
+) -> None:
+    """
+    Test the handle_checkout_session_async_payment_failed function.
+    """
+    plan_id = uuid.uuid4()
+    _ = create_dummy_subscription_plan(db, plan_id)
+    checkout = create_dummy_checkout_session(
+        db, "handle-checkout-session-async-payment-failed", plan_id, dummy_user.id
+    )
+    with patch("app.integrations.stripe.handle_checkout_session_async_payment_failed") as mock_handle:
+        response = client.post(
+            f"{checkout_base_url}/handle-checkout-session-async-payment-failed",
+            headers=superuser_token_headers,
+            params={"session_id": checkout.session_id},
+        )
+        assert response.status_code == 200, f"Response: {response.text}"
+        data: dict[str, Any] = response.json()
+        assert data["message"] == "Checkout session async payment failed", "Handle message mismatch"
+        mock_handle.assert_called_once()
+
+
+def test_handle_charge_dispute_created(
+    client: TestClient,
+    db: Session,
+    superuser_token_headers: dict[str, str],
+    checkout_base_url: str,
+) -> None:
+    """
+    Test the handle_charge_dispute_created function.
+    """
+    plan_id = uuid.uuid4()
+    _ = create_dummy_subscription_plan(db, plan_id)
+    checkout = create_dummy_checkout_session(
+        db, "handle-charge-dispute-created", plan_id, dummy_user.id
+    )
+    with patch("app.integrations.stripe.handle_charge_dispute_created") as mock_handle:
+        response = client.post(
+            f"{checkout_base_url}/handle-charge-dispute-created",
+            headers=superuser_token_headers,
+            params={"session_id": checkout.session_id},
+        )
+        assert response.status_code == 200, f"Response: {response.text}"
+        data: dict[str, Any] = response.json()
+        assert data["message"] == "Charge dispute created", "Handle message mismatch"
+        mock_handle.assert_called_once()
