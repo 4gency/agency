@@ -103,7 +103,7 @@ def stripe_success(
             detail="Checkout session does not belong to the authenticated user",
         )
 
-    stripe_controller.handle_success_callback(session, checkout, plan, user)
+    stripe_controller.handle_success_callback(session, checkout)
 
     return {"message": "Success callback processed"}
 
