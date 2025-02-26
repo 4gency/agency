@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 import stripe
@@ -103,7 +103,7 @@ def stripe_success(
             detail="Checkout session does not belong to the authenticated user",
         )
 
-    stripe_controller.handle_success_callback(session, checkout, plan, user)
+    stripe_controller.handle_success_callback(session, checkout)
 
     return {"message": "Success callback processed"}
 
@@ -378,10 +378,13 @@ async def stripe_webhook(
 ) -> Any:
     payload = await request.body()
     try:
-        event: stripe.Event = stripe.Webhook.construct_event(
-            payload=payload,
-            sig_header=stripe_signature,
-            secret=settings.STRIPE_WEBHOOK_SECRET,
+        event = cast(
+            stripe.Event,
+            stripe.Webhook.construct_event(  # type: ignore[no-untyped-call]
+                payload=payload,
+                sig_header=stripe_signature,
+                secret=settings.STRIPE_WEBHOOK_SECRET,
+            ),
         )
     except (ValueError, stripe.SignatureVerificationError) as e:
         raise HTTPException(

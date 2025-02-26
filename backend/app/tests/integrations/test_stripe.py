@@ -691,7 +691,7 @@ def test_handle_checkout_session_paid(db: Any, mocker: Any) -> None:
     db.commit()
     db.refresh(ck)
 
-    handle_checkout_session(db, evt)
+    handle_checkout_session(db, evt)  # type: ignore
     db.refresh(ck)
     assert ck.status == "complete"
     assert ck.payment_status == "paid"
@@ -753,7 +753,7 @@ def test_handle_checkout_session_unpaid(db: Any) -> None:
     db.commit()
     db.refresh(ck)
 
-    handle_checkout_session(db, evt)
+    handle_checkout_session(db, evt)  # type: ignore
     db.refresh(ck)
     assert ck.status == "canceled"
     assert ck.payment_status == "unpaid"
