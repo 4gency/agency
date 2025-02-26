@@ -854,16 +854,23 @@ def handle_invoice_payment_succeeded(session: Session, event: stripe.Event) -> N
                     Subscription.stripe_subscription_id == stripe_subscription.id
                 )
             ).first()
-
-            # Processa o pagamento e a subscription com a função reutilizável
-            process_invoice_payment_succeeded(
-                session=session,
-                stripe_invoice=stripe_invoice,
-                stripe_subscription=stripe_subscription,
-                user=user,
-                plan=plan,
-                subscription=subscription,
-            )
+            try:
+                # Processa o pagamento e a subscription com a função reutilizável
+                process_invoice_payment_succeeded(
+                    session=session,
+                    stripe_invoice=stripe_invoice,
+                    stripe_subscription=stripe_subscription,
+                    user=user,
+                    plan=plan,
+                    subscription=subscription,
+                )
+            except AlreadyProcessed as e:
+                logger.info("Evento já processado: %s", str(e))
+            except Exception as e:
+                logger.exception(
+                    "Erro no processamento de invoice.payment_succeeded: %s", str(e)
+                )
+                raise e
     except Exception as e:
         session.rollback()
         logger.exception(
