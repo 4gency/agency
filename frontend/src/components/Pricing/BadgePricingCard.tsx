@@ -1,15 +1,15 @@
-import React from "react";
+import type React from "react"
 
 interface BadgePricingCardProps {
-  title: string;
-  badge: string;
-  price: number;
-  benefits: string[];
-  buttonText: string;
-  buttonLink: string;
-  hasDiscount?: boolean;
-  priceWithoutDiscount?: number;
-  recurrence: string;
+  title: string
+  badge: string
+  price: number
+  benefits: string[]
+  buttonText: string
+  buttonLink: string
+  hasDiscount?: boolean
+  priceWithoutDiscount?: number
+  recurrence: string
 }
 
 const BadgePricingCard: React.FC<BadgePricingCardProps> = ({
@@ -140,7 +140,7 @@ const BadgePricingCard: React.FC<BadgePricingCardProps> = ({
         {buttonText}
       </a>
     </div>
-  );
-};
+  )
+}
 
-export default BadgePricingCard;
+export default BadgePricingCard

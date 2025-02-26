@@ -3,8 +3,8 @@ import { Outlet, createFileRoute } from "@tanstack/react-router"
 
 import Sidebar from "../components/Common/Sidebar"
 import UserMenu from "../components/Common/UserMenu"
-import useAuth from "../hooks/useAuth"
 import LandingPage from "../components/Pages/LandingPage"
+import useAuth from "../hooks/useAuth"
 
 export const Route = createFileRoute("/_layout")({
   component: Layout,

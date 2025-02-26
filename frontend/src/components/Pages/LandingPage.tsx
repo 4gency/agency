@@ -1,65 +1,96 @@
-import { useEffect } from "react";
-import PricingSection from "../Pricing/PricingSection";
+import { useEffect } from "react"
+import PricingSection from "../Pricing/PricingSection"
 
 export default function LandingPage() {
   useEffect(() => {
-    const originalTheme = document.documentElement.getAttribute("data-theme");
-    document.documentElement.setAttribute("data-theme", "light");
-    document.documentElement.style.colorScheme = "light";
+    const scrollToHash = () => {
+      const hash = window.location.hash
+      if (hash) {
+        const elementId = hash.substring(1)
+        const element = document.getElementById(elementId)
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth" })
+        } else {
+          setTimeout(scrollToHash, 100)
+        }
+      }
+    }
+
+    const queryString = window.location.search
+    const urlParams = new URLSearchParams(queryString)
+    const redirectTo = urlParams.get("redirectTo")
+
+    if (redirectTo) {
+      window.location.hash = `#${redirectTo}`
+    }
+
+    scrollToHash()
+
+    window.addEventListener("hashchange", scrollToHash)
+
+    return () => {
+      window.removeEventListener("hashchange", scrollToHash)
+    }
+  }, [])
+
+  useEffect(() => {
+    const originalTheme = document.documentElement.getAttribute("data-theme")
+    document.documentElement.setAttribute("data-theme", "light")
+    document.documentElement.style.colorScheme = "light"
     function playAnimation(element: any, frame = false) {
       if (frame) {
-        element.style.visibility = "visible";
-        element.style.opacity = "1";
-        element.style.transform = "none";
+        element.style.visibility = "visible"
+        element.style.opacity = "1"
+        element.style.transform = "none"
       }
       if (
         element.getBoundingClientRect().top > 0 &&
         element.getBoundingClientRect().top <= window.innerHeight * 0.75
       ) {
-        element.classList.add("lambdagency-animate-init");
+        element.classList.add("lambdagency-animate-init")
       }
     }
 
     function prepareAnimation(doc: any, frame = false) {
-      const elements = doc.getElementsByClassName("lambdagency-animate");
+      const elements = doc.getElementsByClassName("lambdagency-animate")
 
-      for (let element of elements) {
+      for (const element of elements) {
         if (frame) {
-          playAnimation(element, true);
+          playAnimation(element, true)
         } else {
-          playAnimation(element);
+          playAnimation(element)
 
-          window.addEventListener("scroll", () => playAnimation(element));
+          window.addEventListener("scroll", () => playAnimation(element))
         }
       }
     }
 
-    prepareAnimation(document);
+    prepareAnimation(document)
 
     const timer = setTimeout(() => {
       const iframe = document.getElementsByClassName(
-        "edit-site-visual-editor__editor-canvas"
-      );
+        "edit-site-visual-editor__editor-canvas",
+      )
       const innerDoc =
         iframe.length > 0
           ? (iframe[0] as HTMLIFrameElement).contentDocument ||
-          (iframe[0] as HTMLIFrameElement).contentWindow?.document
-          : null;
+            (iframe[0] as HTMLIFrameElement).contentWindow?.document
+          : null
 
       if (innerDoc) {
-        prepareAnimation(innerDoc, true);
+        prepareAnimation(innerDoc, true)
       }
-    }, 6000);
+    }, 6000)
 
     return () => {
-      clearTimeout(timer);
+      clearTimeout(timer)
       document.documentElement.setAttribute(
         "data-theme",
-        originalTheme || "dark"
-      );
-      document.documentElement.style.colorScheme = originalTheme || "dark";
-    };
-  }, []);
+        originalTheme || "dark",
+      )
+      document.documentElement.style.colorScheme = originalTheme || "dark"
+    }
+  }, [])
 
   return (
     <div className="light-theme">
@@ -67,7 +98,7 @@ export default function LandingPage() {
       <meta name="viewport" content="width=device-width, initial-scale=1" />
       <meta name="robots" content="max-image-preview:large" />
       <title>λgency - Empowering Your Career with AI</title>
-      <script src="/landing-page/js/emoji.js"></script>
+      <script src="/landing-page/js/emoji.js" />
       <link
         rel="stylesheet"
         id="block-cover-css"
@@ -265,7 +296,7 @@ export default function LandingPage() {
                 backgroundPosition: "0% 15%",
                 backgroundImage: "url(/landing-page/img/dot-pattern.webp)",
               }}
-            ></div>
+            />
             <div className="block-cover__inner-container is-layout-constrained container-core-cover-is-layout-1 block-cover-is-layout-constrained">
               <div className="block-columns is-layout-flex container-core-columns-is-layout-1 block-columns-is-layout-flex">
                 <div className="block-column is-layout-flow block-column-is-layout-flow">
@@ -462,7 +493,7 @@ export default function LandingPage() {
                 backgroundPosition: "0% 5%",
                 backgroundImage: "url(/landing-page/img/dot-pattern.webp)",
               }}
-            ></div>
+            />
             <div className="block-cover__inner-container is-layout-constrained container-core-cover-is-layout-3 block-cover-is-layout-constrained">
               <div className="block-columns is-not-stacked-on-mobile is-layout-flex container-core-columns-is-layout-3 block-columns-is-layout-flex">
                 <div
@@ -524,12 +555,12 @@ export default function LandingPage() {
                     className="has-theme-2-color has-text-color"
                     style={{ marginBottom: 15 }}
                   >
-                    At λgency, we're rethinking the old-school job search process.
-                    By applying AI to handle the routine tasks that bog you down,
-                    we're making job hunting a bit simpler and more efficient.
-                    We're a young startup—only a few months in—and we're excited to
-                    see how these practical tweaks can really help both job seekers
-                    and recruiters.
+                    At λgency, we're rethinking the old-school job search
+                    process. By applying AI to handle the routine tasks that bog
+                    you down, we're making job hunting a bit simpler and more
+                    efficient. We're a young startup—only a few months in—and
+                    we're excited to see how these practical tweaks can really
+                    help both job seekers and recruiters.
                   </p>
                   <p className="has-theme-2-color has-text-color">
                     Our innovative platform enables job seekers to automatically
@@ -1035,7 +1066,7 @@ export default function LandingPage() {
                 backgroundPosition: "0% 15%",
                 backgroundImage: "url(/landing-page/img/dot-pattern.webp)",
               }}
-            ></div>
+            />
             <div className="block-cover__inner-container is-layout-constrained container-core-cover-is-layout-4 block-cover-is-layout-constrained">
               <p className="has-text-align-center has-theme-0-color has-text-color has-link-color elements-af80cd34a8a1ea6821415c4a8409b68b">
                 Your Trusted AI Partner
@@ -1239,7 +1270,7 @@ export default function LandingPage() {
                         style={{
                           width: 50,
                           filter:
-                            'invert(42%) sepia(68%) saturate(450%) hue-rotate(145deg) brightness(93%) contrast(88%) opacity(20%)'
+                            "invert(42%) sepia(68%) saturate(450%) hue-rotate(145deg) brightness(93%) contrast(88%) opacity(20%)",
                         }}
                       />
                     </figure>
@@ -1297,7 +1328,7 @@ export default function LandingPage() {
                         style={{
                           width: 50,
                           filter:
-                            'invert(42%) sepia(68%) saturate(450%) hue-rotate(145deg) brightness(93%) contrast(88%) opacity(20%)'
+                            "invert(42%) sepia(68%) saturate(450%) hue-rotate(145deg) brightness(93%) contrast(88%) opacity(20%)",
                         }}
                       />
                     </figure>
@@ -1355,7 +1386,7 @@ export default function LandingPage() {
                         style={{
                           width: 50,
                           filter:
-                            'invert(42%) sepia(68%) saturate(450%) hue-rotate(145deg) brightness(93%) contrast(88%) opacity(20%)'
+                            "invert(42%) sepia(68%) saturate(450%) hue-rotate(145deg) brightness(93%) contrast(88%) opacity(20%)",
                         }}
                       />
                     </figure>
@@ -1413,7 +1444,7 @@ export default function LandingPage() {
                         style={{
                           width: 50,
                           filter:
-                            'invert(42%) sepia(68%) saturate(450%) hue-rotate(145deg) brightness(93%) contrast(88%) opacity(20%)'
+                            "invert(42%) sepia(68%) saturate(450%) hue-rotate(145deg) brightness(93%) contrast(88%) opacity(20%)",
                         }}
                       />
                     </figure>
@@ -1643,13 +1674,18 @@ export default function LandingPage() {
             </nav>
 
             {/* Agency Info (Optional) */}
-            <div style={{ textAlign: "center", color: "#718096", fontSize: "14px" }}>
+            <div
+              style={{
+                textAlign: "center",
+                color: "#718096",
+                fontSize: "14px",
+              }}
+            >
               <p>Powered by λgency</p>
               <p>&copy; 2024. All rights reserved.</p>
             </div>
           </div>
         </footer>
-
       </div>
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -1657,7 +1693,6 @@ export default function LandingPage() {
         width={0}
         height={0}
         focusable="false"
-        role="none"
         style={{
           visibility: "hidden",
           position: "absolute",
@@ -1671,7 +1706,7 @@ export default function LandingPage() {
               colorInterpolationFilters="sRGB"
               type="matrix"
               values=" .299 .587 .114 0 0 .299 .587 .114 0 0 .299 .587 .114 0 0 .299 .587 .114 0 0 "
-            ></feColorMatrix>
+            />
             <feComponentTransfer colorInterpolationFilters="sRGB">
               <feFuncR type="table" tableValues="0 1" />
               <feFuncG type="table" tableValues="0 1" />
@@ -1688,7 +1723,6 @@ export default function LandingPage() {
         width={0}
         height={0}
         focusable="false"
-        role="none"
         style={{
           visibility: "hidden",
           position: "absolute",
@@ -1702,7 +1736,7 @@ export default function LandingPage() {
               colorInterpolationFilters="sRGB"
               type="matrix"
               values=" .299 .587 .114 0 0 .299 .587 .114 0 0 .299 .587 .114 0 0 .299 .587 .114 0 0 "
-            ></feColorMatrix>
+            />
             <feComponentTransfer colorInterpolationFilters="sRGB">
               <feFuncR type="table" tableValues="0.4156862745098 0.8" />
               <feFuncG type="table" tableValues="0.42352941176471 0.8" />
@@ -1719,7 +1753,6 @@ export default function LandingPage() {
         width={0}
         height={0}
         focusable="false"
-        role="none"
         style={{
           visibility: "hidden",
           position: "absolute",
@@ -1733,7 +1766,7 @@ export default function LandingPage() {
               colorInterpolationFilters="sRGB"
               type="matrix"
               values=" .299 .587 .114 0 0 .299 .587 .114 0 0 .299 .587 .114 0 0 .299 .587 .114 0 0 "
-            ></feColorMatrix>
+            />
             <feComponentTransfer colorInterpolationFilters="sRGB">
               <feFuncR type="table" tableValues="0.4156862745098 0.8" />
               <feFuncG type="table" tableValues="0.42352941176471 0.8" />
@@ -1750,7 +1783,6 @@ export default function LandingPage() {
         width={0}
         height={0}
         focusable="false"
-        role="none"
         style={{
           visibility: "hidden",
           position: "absolute",
@@ -1764,7 +1796,7 @@ export default function LandingPage() {
               colorInterpolationFilters="sRGB"
               type="matrix"
               values=" .299 .587 .114 0 0 .299 .587 .114 0 0 .299 .587 .114 0 0 .299 .587 .114 0 0 "
-            ></feColorMatrix>
+            />
             <feComponentTransfer colorInterpolationFilters="sRGB">
               <feFuncR type="table" tableValues="0.4156862745098 0.8" />
               <feFuncG type="table" tableValues="0.42352941176471 0.8" />
@@ -1781,7 +1813,6 @@ export default function LandingPage() {
         width={0}
         height={0}
         focusable="false"
-        role="none"
         style={{
           visibility: "hidden",
           position: "absolute",
@@ -1795,7 +1826,7 @@ export default function LandingPage() {
               colorInterpolationFilters="sRGB"
               type="matrix"
               values=" .299 .587 .114 0 0 .299 .587 .114 0 0 .299 .587 .114 0 0 .299 .587 .114 0 0 "
-            ></feColorMatrix>
+            />
             <feComponentTransfer colorInterpolationFilters="sRGB">
               <feFuncR type="table" tableValues="0.4156862745098 0.8" />
               <feFuncG type="table" tableValues="0.42352941176471 0.8" />
@@ -1812,7 +1843,6 @@ export default function LandingPage() {
         width={0}
         height={0}
         focusable="false"
-        role="none"
         style={{
           visibility: "hidden",
           position: "absolute",
@@ -1826,7 +1856,7 @@ export default function LandingPage() {
               colorInterpolationFilters="sRGB"
               type="matrix"
               values=" .299 .587 .114 0 0 .299 .587 .114 0 0 .299 .587 .114 0 0 .299 .587 .114 0 0 "
-            ></feColorMatrix>
+            />
             <feComponentTransfer colorInterpolationFilters="sRGB">
               <feFuncR type="table" tableValues="0.4156862745098 0.8" />
               <feFuncG type="table" tableValues="0.42352941176471 0.8" />
@@ -1843,7 +1873,6 @@ export default function LandingPage() {
         width={0}
         height={0}
         focusable="false"
-        role="none"
         style={{
           visibility: "hidden",
           position: "absolute",
@@ -1857,7 +1886,7 @@ export default function LandingPage() {
               colorInterpolationFilters="sRGB"
               type="matrix"
               values=" .299 .587 .114 0 0 .299 .587 .114 0 0 .299 .587 .114 0 0 .299 .587 .114 0 0 "
-            ></feColorMatrix>
+            />
             <feComponentTransfer colorInterpolationFilters="sRGB">
               <feFuncR type="table" tableValues="0.4156862745098 0.8" />
               <feFuncG type="table" tableValues="0.42352941176471 0.8" />
@@ -1874,7 +1903,6 @@ export default function LandingPage() {
         width={0}
         height={0}
         focusable="false"
-        role="none"
         style={{
           visibility: "hidden",
           position: "absolute",
@@ -1888,7 +1916,7 @@ export default function LandingPage() {
               colorInterpolationFilters="sRGB"
               type="matrix"
               values=" .299 .587 .114 0 0 .299 .587 .114 0 0 .299 .587 .114 0 0 .299 .587 .114 0 0 "
-            ></feColorMatrix>
+            />
             <feComponentTransfer colorInterpolationFilters="sRGB">
               <feFuncR type="table" tableValues="0.87843137254902 1" />
               <feFuncG type="table" tableValues="0.91764705882353 1" />
@@ -1905,7 +1933,6 @@ export default function LandingPage() {
         width={0}
         height={0}
         focusable="false"
-        role="none"
         style={{
           visibility: "hidden",
           position: "absolute",
@@ -1919,7 +1946,7 @@ export default function LandingPage() {
               colorInterpolationFilters="sRGB"
               type="matrix"
               values=" .299 .587 .114 0 0 .299 .587 .114 0 0 .299 .587 .114 0 0 .299 .587 .114 0 0 "
-            ></feColorMatrix>
+            />
             <feComponentTransfer colorInterpolationFilters="sRGB">
               <feFuncR
                 type="table"
@@ -1942,7 +1969,6 @@ export default function LandingPage() {
         width={0}
         height={0}
         focusable="false"
-        role="none"
         style={{
           visibility: "hidden",
           position: "absolute",
@@ -1956,7 +1982,7 @@ export default function LandingPage() {
               colorInterpolationFilters="sRGB"
               type="matrix"
               values=" .299 .587 .114 0 0 .299 .587 .114 0 0 .299 .587 .114 0 0 .299 .587 .114 0 0 "
-            ></feColorMatrix>
+            />
             <feComponentTransfer colorInterpolationFilters="sRGB">
               <feFuncR type="table" tableValues="0.87843137254902 1" />
               <feFuncG
@@ -1976,7 +2002,6 @@ export default function LandingPage() {
         width={0}
         height={0}
         focusable="false"
-        role="none"
         style={{
           visibility: "hidden",
           position: "absolute",
@@ -1990,7 +2015,7 @@ export default function LandingPage() {
               colorInterpolationFilters="sRGB"
               type="matrix"
               values=" .299 .587 .114 0 0 .299 .587 .114 0 0 .299 .587 .114 0 0 .299 .587 .114 0 0 "
-            ></feColorMatrix>
+            />
             <feComponentTransfer colorInterpolationFilters="sRGB">
               <feFuncR type="table" tableValues="0.87843137254902 1" />
               <feFuncG type="table" tableValues="0.91764705882353 1" />
@@ -2004,11 +2029,11 @@ export default function LandingPage() {
       <script
         src="/landing-page/js/animation-script.js?ver=1.0.1"
         id="animation-script-js"
-      ></script>
+      />
       <script
         src="/landing-page/js/block-template-skip-link.js"
         id="block-template-skip-link-js-after"
-      ></script>
+      />
     </div>
-  );
+  )
 }

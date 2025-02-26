@@ -1,38 +1,38 @@
-(function () {
-    var skipLinkTarget = document.querySelector('main'),
-        sibling,
-        skipLinkTargetID,
-        skipLink;
+;(() => {
+  const skipLinkTarget = document.querySelector("main")
+  let sibling
+  let skipLinkTargetID
+  let skipLink
 
-    // Early exit if a skip-link target can't be located.
-    if (!skipLinkTarget) {
-        return;
-    }
+  // Early exit if a skip-link target can't be located.
+  if (!skipLinkTarget) {
+    return
+  }
 
-    /*
-     * Get the site wrapper.
-     * The skip-link will be injected in the beginning of it.
-     */
-    sibling = document.querySelector('.site-blocks');
+  /*
+   * Get the site wrapper.
+   * The skip-link will be injected in the beginning of it.
+   */
+  sibling = document.querySelector(".site-blocks")
 
-    // Early exit if the root element was not found.
-    if (!sibling) {
-        return;
-    }
+  // Early exit if the root element was not found.
+  if (!sibling) {
+    return
+  }
 
-    // Get the skip-link target's ID, and generate one if it doesn't exist.
-    skipLinkTargetID = skipLinkTarget.id;
-    if (!skipLinkTargetID) {
-        skipLinkTargetID = '-skip-link--target';
-        skipLinkTarget.id = skipLinkTargetID;
-    }
+  // Get the skip-link target's ID, and generate one if it doesn't exist.
+  skipLinkTargetID = skipLinkTarget.id
+  if (!skipLinkTargetID) {
+    skipLinkTargetID = "-skip-link--target"
+    skipLinkTarget.id = skipLinkTargetID
+  }
 
-    // Create the skip link.
-    skipLink = document.createElement('a');
-    skipLink.classList.add('skip-link', 'screen-reader-text');
-    skipLink.href = '#' + skipLinkTargetID;
-    skipLink.innerHTML = 'Skip to content';
+  // Create the skip link.
+  skipLink = document.createElement("a")
+  skipLink.classList.add("skip-link", "screen-reader-text")
+  skipLink.href = `#${skipLinkTargetID}`
+  skipLink.innerHTML = "Skip to content"
 
-    // Inject the skip link.
-    sibling.parentElement.insertBefore(skipLink, sibling);
-}());
+  // Inject the skip link.
+  sibling.parentElement.insertBefore(skipLink, sibling)
+})()
