@@ -759,9 +759,9 @@ def handle_invoice_payment_succeeded(session: Session, event: stripe.Event) -> N
             # Recupera os dados da Stripe
             stripe_invoice = stripe.Invoice.retrieve(event["data"]["object"]["id"])
             stripe_subscription = stripe.Subscription.retrieve(
-                stripe_invoice.subscription
+                stripe_invoice.subscription  # type: ignore
             )
-            stripe_plan = stripe.Plan.retrieve(stripe_subscription.plan.id)
+            stripe_plan = stripe.Plan.retrieve(stripe_subscription.plan.id)  # type: ignore
 
             if not all([stripe_subscription, stripe_plan]):
                 logger.error("Subscription ou Plan não encontrados na Stripe.")
@@ -787,7 +787,7 @@ def handle_invoice_payment_succeeded(session: Session, event: stripe.Event) -> N
             if not plan:
                 logger.error(
                     "SubscriptionPlan não encontrada para plan_id: %s",
-                    stripe_plan.product.id,
+                    stripe_plan.product.id,  # type: ignore
                 )
                 raise Exception("SubscriptionPlan not found.")
 
@@ -931,6 +931,9 @@ def handle_charge_dispute_created(session: Session, event: stripe.Event) -> None
                 logger.info("Subscription %s marcada como disputed", subscription.id)
 
             user = session.exec(select(User).where(User.id == payment.user_id)).first()
+
+            if not user:
+                raise Exception("User not found")
 
             user.is_active = False
             session.add(user)
