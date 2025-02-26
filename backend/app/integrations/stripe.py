@@ -761,7 +761,7 @@ def handle_invoice_payment_succeeded(session: Session, event: stripe.Event) -> N
             stripe_subscription = stripe.Subscription.retrieve(
                 stripe_invoice.subscription  # type: ignore
             )
-            stripe_plan = stripe.Plan.retrieve(stripe_subscription.plan.id)  # type: ignore
+            stripe_plan = stripe.Plan.retrieve(str(stripe_subscription.plan.id))  # type: ignore
 
             if not all([stripe_subscription, stripe_plan]):
                 logger.error("Subscription ou Plan não encontrados na Stripe.")
@@ -787,7 +787,7 @@ def handle_invoice_payment_succeeded(session: Session, event: stripe.Event) -> N
             if not plan:
                 logger.error(
                     "SubscriptionPlan não encontrada para plan_id: %s",
-                    stripe_plan.product.id,  # type: ignore
+                    stripe_plan.product,
                 )
                 raise Exception("SubscriptionPlan not found.")
 
