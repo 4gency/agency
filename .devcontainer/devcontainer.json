@@ -1,0 +1,7 @@
+{
+  "name": "Agency",
+  "dockerComposeFile": "../docker-compose.yml",
+  "service": "backend",
+  "workspaceFolder": "/app",
+  "shutdownAction": "stopCompose"
+}
