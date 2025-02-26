@@ -1,6 +1,5 @@
 import logging
 from datetime import datetime, timezone
-from typing import Optional
 
 import stripe
 from fastapi import HTTPException, status
@@ -680,7 +679,7 @@ def process_invoice_payment_succeeded(
     stripe_subscription: stripe.Subscription,
     user: User,
     plan: SubscriptionPlan,
-    subscription: Optional[Subscription] = None,
+    subscription: Subscription | None = None,
 ) -> None:
     """
     Processa o pagamento da invoice, criando ou atualizando a Subscription e registrando o Payment.
@@ -737,14 +736,10 @@ def process_invoice_payment_succeeded(
             transaction_id=stripe_invoice.id,
         )
         session.add(payment)
-        logger.info(
-            "Criado novo Payment para transaction_id %s", stripe_invoice.id
-        )
+        logger.info("Criado novo Payment para transaction_id %s", stripe_invoice.id)
     else:
         payment = existing_payment
-        logger.info(
-            "Payment já existe para transaction_id %s", stripe_invoice.id
-        )
+        logger.info("Payment já existe para transaction_id %s", stripe_invoice.id)
 
     session.flush()
 
@@ -755,7 +750,7 @@ def process_invoice_payment_succeeded(
 def handle_invoice_payment_succeeded(session: Session, event: stripe.Event) -> None:
     """
     Webhook handler para 'invoice.payment_succeeded'.
-    
+
     Junta todos os dados necessários e chama a função process_invoice_payment_succeeded para
     criar/atualizar a Subscription e registrar o Payment.
     """
@@ -818,7 +813,6 @@ def handle_invoice_payment_succeeded(session: Session, event: stripe.Event) -> N
             "Erro no processamento de invoice.payment_succeeded: %s", str(e)
         )
         raise e
-
 
 
 def handle_checkout_session_expired(session: Session, event: stripe.Event) -> None:
