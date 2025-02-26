@@ -747,6 +747,57 @@ def process_invoice_payment_succeeded(
     update_subscription_payment(session, subscription, payment, stripe_subscription)
 
 
+def handle_invoice_payment_succeeded_in_checkout_callback(
+    session: Session,
+    checkout: CheckoutSession,
+    user: User,
+    plan: SubscriptionPlan,
+) -> None:
+    try:
+        stripe_checkout_session: stripe.checkout.Session = (
+            stripe.checkout.Session.retrieve(checkout.session_id)
+        )
+        if not stripe_checkout_session:
+            logger.error("CheckoutSession não encontrado na Stripe.")
+            raise Exception("CheckoutSession not found.")
+
+        stripe_invoice: stripe.Invoice = stripe.Invoice.retrieve(
+            str(stripe_checkout_session.invoice)
+        )
+        if not stripe_invoice:
+            logger.error("Invoice não encontrado na Stripe.")
+            raise Exception("Invoice not found.")
+
+        stripe_subscription: stripe.Subscription = stripe.Subscription.retrieve(
+            str(stripe_invoice.subscription)
+        )
+        if not stripe_subscription:
+            logger.error("Subscription não encontrado na Stripe.")
+            raise Exception("Subscription not found.")
+
+        subscription = session.exec(
+            select(Subscription).where(
+                Subscription.stripe_subscription_id == stripe_subscription.id
+            )
+        ).first()
+
+        process_invoice_payment_succeeded(
+            session=session,
+            stripe_invoice=stripe_invoice,
+            stripe_subscription=stripe_subscription,
+            user=user,
+            plan=plan,
+            subscription=subscription or None,
+        )
+
+    except Exception as e:
+        session.rollback()
+        logger.exception(
+            "Erro no processamento de invoice.payment_succeeded: %s", str(e)
+        )
+        raise e
+
+
 def handle_invoice_payment_succeeded(session: Session, event: stripe.Event) -> None:
     """
     Webhook handler para 'invoice.payment_succeeded'.

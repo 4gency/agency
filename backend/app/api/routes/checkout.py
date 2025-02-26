@@ -1,3 +1,4 @@
+import logging
 from typing import Any, cast
 from uuid import UUID
 
@@ -14,12 +15,12 @@ from app.models.core import (
     CheckoutSessionUpdate,
     ErrorMessage,
     Message,
-    SubscriptionPlan,
 )
 from app.models.crud import subscription as crud_subs
 from app.utils import timestamp_to_datetime
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.post(
@@ -87,16 +88,6 @@ def stripe_success(
             status_code=status.HTTP_404_NOT_FOUND, detail="Checkout session not found"
         )
 
-    plan: SubscriptionPlan | None = crud_subs.get_subscription_plan_by_id(
-        session=session, id=checkout.subscription_plan_id
-    )
-
-    if not plan:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Subscription plan not found, please contact support!",
-        )
-
     if checkout.user_id != user.id and not user.is_superuser:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -104,6 +95,15 @@ def stripe_success(
         )
 
     stripe_controller.handle_success_callback(session, checkout)
+
+    try:
+        stripe_controller.handle_invoice_payment_succeeded_in_checkout_callback(
+            session=session, checkout=checkout, user=user, plan=checkout.plan
+        )
+    except Exception as e:
+        logger.error(
+            f"Error handling invoice payment succeeded in checkout callback: {e}"
+        )
 
     return {"message": "Success callback processed"}
 
