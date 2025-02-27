@@ -185,6 +185,11 @@ class NotFound(HTTPException):
         super().__init__(status_code=status.HTTP_404_NOT_FOUND, detail=detail)
 
 
+class AlreadyProcessed(HTTPException):
+    def __init__(self, detail: str) -> None:
+        super().__init__(status_code=status.HTTP_409_CONFLICT, detail=detail)
+
+
 def _begin_transaction(session: Session) -> SessionTransaction:
     if session.in_transaction():
         return session.begin_nested()
@@ -662,8 +667,6 @@ def update_subscription_payment(
                 invoice.amount_paid or 0
             ) / 100.0  # converte de centavos para valor unitário
             payment.currency = invoice.currency.upper() if invoice.currency else "USD"
-            payment.transaction_id = str(invoice.payment_intent)
-
         session.add(subscription)
         session.add(payment)
         session.commit()
@@ -724,22 +727,23 @@ def process_invoice_payment_succeeded(
     existing_payment = session.exec(
         select(Payment).where(Payment.transaction_id == stripe_invoice.id)
     ).first()
-    if not existing_payment:
-        payment = Payment(
-            subscription_id=subscription.id,
-            user_id=user.id,
-            amount=amount_paid / 100.0,
-            currency=currency.upper() if currency else "USD",
-            payment_date=datetime.now(timezone.utc),
-            payment_status=stripe_invoice.status or "unknown",
-            payment_gateway="stripe",
-            transaction_id=stripe_invoice.id,
-        )
-        session.add(payment)
-        logger.info("Criado novo Payment para transaction_id %s", stripe_invoice.id)
-    else:
-        payment = existing_payment
+
+    if existing_payment:
         logger.info("Payment já existe para transaction_id %s", stripe_invoice.id)
+        raise AlreadyProcessed("This subscription payment has already been processed.")
+
+    payment = Payment(
+        subscription_id=subscription.id,
+        user_id=user.id,
+        amount=amount_paid / 100.0,
+        currency=currency.upper() if currency else "USD",
+        payment_date=datetime.now(timezone.utc),
+        payment_status=stripe_invoice.status or "unknown",
+        payment_gateway="stripe",
+        transaction_id=str(stripe_invoice.id),
+    )
+    session.add(payment)
+    logger.info("Criado novo Payment para transaction_id %s", stripe_invoice.id)
 
     session.flush()
 
@@ -768,15 +772,6 @@ def handle_invoice_payment_succeeded_in_checkout_callback(
             logger.error("Invoice não encontrado na Stripe.")
             raise Exception("Invoice not found.")
 
-        payment = session.exec(
-            select(Payment).where(Payment.transaction_id == stripe_invoice.id)
-        ).first()
-
-        if payment:
-            # Payment já existe, não precisa processar novamente
-            logger.info("Payment já existe para transaction_id %s", stripe_invoice.id)
-            return
-
         stripe_subscription: stripe.Subscription = stripe.Subscription.retrieve(
             str(stripe_invoice.subscription)
         )
@@ -798,12 +793,14 @@ def handle_invoice_payment_succeeded_in_checkout_callback(
             plan=plan,
             subscription=subscription or None,
         )
-
-    except Exception as e:
+    except AlreadyProcessed as e:
         session.rollback()
+        raise e
+    except Exception as e:
         logger.exception(
             "Erro no processamento de invoice.payment_succeeded: %s", str(e)
         )
+        session.rollback()
         raise e
 
 
@@ -857,16 +854,23 @@ def handle_invoice_payment_succeeded(session: Session, event: stripe.Event) -> N
                     Subscription.stripe_subscription_id == stripe_subscription.id
                 )
             ).first()
-
-            # Processa o pagamento e a subscription com a função reutilizável
-            process_invoice_payment_succeeded(
-                session=session,
-                stripe_invoice=stripe_invoice,
-                stripe_subscription=stripe_subscription,
-                user=user,
-                plan=plan,
-                subscription=subscription,
-            )
+            try:
+                # Processa o pagamento e a subscription com a função reutilizável
+                process_invoice_payment_succeeded(
+                    session=session,
+                    stripe_invoice=stripe_invoice,
+                    stripe_subscription=stripe_subscription,
+                    user=user,
+                    plan=plan,
+                    subscription=subscription,
+                )
+            except AlreadyProcessed as e:
+                logger.info("Evento já processado: %s", str(e))
+            except Exception as e:
+                logger.exception(
+                    "Erro no processamento de invoice.payment_succeeded: %s", str(e)
+                )
+                raise e
     except Exception as e:
         session.rollback()
         logger.exception(

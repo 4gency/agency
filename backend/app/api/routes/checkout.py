@@ -93,12 +93,20 @@ def stripe_success(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Checkout session does not belong to the authenticated user",
         )
-
     stripe_controller.handle_success_callback(session, checkout)
 
     try:
-        stripe_controller.handle_invoice_payment_succeeded_in_checkout_callback(
-            session=session, checkout=checkout, user=user, plan=checkout.plan
+        # create a new session that can be rolled back if the sub_session fails
+        with session.begin_nested():
+            stripe_controller.handle_invoice_payment_succeeded_in_checkout_callback(
+                session=session,
+                checkout=checkout,
+                user=user,
+                plan=checkout.plan,
+            )
+    except stripe_controller.AlreadyProcessed as e:
+        logger.info(
+            f"Already processed invoice payment succeeded in checkout callback: {e}"
         )
     except Exception as e:
         logger.error(
@@ -405,7 +413,7 @@ async def stripe_webhook(
     if handler := handlers.get(event_type):
         handler(session, event)
     else:
-        print(f"Unhandled event type: {event_type}")
+        logger.error(f"Unhandled event type: {event_type}")
 
     return {"message": "success"}
 
