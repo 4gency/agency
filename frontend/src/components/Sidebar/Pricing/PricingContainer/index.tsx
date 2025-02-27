@@ -57,7 +57,8 @@ export const PricingContainer = () => {
             name,
             price,
             has_badge,
-            badge,
+            badge_text,
+            button_text,
             has_discount,
             price_without_discount,
             is_active,
@@ -70,7 +71,7 @@ export const PricingContainer = () => {
             title: name,
             price: price,
             benefits: benefits ? benefits.map((b) => b.name) : [],
-            buttonText: "Get Started",
+            buttonText: button_text,
             buttonLink: "/signup",
             disabled: !is_active,
             hasDiscount: has_discount,
@@ -79,7 +80,7 @@ export const PricingContainer = () => {
           }
 
           if (has_badge) {
-            return <BadgePricingCard {...commonProps} badge={badge} />
+            return <BadgePricingCard {...commonProps} badgeText={badge_text} />
           }
           return <NormalPricingCard {...commonProps} />
         })}
