@@ -239,8 +239,7 @@ export type SubscriptionPlanPublic = {
   name: string
   price: number
   has_badge?: boolean
-  badge_text: string
-  button_text: string
+  badge: string
   has_discount: boolean
   price_without_discount: number
   currency: string
