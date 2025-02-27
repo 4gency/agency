@@ -465,7 +465,8 @@ class SubscriptionPlanPublic(SQLModel):
     name: str
     price: float
     has_badge: bool = Field(default=False)
-    badge: str
+    badge_text: str
+    button_text: str
     has_discount: bool
     price_without_discount: float
     currency: str
