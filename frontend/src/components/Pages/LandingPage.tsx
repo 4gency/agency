@@ -3,6 +3,37 @@ import PricingSection from "../Pricing/PricingSection";
 
 export default function LandingPage() {
   useEffect(() => {
+    const scrollToHash = () => {
+      const hash = window.location.hash;
+      if (hash) {
+        const elementId = hash.substring(1);
+        const element = document.getElementById(elementId);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth' });
+        } else {
+          setTimeout(scrollToHash, 100);
+        }
+      }
+    };
+
+    const queryString = window.location.search;
+    const urlParams = new URLSearchParams(queryString);
+    const redirectTo = urlParams.get('redirectTo');
+
+    if (redirectTo) {
+      window.location.hash = `#${redirectTo}`;
+    }
+
+    scrollToHash();
+
+    window.addEventListener('hashchange', scrollToHash);
+
+    return () => {
+      window.removeEventListener('hashchange', scrollToHash);
+    };
+  }, []);
+
+  useEffect(() => {
     const originalTheme = document.documentElement.getAttribute("data-theme");
     document.documentElement.setAttribute("data-theme", "light");
     document.documentElement.style.colorScheme = "light";
@@ -43,7 +74,7 @@ export default function LandingPage() {
       const innerDoc =
         iframe.length > 0
           ? (iframe[0] as HTMLIFrameElement).contentDocument ||
-          (iframe[0] as HTMLIFrameElement).contentWindow?.document
+            (iframe[0] as HTMLIFrameElement).contentWindow?.document
           : null;
 
       if (innerDoc) {
@@ -524,12 +555,12 @@ export default function LandingPage() {
                     className="has-theme-2-color has-text-color"
                     style={{ marginBottom: 15 }}
                   >
-                    At λgency, we're rethinking the old-school job search process.
-                    By applying AI to handle the routine tasks that bog you down,
-                    we're making job hunting a bit simpler and more efficient.
-                    We're a young startup—only a few months in—and we're excited to
-                    see how these practical tweaks can really help both job seekers
-                    and recruiters.
+                    At λgency, we're rethinking the old-school job search
+                    process. By applying AI to handle the routine tasks that bog
+                    you down, we're making job hunting a bit simpler and more
+                    efficient. We're a young startup—only a few months in—and
+                    we're excited to see how these practical tweaks can really
+                    help both job seekers and recruiters.
                   </p>
                   <p className="has-theme-2-color has-text-color">
                     Our innovative platform enables job seekers to automatically
@@ -1239,7 +1270,7 @@ export default function LandingPage() {
                         style={{
                           width: 50,
                           filter:
-                            'invert(42%) sepia(68%) saturate(450%) hue-rotate(145deg) brightness(93%) contrast(88%) opacity(20%)'
+                            "invert(42%) sepia(68%) saturate(450%) hue-rotate(145deg) brightness(93%) contrast(88%) opacity(20%)",
                         }}
                       />
                     </figure>
@@ -1297,7 +1328,7 @@ export default function LandingPage() {
                         style={{
                           width: 50,
                           filter:
-                            'invert(42%) sepia(68%) saturate(450%) hue-rotate(145deg) brightness(93%) contrast(88%) opacity(20%)'
+                            "invert(42%) sepia(68%) saturate(450%) hue-rotate(145deg) brightness(93%) contrast(88%) opacity(20%)",
                         }}
                       />
                     </figure>
@@ -1355,7 +1386,7 @@ export default function LandingPage() {
                         style={{
                           width: 50,
                           filter:
-                            'invert(42%) sepia(68%) saturate(450%) hue-rotate(145deg) brightness(93%) contrast(88%) opacity(20%)'
+                            "invert(42%) sepia(68%) saturate(450%) hue-rotate(145deg) brightness(93%) contrast(88%) opacity(20%)",
                         }}
                       />
                     </figure>
@@ -1413,7 +1444,7 @@ export default function LandingPage() {
                         style={{
                           width: 50,
                           filter:
-                            'invert(42%) sepia(68%) saturate(450%) hue-rotate(145deg) brightness(93%) contrast(88%) opacity(20%)'
+                            "invert(42%) sepia(68%) saturate(450%) hue-rotate(145deg) brightness(93%) contrast(88%) opacity(20%)",
                         }}
                       />
                     </figure>
@@ -1643,13 +1674,18 @@ export default function LandingPage() {
             </nav>
 
             {/* Agency Info (Optional) */}
-            <div style={{ textAlign: "center", color: "#718096", fontSize: "14px" }}>
+            <div
+              style={{
+                textAlign: "center",
+                color: "#718096",
+                fontSize: "14px",
+              }}
+            >
               <p>Powered by λgency</p>
               <p>&copy; 2024. All rights reserved.</p>
             </div>
           </div>
         </footer>
-
       </div>
       <svg
         xmlns="http://www.w3.org/2000/svg"
