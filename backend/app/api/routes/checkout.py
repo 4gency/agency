@@ -1,4 +1,5 @@
-from typing import Any
+import logging
+from typing import Any, cast
 from uuid import UUID
 
 import stripe
@@ -14,12 +15,12 @@ from app.models.core import (
     CheckoutSessionUpdate,
     ErrorMessage,
     Message,
-    SubscriptionPlan,
 )
 from app.models.crud import subscription as crud_subs
 from app.utils import timestamp_to_datetime
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.post(
@@ -87,23 +88,22 @@ def stripe_success(
             status_code=status.HTTP_404_NOT_FOUND, detail="Checkout session not found"
         )
 
-    plan: SubscriptionPlan | None = crud_subs.get_subscription_plan_by_id(
-        session=session, id=checkout.subscription_plan_id
-    )
-
-    if not plan:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Subscription plan not found, please contact support!",
-        )
-
     if checkout.user_id != user.id and not user.is_superuser:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Checkout session does not belong to the authenticated user",
         )
 
-    stripe_controller.handle_success_callback(session, checkout, plan, user)
+    stripe_controller.handle_success_callback(session, checkout)
+
+    try:
+        stripe_controller.handle_invoice_payment_succeeded_in_checkout_callback(
+            session=session, checkout=checkout, user=user, plan=checkout.plan
+        )
+    except Exception as e:
+        logger.error(
+            f"Error handling invoice payment succeeded in checkout callback: {e}"
+        )
 
     return {"message": "Success callback processed"}
 
@@ -378,10 +378,13 @@ async def stripe_webhook(
 ) -> Any:
     payload = await request.body()
     try:
-        event: stripe.Event = stripe.Webhook.construct_event(
-            payload=payload,
-            sig_header=stripe_signature,
-            secret=settings.STRIPE_WEBHOOK_SECRET,
+        event = cast(
+            stripe.Event,
+            stripe.Webhook.construct_event(  # type: ignore[no-untyped-call]
+                payload=payload,
+                sig_header=stripe_signature,
+                secret=settings.STRIPE_WEBHOOK_SECRET,
+            ),
         )
     except (ValueError, stripe.SignatureVerificationError) as e:
         raise HTTPException(

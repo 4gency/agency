@@ -1,3 +1,5 @@
+[![Deploy to Staging](https://github.com/4gency/agency/actions/workflows/deploy-staging.yml/badge.svg?branch=main)](https://github.com/4gency/agency/actions/workflows/deploy-staging.yml)
+[![Deploy to Production](https://github.com/4gency/agency/actions/workflows/deploy-production.yml/badge.svg?branch=main)](https://github.com/4gency/agency/actions/workflows/deploy-production.yml)
 ![λgency](/docs/full.png)
 
 ## Technology Stack and Features
