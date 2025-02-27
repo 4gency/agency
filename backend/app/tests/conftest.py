@@ -24,19 +24,7 @@ def db() -> Generator[Session, None, None]:
     with Session(engine) as session:
         init_db(session)
         yield session
-        statement = delete(Payment)
-        session.execute(statement)
-        statement = delete(Subscription)
-        session.execute(statement)
-        statement = delete(CheckoutSession)
-        session.execute(statement)
-        statement = delete(SubscriptionPlanBenefit)
-        session.execute(statement)
-        statement = delete(SubscriptionPlan)
-        session.execute(statement)
-        statement = delete(User)
-        session.execute(statement)
-        session.commit()
+        session.rollback()
 
 
 @pytest.fixture(scope="module")
