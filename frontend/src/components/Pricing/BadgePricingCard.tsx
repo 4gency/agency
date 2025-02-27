@@ -2,7 +2,7 @@ import type React from "react"
 
 interface BadgePricingCardProps {
   title: string
-  badge: string
+  badgeText: string
   price: number
   benefits: string[]
   buttonText: string
@@ -14,7 +14,7 @@ interface BadgePricingCardProps {
 
 const BadgePricingCard: React.FC<BadgePricingCardProps> = ({
   title,
-  badge,
+  badgeText,
   price,
   benefits,
   buttonText,
@@ -53,7 +53,7 @@ const BadgePricingCard: React.FC<BadgePricingCardProps> = ({
           fontWeight: 600,
         }}
       >
-        {badge}
+        {badgeText}
       </div>
       <div>
         <h3

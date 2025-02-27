@@ -222,7 +222,8 @@ export type SubscriptionPlanCreate = {
   name: string
   price: number
   has_badge?: boolean
-  badge?: string
+  badge_text?: string
+  button_text?: string
   has_discount?: boolean
   price_without_discount?: number
   currency?: string
@@ -238,7 +239,8 @@ export type SubscriptionPlanPublic = {
   name: string
   price: number
   has_badge?: boolean
-  badge: string
+  badge_text: string
+  button_text: string
   has_discount: boolean
   price_without_discount: number
   currency: string
@@ -257,7 +259,8 @@ export type SubscriptionPlanUpdate = {
   name?: string | null
   price?: number | null
   has_badge?: boolean | null
-  badge?: string | null
+  badge_text?: string | null
+  button_text?: string | null
   has_discount?: boolean | null
   price_without_discount?: number | null
   currency?: string | null
