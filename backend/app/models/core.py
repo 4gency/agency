@@ -145,7 +145,7 @@ class SubscriptionPlan(SQLModel, table=True):
     has_badge: bool = Field(default=False)
     badge_text: str = Field(default="", max_length=50)
     button_text: str = Field(default="Subscribe", max_length=50)
-    
+
     has_discount: bool = Field(default=False)
     price_without_discount: float = Field(default=0.0)
     currency: str = Field(default="USD", max_length=10)
