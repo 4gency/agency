@@ -1,15 +1,15 @@
-import React from "react";
+import type React from "react"
 
 interface NormalPricingCardProps {
-  title: string;
-  price: number;
-  recurrence: string;
-  benefits: string[];
-  buttonText: string;
-  buttonLink: string;
-  disabled?: boolean;
-  hasDiscount?: boolean;
-  priceWithoutDiscount?: number;
+  title: string
+  price: number
+  recurrence: string
+  benefits: string[]
+  buttonText: string
+  buttonLink: string
+  disabled?: boolean
+  hasDiscount?: boolean
+  priceWithoutDiscount?: number
 }
 
 const NormalPricingCard: React.FC<NormalPricingCardProps> = ({
@@ -27,7 +27,9 @@ const NormalPricingCard: React.FC<NormalPricingCardProps> = ({
     <div
       style={{
         backgroundColor: "#fff",
-        ...(disabled ? {boxShadow: "0 4px 10px rgba(0,0,0,0.2)",} : {boxShadow: "0 4px 10px rgba(0,0,0,0.1)",}),
+        ...(disabled
+          ? { boxShadow: "0 4px 10px rgba(0,0,0,0.2)" }
+          : { boxShadow: "0 4px 10px rgba(0,0,0,0.1)" }),
         borderRadius: "20px",
         width: "300px",
         minWidth: "300px",
@@ -124,7 +126,7 @@ const NormalPricingCard: React.FC<NormalPricingCardProps> = ({
         {buttonText}
       </a>
     </div>
-  );
-};
+  )
+}
 
-export default NormalPricingCard;
+export default NormalPricingCard

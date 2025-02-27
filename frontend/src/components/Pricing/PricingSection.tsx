@@ -1,39 +1,40 @@
-import React, { useState, useEffect } from "react";
-import NormalPricingCard from "./NormalPricingCard";
-import BadgePricingCard from "./BadgePricingCard";
+import type React from "react"
+import { useEffect, useState } from "react"
 import {
-  SubscriptionPlanPublic,
-  SubscriptionPlansPublic,
+  type SubscriptionPlanPublic,
+  type SubscriptionPlansPublic,
   SubscriptionPlansService,
-} from "../../client";
+} from "../../client"
+import BadgePricingCard from "./BadgePricingCard"
+import NormalPricingCard from "./NormalPricingCard"
 
 const PricingSection: React.FC = () => {
-  const [plans, setPlans] = useState<SubscriptionPlanPublic[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string>("");
+  const [plans, setPlans] = useState<SubscriptionPlanPublic[]>([])
+  const [loading, setLoading] = useState<boolean>(true)
+  const [error, setError] = useState<string>("")
 
   useEffect(() => {
     SubscriptionPlansService.readSubscriptionPlans({ onlyActive: false })
       .then((response: SubscriptionPlansPublic) => {
         if (response.plans) {
-          setPlans(response.plans);
+          setPlans(response.plans)
         }
       })
       .catch((err: any) => {
-        console.error("Error fetching subscription plans", err);
-        setError("Failed to load subscription plans");
+        console.error("Error fetching subscription plans", err)
+        setError("Failed to load subscription plans")
       })
       .finally(() => {
-        setLoading(false);
-      });
-  }, []);
+        setLoading(false)
+      })
+  }, [])
 
   if (loading) {
-    return <div></div>;
+    return <div />
   }
 
   if (error) {
-    return <div></div>;
+    return <div />
   }
 
   return (
@@ -85,66 +86,56 @@ const PricingSection: React.FC = () => {
           className="block-group is-content-justification-center is-nowrap is-layout-flex container-core-group-is-layout-39 block-group-is-layout-flex"
           style={{ marginBottom: "40px" }}
         >
-          <p style={{ fontSize: 18 }}>
-            {/* Additional text if needed */}
-          </p>
+          <p style={{ fontSize: 18 }}>{/* Additional text if needed */}</p>
         </div>
         {/* Horizontally Scrollable Pricing Cards Container */}
         <div style={{ maxWidth: "100%", overflowX: "auto", paddingBottom: 16 }}>
-        <div
-          style={{
-            display: "flex",
-            gap: "40px",
-            flexWrap: "nowrap",
-            padding: "20px",
-          }}
-          className="pricing-scroll-container"
-        >
-          {plans.map((plan) => {
-            const {
-              id,
-              name,
-              price,
-              has_badge,
-              badge,
-              has_discount,
-              price_without_discount,
-              is_active,
-              metric_type,
-              benefits,
-            } = plan;
+          <div
+            style={{
+              display: "flex",
+              gap: "40px",
+              flexWrap: "nowrap",
+              padding: "20px",
+            }}
+            className="pricing-scroll-container"
+          >
+            {plans.map((plan) => {
+              const {
+                id,
+                name,
+                price,
+                has_badge,
+                badge,
+                has_discount,
+                price_without_discount,
+                is_active,
+                metric_type,
+                benefits,
+              } = plan
 
-            const commonProps = {
-              key: id,
-              title: name,
-              price: price,
-              benefits: benefits ? benefits.map((b) => b.name) : [],
-              buttonText: "Get Started",
-              buttonLink: "/signup",
-              disabled: !is_active,
-              hasDiscount: has_discount,
-              priceWithoutDiscount: price_without_discount,
-              recurrence: metric_type,
-            };
+              const commonProps = {
+                key: id,
+                title: name,
+                price: price,
+                benefits: benefits ? benefits.map((b) => b.name) : [],
+                buttonText: "Get Started",
+                buttonLink: "/signup",
+                disabled: !is_active,
+                hasDiscount: has_discount,
+                priceWithoutDiscount: price_without_discount,
+                recurrence: metric_type,
+              }
 
-            if (has_badge) {
-              return <BadgePricingCard 
-                  {...commonProps}
-                  badge={badge}
-                />;
-            } else {
-              return (
-                <NormalPricingCard
-                  {...commonProps}
-                />
-              );
-            }
-          })}
+              if (has_badge) {
+                return <BadgePricingCard {...commonProps} badge={badge} />
+              }
+              return <NormalPricingCard {...commonProps} />
+            })}
+          </div>
         </div>
       </div>
-      </div>
     </div>
-  );
-};
+  )
+}
 
-export default PricingSection;
+export default PricingSection

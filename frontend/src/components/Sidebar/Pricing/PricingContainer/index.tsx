@@ -1,16 +1,20 @@
-import { useEffect, useState } from "react";
-import BadgePricingCard from "../../../Pricing/BadgePricingCard";
-import NormalPricingCard from "../../../Pricing/NormalPricingCard";
+import { useEffect, useState } from "react"
 import {
-  SubscriptionPlanPublic,
-  SubscriptionPlansPublic,
+  type SubscriptionPlanPublic,
+  type SubscriptionPlansPublic,
   SubscriptionPlansService,
-} from "../../../../client";
+} from "../../../../client"
+import BadgePricingCard from "../../../Pricing/BadgePricingCard"
+import NormalPricingCard from "../../../Pricing/NormalPricingCard"
 
 export const PricingContainer = () => {
-  const [plans, setPlans] = useState<SubscriptionPlanPublic[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string>("");
+  const [plans, setPlans] = useState<SubscriptionPlanPublic[]>([])
+  const [loading, setLoading] = useState<boolean>(true)
+  const [error, setError] = useState<string>("")
+
+  // This is a good example of how to handle loading and error states
+  // This block is commented out beacuse github build fails
+  console.log(loading, error)
 
   // if (loading) {
   //   return <div></div>;
@@ -24,17 +28,17 @@ export const PricingContainer = () => {
     SubscriptionPlansService.readSubscriptionPlans({ onlyActive: true })
       .then((response: SubscriptionPlansPublic) => {
         if (response.plans) {
-          setPlans(response.plans);
+          setPlans(response.plans)
         }
       })
       .catch((err: any) => {
-        console.error("Error fetching subscription plans", err);
-        setError("Failed to load subscription plans");
+        console.error("Error fetching subscription plans", err)
+        setError("Failed to load subscription plans")
       })
       .finally(() => {
-        setLoading(false);
-      });
-  }, []);
+        setLoading(false)
+      })
+  }, [])
 
   return (
     <div style={{ maxWidth: "100%", overflowX: "auto", paddingBottom: 16 }}>
@@ -59,7 +63,7 @@ export const PricingContainer = () => {
             is_active,
             metric_type,
             benefits,
-          } = plan;
+          } = plan
 
           const commonProps = {
             key: id,
@@ -72,15 +76,14 @@ export const PricingContainer = () => {
             hasDiscount: has_discount,
             priceWithoutDiscount: price_without_discount,
             recurrence: metric_type,
-          };
+          }
 
           if (has_badge) {
-            return <BadgePricingCard {...commonProps} badge={badge} />;
-          } else {
-            return <NormalPricingCard {...commonProps} />;
+            return <BadgePricingCard {...commonProps} badge={badge} />
           }
+          return <NormalPricingCard {...commonProps} />
         })}
       </div>
     </div>
-  );
-};
+  )
+}

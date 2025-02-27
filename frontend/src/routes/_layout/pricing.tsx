@@ -1,9 +1,9 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
-import { z } from "zod";
-import { isLoggedIn } from "../../hooks/useAuth";
-import { Pricing } from "../../components/Sidebar/Pricing";
+import { createFileRoute, redirect } from "@tanstack/react-router"
+import { z } from "zod"
+import { Pricing } from "../../components/Sidebar/Pricing"
+import { isLoggedIn } from "../../hooks/useAuth"
 
-const jobPreferencesSearchSchema = z.object({});
+const pricingSearchSchema = z.object({})
 
 export const Route = createFileRoute("/_layout/pricing")({
   component: Pricing,
@@ -12,8 +12,8 @@ export const Route = createFileRoute("/_layout/pricing")({
       throw redirect({
         //@ts-ignore
         to: "/?redirectTo=pricing",
-      });
+      })
     }
   },
-  validateSearch: (search) => jobPreferencesSearchSchema.parse(search),
-});
+  validateSearch: (search) => pricingSearchSchema.parse(search),
+})

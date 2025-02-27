@@ -1,4 +1,3 @@
-import React, { useEffect, useState } from "react";
 import {
   Box,
   Button,
@@ -6,73 +5,75 @@ import {
   Flex,
   FormControl,
   FormLabel,
+  HStack,
   Heading,
+  IconButton,
   Input,
-  Select,
-  Text,
-  RadioGroup,
   Radio,
+  RadioGroup,
+  Select,
   Slider,
-  SliderTrack,
   SliderFilledTrack,
   SliderThumb,
-  IconButton,
+  SliderTrack,
   Tag,
-  TagLabel,
   TagCloseButton,
-  HStack,
+  TagLabel,
+  Text,
   useColorModeValue, // <--- importamos esse hook
-} from "@chakra-ui/react";
-import { useMutation } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
-import { ApiError, ConfigsService, type ConfigPublic } from "../../client";
+} from "@chakra-ui/react"
+import { useMutation } from "@tanstack/react-query"
+import type React from "react"
+import { useEffect, useState } from "react"
+import { useForm } from "react-hook-form"
+import { type ApiError, type ConfigPublic, ConfigsService } from "../../client"
 
-import useCustomToast from "../../hooks/useCustomToast";
-import useSubscriptions from "../../hooks/userSubscriptions";
-import { AddIcon } from "@chakra-ui/icons";
+import { AddIcon } from "@chakra-ui/icons"
+import useCustomToast from "../../hooks/useCustomToast"
+import useSubscriptions from "../../hooks/userSubscriptions"
 
 /* ----------------------------- TYPES & UTILS ----------------------------- */
 
 /** The shape we'll use internally for form data (more user-friendly). */
 type JobPreferencesForm = {
-  remote: boolean;
-  experience_levels: string[];
-  job_types: string[];
-  posting_date: string;
-  apply_once_at_company: boolean;
-  distance: number;
-  positions: string[];
-  locations: string[];
-  company_blacklist: string[];
-  title_blacklist: string[];
-};
+  remote: boolean
+  experience_levels: string[]
+  job_types: string[]
+  posting_date: string
+  apply_once_at_company: boolean
+  distance: number
+  positions: string[]
+  locations: string[]
+  company_blacklist: string[]
+  title_blacklist: string[]
+}
 
 /**
  * Transform API data (ConfigPublic) --> Form data (JobPreferencesForm)
  */
 function transformToForm(config: ConfigPublic): JobPreferencesForm {
-  const experience_levels: string[] = [];
-  if (config.experience_level?.intership) experience_levels.push("internship");
-  if (config.experience_level?.entry) experience_levels.push("entry");
-  if (config.experience_level?.associate) experience_levels.push("associate");
+  const experience_levels: string[] = []
+  if (config.experience_level?.intership) experience_levels.push("internship")
+  if (config.experience_level?.entry) experience_levels.push("entry")
+  if (config.experience_level?.associate) experience_levels.push("associate")
   if (config.experience_level?.mid_senior_level)
-    experience_levels.push("mid_senior_level");
-  if (config.experience_level?.director) experience_levels.push("director");
-  if (config.experience_level?.executive) experience_levels.push("executive");
+    experience_levels.push("mid_senior_level")
+  if (config.experience_level?.director) experience_levels.push("director")
+  if (config.experience_level?.executive) experience_levels.push("executive")
 
-  const job_types: string[] = [];
-  if (config.job_types?.full_time) job_types.push("full_time");
-  if (config.job_types?.contract) job_types.push("contract");
-  if (config.job_types?.part_time) job_types.push("part_time");
-  if (config.job_types?.temporary) job_types.push("temporary");
-  if (config.job_types?.internship) job_types.push("internship");
-  if (config.job_types?.other) job_types.push("other");
-  if (config.job_types?.volunteer) job_types.push("volunteer");
+  const job_types: string[] = []
+  if (config.job_types?.full_time) job_types.push("full_time")
+  if (config.job_types?.contract) job_types.push("contract")
+  if (config.job_types?.part_time) job_types.push("part_time")
+  if (config.job_types?.temporary) job_types.push("temporary")
+  if (config.job_types?.internship) job_types.push("internship")
+  if (config.job_types?.other) job_types.push("other")
+  if (config.job_types?.volunteer) job_types.push("volunteer")
 
-  let posting_date = "all_time";
-  if (config.date?.month) posting_date = "month";
-  if (config.date?.week) posting_date = "week";
-  if (config.date?.hours) posting_date = "hours";
+  let posting_date = "all_time"
+  if (config.date?.month) posting_date = "month"
+  if (config.date?.week) posting_date = "week"
+  if (config.date?.hours) posting_date = "hours"
 
   return {
     remote: config.remote ?? false,
@@ -85,7 +86,7 @@ function transformToForm(config: ConfigPublic): JobPreferencesForm {
     locations: config.locations || [],
     company_blacklist: config.company_blacklist || [],
     title_blacklist: config.title_blacklist || [],
-  };
+  }
 }
 
 /**
@@ -123,21 +124,21 @@ function transformFromForm(formData: JobPreferencesForm): ConfigPublic {
     locations: formData.locations,
     company_blacklist: formData.company_blacklist,
     title_blacklist: formData.title_blacklist,
-  };
+  }
 }
 
 /* ----------------------- MULTI-SELECT TOGGLE COMPONENT ---------------------- */
 
 type Option = {
-  label: string;
-  value: string;
-};
+  label: string
+  value: string
+}
 
 type MultiSelectToggleProps = {
-  options: Option[];
-  selected: string[];
-  onChange: (selected: string[]) => void;
-};
+  options: Option[]
+  selected: string[]
+  onChange: (selected: string[]) => void
+}
 
 const MultiSelectToggle: React.FC<MultiSelectToggleProps> = ({
   options,
@@ -146,16 +147,16 @@ const MultiSelectToggle: React.FC<MultiSelectToggleProps> = ({
 }) => {
   const handleToggle = (value: string) => {
     if (selected.includes(value)) {
-      onChange(selected.filter((v) => v !== value));
+      onChange(selected.filter((v) => v !== value))
     } else {
-      onChange([...selected, value]);
+      onChange([...selected, value])
     }
-  };
+  }
 
   return (
     <Flex wrap="wrap" gap={2}>
       {options.map((option) => {
-        const isSelected = selected.includes(option.value);
+        const isSelected = selected.includes(option.value)
         return (
           <Button
             key={option.value}
@@ -176,11 +177,11 @@ const MultiSelectToggle: React.FC<MultiSelectToggleProps> = ({
           >
             {option.label}
           </Button>
-        );
+        )
       })}
     </Flex>
-  );
-};
+  )
+}
 
 /* --------------------------- ARRAY INPUT COMPONENT --------------------------- */
 /**
@@ -188,11 +189,11 @@ const MultiSelectToggle: React.FC<MultiSelectToggleProps> = ({
  * with an input field and an "Add" button.
  */
 type ArrayInputProps = {
-  label: string;
-  items: string[];
-  onChange: (newItems: string[]) => void;
-  placeholder?: string;
-};
+  label: string
+  items: string[]
+  onChange: (newItems: string[]) => void
+  placeholder?: string
+}
 
 const ArrayInput: React.FC<ArrayInputProps> = ({
   label,
@@ -200,21 +201,21 @@ const ArrayInput: React.FC<ArrayInputProps> = ({
   onChange,
   placeholder,
 }) => {
-  const [inputValue, setInputValue] = useState("");
+  const [inputValue, setInputValue] = useState("")
 
   const handleAdd = () => {
-    const trimmed = inputValue.trim();
-    if (!trimmed) return;
+    const trimmed = inputValue.trim()
+    if (!trimmed) return
     if (!items.includes(trimmed)) {
-      onChange([...items, trimmed]);
+      onChange([...items, trimmed])
     }
-    setInputValue("");
-  };
+    setInputValue("")
+  }
 
   const handleRemove = (item: string) => {
-    const filtered = items.filter((i) => i !== item);
-    onChange(filtered);
-  };
+    const filtered = items.filter((i) => i !== item)
+    onChange(filtered)
+  }
 
   return (
     <FormControl mb={4}>
@@ -240,15 +241,15 @@ const ArrayInput: React.FC<ArrayInputProps> = ({
         ))}
       </HStack>
     </FormControl>
-  );
-};
+  )
+}
 
 /* --------------------------- MAIN COMPONENT --------------------------- */
 
 const JobPreferencesPage: React.FC = () => {
-  const { data: subscriptions, isLoading } = useSubscriptions();
-  const [selectedSubId, setSelectedSubId] = useState<string>("");
-  const showToast = useCustomToast();
+  const { data: subscriptions, isLoading } = useSubscriptions()
+  const [selectedSubId, setSelectedSubId] = useState<string>("")
+  const showToast = useCustomToast()
 
   // Default form data for first render
   const defaultFormValues: JobPreferencesForm = {
@@ -262,7 +263,7 @@ const JobPreferencesPage: React.FC = () => {
     locations: ["USA"],
     company_blacklist: [],
     title_blacklist: [],
-  };
+  }
 
   const {
     register,
@@ -273,7 +274,7 @@ const JobPreferencesPage: React.FC = () => {
     formState: { isSubmitting },
   } = useForm<JobPreferencesForm>({
     defaultValues: defaultFormValues,
-  });
+  })
 
   /** When a subscription is selected, fetch the config and populate the form. */
   useEffect(() => {
@@ -281,15 +282,15 @@ const JobPreferencesPage: React.FC = () => {
       ConfigsService.getConfig({ subscriptionId: selectedSubId })
         .then((config) => {
           // Transform API config -> form shape
-          const transformed = transformToForm(config);
-          reset(transformed);
+          const transformed = transformToForm(config)
+          reset(transformed)
         })
         .catch((err: ApiError) => {
-          const detail = (err.body as any)?.detail || err.message;
-          showToast("Error fetching preferences", String(detail), "error");
-        });
+          const detail = (err.body as any)?.detail || err.message
+          showToast("Error fetching preferences", String(detail), "error")
+        })
     }
-  }, [selectedSubId, reset, showToast]);
+  }, [selectedSubId, reset, showToast])
 
   /** Save preferences (PUT) */
   const mutation = useMutation({
@@ -299,32 +300,32 @@ const JobPreferencesPage: React.FC = () => {
         requestBody: data,
       }),
     onSuccess: () => {
-      showToast("Success", "Preferences updated!", "success");
+      showToast("Success", "Preferences updated!", "success")
     },
     onError: (err: ApiError) => {
-      const detail = (err.body as any)?.detail || err.message;
-      showToast("Error updating preferences", String(detail), "error");
+      const detail = (err.body as any)?.detail || err.message
+      showToast("Error updating preferences", String(detail), "error")
     },
-  });
+  })
 
   /** Handle form submit */
   const onSubmit = (data: JobPreferencesForm) => {
     if (!selectedSubId) {
-      showToast("Attention", "Select a subscription before saving.", "error");
-      return;
+      showToast("Attention", "Select a subscription before saving.", "error")
+      return
     }
     // Convert form data -> API shape
-    const payload = transformFromForm(data);
-    mutation.mutate(payload);
-  };
+    const payload = transformFromForm(data)
+    mutation.mutate(payload)
+  }
 
   /** Watch local state for array-based fields to keep form in sync. */
-  const positions = watch("positions");
-  const locations = watch("locations");
-  const companyBlacklist = watch("company_blacklist");
-  const titleBlacklist = watch("title_blacklist");
-  const experienceLevels = watch("experience_levels");
-  const jobTypes = watch("job_types");
+  const positions = watch("positions")
+  const locations = watch("locations")
+  const companyBlacklist = watch("company_blacklist")
+  const titleBlacklist = watch("title_blacklist")
+  const experienceLevels = watch("experience_levels")
+  const jobTypes = watch("job_types")
 
   // Options for the MultiSelectToggle components
   const experienceOptions: Option[] = [
@@ -334,7 +335,7 @@ const JobPreferencesPage: React.FC = () => {
     { value: "mid_senior_level", label: "Mid-Senior Level" },
     { value: "director", label: "Director" },
     { value: "executive", label: "Executive" },
-  ];
+  ]
 
   const jobTypeOptions: Option[] = [
     { value: "full_time", label: "Full-time" },
@@ -344,13 +345,13 @@ const JobPreferencesPage: React.FC = () => {
     { value: "internship", label: "Internship" },
     { value: "other", label: "Other" },
     { value: "volunteer", label: "Volunteer" },
-  ];
+  ]
 
   if (isLoading) {
-    return <Text>Loading subscriptions...</Text>;
+    return <Text>Loading subscriptions...</Text>
   }
 
-  const hasSubscriptions = subscriptions && subscriptions.length > 0;
+  const hasSubscriptions = subscriptions && subscriptions.length > 0
 
   return (
     <Container maxW="full">
@@ -531,7 +532,7 @@ const JobPreferencesPage: React.FC = () => {
         </Button>
       </Box>
     </Container>
-  );
-};
+  )
+}
 
-export default JobPreferencesPage;
+export default JobPreferencesPage
