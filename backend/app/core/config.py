@@ -115,6 +115,7 @@ class Settings(BaseSettings):
         return bool(self.SMTP_HOST and self.EMAILS_FROM_EMAIL)
 
     EMAIL_TEST_USER: str = "test@example.com"
+    EMAIL_TEST_USER_SUBSCRIBER: str = "test_subscriber@example.com"
     FIRST_SUPERUSER: str
     FIRST_SUPERUSER_PASSWORD: str
 

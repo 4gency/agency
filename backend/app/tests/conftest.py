@@ -15,7 +15,10 @@ from app.models.core import (
     SubscriptionPlanBenefit,
     User,
 )
-from app.tests.utils.user import authentication_token_from_email
+from app.tests.utils.user import (
+    authentication_subscriber_token_from_email,
+    authentication_token_from_email,
+)
 from app.tests.utils.utils import get_superuser_token_headers
 
 
@@ -54,4 +57,11 @@ def superuser_token_headers(client: TestClient) -> dict[str, str]:
 def normal_user_token_headers(client: TestClient, db: Session) -> dict[str, str]:
     return authentication_token_from_email(
         client=client, email=settings.EMAIL_TEST_USER, db=db
+    )
+
+
+@pytest.fixture(scope="module")
+def normal_subscriber_token_headers(client: TestClient, db: Session) -> dict[str, str]:
+    return authentication_subscriber_token_from_email(
+        client=client, email=settings.EMAIL_TEST_USER_SUBSCRIBER, db=db
     )

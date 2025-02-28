@@ -1,9 +1,9 @@
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, HTTPException, status
 
-from app.api.deps import NosqlSessionDep, SessionDep, get_current_user
+from app.api.deps import CurrentUser, NosqlSessionDep, SessionDep
 from app.models.core import ErrorMessage
 from app.models.crud import config as config_crud
 from app.models.crud import subscription as subscription_crud
@@ -15,7 +15,6 @@ router = APIRouter()
 
 @router.get(
     "/{subscription_id}/job-preferences",
-    dependencies=[Depends(get_current_user)],
     response_model=ConfigPublic,
     responses={
         403: {
@@ -61,12 +60,18 @@ def get_config(
     subscription_id: uuid.UUID,
     nosql_session: NosqlSessionDep,
     session: SessionDep,
+    user: CurrentUser,
 ) -> Any:
     subscription = subscription_crud.get_subscription_by_id(
         session=session, id=subscription_id
     )
 
     if not subscription:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found"
+        )
+
+    if subscription.user_id != user.id and not user.is_superuser:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found"
         )
@@ -88,7 +93,6 @@ def get_config(
 
 @router.get(
     "/{subscription_id}/resume",
-    dependencies=[Depends(get_current_user)],
     response_model=PlainTextResumePublic,
     responses={
         403: {
@@ -134,12 +138,18 @@ def get_plain_text_resume(
     subscription_id: uuid.UUID,
     nosql_session: NosqlSessionDep,
     session: SessionDep,
+    user: CurrentUser,
 ) -> Any:
     subscription = subscription_crud.get_subscription_by_id(
         session=session, id=subscription_id
     )
 
     if not subscription:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found"
+        )
+
+    if subscription.user_id != user.id and not user.is_superuser:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found"
         )
@@ -161,7 +171,6 @@ def get_plain_text_resume(
 
 @router.patch(
     "/{subscription_id}/job-preferences",
-    dependencies=[Depends(get_current_user)],
     status_code=status.HTTP_202_ACCEPTED,
     responses={
         403: {
@@ -208,6 +217,7 @@ def update_config(
     nosql_session: NosqlSessionDep,
     config_in: ConfigPublic,
     session: SessionDep,
+    user: CurrentUser,
 ) -> Any:
     """
     Update config.
@@ -217,6 +227,11 @@ def update_config(
     )
 
     if not subscription:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found"
+        )
+
+    if subscription.user_id != user.id and not user.is_superuser:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found"
         )
@@ -242,7 +257,6 @@ def update_config(
 
 @router.patch(
     "/{subscription_id}/resume",
-    dependencies=[Depends(get_current_user)],
     status_code=status.HTTP_202_ACCEPTED,
     responses={
         403: {
@@ -289,6 +303,7 @@ def update_plain_text_resume(
     nosql_session: NosqlSessionDep,
     resume_in: PlainTextResumePublic,
     session: SessionDep,
+    user: CurrentUser,
 ) -> Any:
     """
     Update plain text resume.
@@ -298,6 +313,11 @@ def update_plain_text_resume(
     )
 
     if not subscription:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found"
+        )
+
+    if subscription.user_id != user.id and not user.is_superuser:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found"
         )
