@@ -78,7 +78,6 @@ class User(UserBase, table=True):
 # Properties to return via API, id is always required
 class UserPublic(UserBase):
     id: uuid.UUID
-    is_subscriber: bool
 
 
 class UsersPublic(SQLModel):
