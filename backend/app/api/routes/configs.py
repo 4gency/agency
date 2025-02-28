@@ -3,7 +3,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.api.deps import NosqlSessionDep, SessionDep, get_current_user
+from app.api.deps import NosqlSessionDep, SessionDep, get_current_active_subscriber
 from app.models.core import ErrorMessage
 from app.models.crud import config as config_crud
 from app.models.crud import subscription as subscription_crud
@@ -15,7 +15,7 @@ router = APIRouter()
 
 @router.get(
     "/{subscription_id}/job-preferences",
-    dependencies=[Depends(get_current_user)],
+    dependencies=[Depends(get_current_active_subscriber)],
     response_model=ConfigPublic,
     responses={
         403: {
@@ -88,7 +88,7 @@ def get_config(
 
 @router.get(
     "/{subscription_id}/resume",
-    dependencies=[Depends(get_current_user)],
+    dependencies=[Depends(get_current_active_subscriber)],
     response_model=PlainTextResumePublic,
     responses={
         403: {
@@ -161,7 +161,7 @@ def get_plain_text_resume(
 
 @router.patch(
     "/{subscription_id}/job-preferences",
-    dependencies=[Depends(get_current_user)],
+    dependencies=[Depends(get_current_active_subscriber)],
     status_code=status.HTTP_202_ACCEPTED,
     responses={
         403: {
@@ -242,7 +242,7 @@ def update_config(
 
 @router.patch(
     "/{subscription_id}/resume",
-    dependencies=[Depends(get_current_user)],
+    dependencies=[Depends(get_current_active_subscriber)],
     status_code=status.HTTP_202_ACCEPTED,
     responses={
         403: {
