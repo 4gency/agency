@@ -21,6 +21,7 @@ class UserBase(SQLModel):
     email: EmailStr = Field(unique=True, index=True, max_length=255)
     is_active: bool = Field(default=True)
     is_superuser: bool = Field(default=False)
+    is_subscriber: bool = Field(default=False)
     full_name: str | None = Field(default=None, max_length=255)
 
 
