@@ -305,7 +305,7 @@ export type UserPublic = {
   email: string
   is_active?: boolean
   is_superuser?: boolean
-  is_subscriber: boolean
+  is_subscriber?: boolean
   full_name?: string | null
   id: string
 }
