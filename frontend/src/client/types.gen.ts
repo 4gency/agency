@@ -224,6 +224,7 @@ export type SubscriptionPlanCreate = {
   has_badge?: boolean
   badge_text?: string
   button_text?: string
+  button_enabled?: boolean
   has_discount?: boolean
   price_without_discount?: number
   currency?: string
@@ -238,9 +239,10 @@ export type SubscriptionPlanPublic = {
   id: string
   name: string
   price: number
-  has_badge?: boolean
+  has_badge: boolean
   badge_text: string
   button_text: string
+  button_enabled: boolean
   has_discount: boolean
   price_without_discount: number
   currency: string
@@ -261,6 +263,7 @@ export type SubscriptionPlanUpdate = {
   has_badge?: boolean | null
   badge_text?: string | null
   button_text?: string | null
+  button_enabled?: boolean | null
   has_discount?: boolean | null
   price_without_discount?: number | null
   currency?: string | null

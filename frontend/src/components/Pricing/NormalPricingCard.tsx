@@ -6,6 +6,7 @@ interface NormalPricingCardProps {
   recurrence: string
   benefits: string[]
   buttonText: string
+  buttonEnabled?: boolean
   buttonLink: string
   disabled?: boolean
   hasDiscount?: boolean
@@ -18,6 +19,7 @@ const NormalPricingCard: React.FC<NormalPricingCardProps> = ({
   recurrence,
   benefits,
   buttonText,
+  buttonEnabled,
   buttonLink,
   disabled = false,
   hasDiscount = false,
@@ -110,7 +112,8 @@ const NormalPricingCard: React.FC<NormalPricingCardProps> = ({
         </ul>
       </div>
       <a
-        href={buttonLink}
+        href={buttonEnabled ? buttonLink : undefined}
+        onClick={buttonEnabled ? undefined : (e) => e.preventDefault()}
         style={{
           display: "block",
           textAlign: "center",
@@ -121,6 +124,12 @@ const NormalPricingCard: React.FC<NormalPricingCardProps> = ({
           marginTop: "24px",
           textDecoration: "none",
           fontWeight: 600,
+          // Cursor "not-allowed" indica visualmente que o link está desabilitado.
+          cursor: buttonEnabled ? "pointer" : "not-allowed",
+          // Opacidade menor quando desabilitado.
+          opacity: buttonEnabled ? 1 : 0.5,
+          // pointerEvents "none" impede qualquer interação no estado desabilitado.
+          pointerEvents: buttonEnabled ? "auto" : "none",
         }}
       >
         {buttonText}

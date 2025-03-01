@@ -101,6 +101,7 @@ class SubscriptionPlanBase(SQLModel):
     has_badge: bool = Field(default=False)
     badge_text: str = Field(default="", max_length=50)
     button_text: str = Field(default="Subscribe", max_length=50)
+    button_enabled: bool = Field(default=True)
     has_discount: bool = Field(default=False)
     price_without_discount: float = Field(default=0.0)
     currency: str = Field(default="USD", max_length=10)
@@ -120,6 +121,7 @@ class SubscriptionPlanUpdate(SQLModel):
     has_badge: bool | None = None
     badge_text: str | None = None
     button_text: str | None = None
+    button_enabled: bool | None = None
     has_discount: bool | None = None
     price_without_discount: float | None = None
     currency: str | None = None
@@ -145,6 +147,7 @@ class SubscriptionPlan(SQLModel, table=True):
     has_badge: bool = Field(default=False)
     badge_text: str = Field(default="", max_length=50)
     button_text: str = Field(default="Subscribe", max_length=50)
+    button_enabled: bool = Field(default=False)
 
     has_discount: bool = Field(default=False)
     price_without_discount: float = Field(default=0.0)
@@ -464,9 +467,10 @@ class SubscriptionPlanPublic(SQLModel):
     id: uuid.UUID
     name: str
     price: float
-    has_badge: bool = Field(default=False)
+    has_badge: bool
     badge_text: str
     button_text: str
+    button_enabled: bool
     has_discount: bool
     price_without_discount: float
     currency: str
