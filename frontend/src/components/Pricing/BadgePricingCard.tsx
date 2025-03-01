@@ -143,7 +143,7 @@ const BadgePricingCard: React.FC<BadgePricingCardProps> = ({
           // Opacidade menor quando desabilitado.
           opacity: buttonEnabled ? 1 : 0.5,
           // Opcional: evita cliques em navegadores que ainda permitiriam clicar no link desabilitado.
-          pointerEvents: buttonEnabled ? "auto" : "none"
+          pointerEvents: buttonEnabled ? "auto" : "none",
         }}
       >
         {buttonText}
