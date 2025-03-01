@@ -64,6 +64,7 @@ def create_dummy_subscription_plan(db: Session, plan_id: uuid.UUID) -> Subscript
         has_badge=False,
         badge_text="",
         button_text="Subscribe",
+        button_enabled=True,
         has_discount=False,
         price_without_discount=20.0,
         currency="USD",

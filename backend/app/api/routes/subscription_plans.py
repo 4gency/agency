@@ -51,6 +51,7 @@ def read_subscription_plans(
                 matched_plan.has_badge = True
                 matched_plan.badge_text = "Your Plan"
                 matched_plan.button_text = "Current Plan"
+                matched_plan.button_enabled = False
             else:
                 # Create a new public plan entry
                 plan_public = SubscriptionPlanPublic.model_validate(
@@ -59,6 +60,7 @@ def read_subscription_plans(
                 plan_public.has_badge = True
                 plan_public.badge_text = "Your Plan"
                 plan_public.button_text = "Current Plan"
+                plan_public.button_enabled = False
                 plan_public.is_active = True
                 public_plans.append(plan_public)
 

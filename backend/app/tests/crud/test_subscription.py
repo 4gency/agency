@@ -13,6 +13,7 @@ subscription_plan_payload = {
     "has_badge": False,
     "badge_text": "",
     "button_text": "Subscribe",
+    "button_enabled": True,
     "has_discount": False,
     "price_without_discount": 0.0,
     "currency": "USD",

@@ -6,6 +6,7 @@ interface BadgePricingCardProps {
   price: number
   benefits: string[]
   buttonText: string
+  buttonEnabled?: boolean
   buttonLink: string
   hasDiscount?: boolean
   priceWithoutDiscount?: number
@@ -18,6 +19,7 @@ const BadgePricingCard: React.FC<BadgePricingCardProps> = ({
   price,
   benefits,
   buttonText,
+  buttonEnabled,
   buttonLink,
   hasDiscount = false,
   priceWithoutDiscount,
@@ -124,7 +126,8 @@ const BadgePricingCard: React.FC<BadgePricingCardProps> = ({
         </ul>
       </div>
       <a
-        href={buttonLink}
+        href={buttonEnabled ? buttonLink : undefined}
+        onClick={buttonEnabled ? undefined : (e) => e.preventDefault()}
         style={{
           display: "block",
           textAlign: "center",
@@ -135,6 +138,12 @@ const BadgePricingCard: React.FC<BadgePricingCardProps> = ({
           marginTop: "24px",
           textDecoration: "none",
           fontWeight: 600,
+          // Cursor "not-allowed" indica visualmente que está desabilitado.
+          cursor: buttonEnabled ? "pointer" : "not-allowed",
+          // Opacidade menor quando desabilitado.
+          opacity: buttonEnabled ? 1 : 0.5,
+          // Opcional: evita cliques em navegadores que ainda permitiriam clicar no link desabilitado.
+          pointerEvents: buttonEnabled ? "auto" : "none"
         }}
       >
         {buttonText}
