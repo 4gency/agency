@@ -7,7 +7,6 @@ import {
   DrawerOverlay,
   Flex,
   IconButton,
-  Image,
   Text,
   useColorModeValue,
   useDisclosure,
@@ -15,9 +14,9 @@ import {
 import { useQueryClient } from "@tanstack/react-query"
 import { FiLogOut, FiMenu } from "react-icons/fi"
 
-import Logo from "/assets/images/a-full.svg"
 import type { UserPublic } from "../../client"
 import useAuth from "../../hooks/useAuth"
+import Logo from "./Logo"
 import SidebarItems from "./SidebarItems"
 
 const Sidebar = () => {
@@ -52,7 +51,9 @@ const Sidebar = () => {
           <DrawerBody py={8}>
             <Flex flexDir="column" justify="space-between">
               <Box>
-                <Image src={Logo} alt="logo" p={6} />
+                <Box p={6}>
+                  <Logo alt="logo" />
+                </Box>
                 <SidebarItems onClose={onClose} />
                 <Flex
                   as="button"
@@ -93,7 +94,9 @@ const Sidebar = () => {
           borderRadius={12}
         >
           <Box>
-            <Image src={Logo} alt="Logo" w="180px" maxW="2xs" p={6} />
+            <Box p={6}>
+              <Logo width="180px" maxW="2xs" alt="Logo" />
+            </Box>
             <SidebarItems />
           </Box>
           {currentUser?.email && (

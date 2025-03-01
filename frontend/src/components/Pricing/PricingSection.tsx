@@ -130,7 +130,9 @@ const PricingSection: React.FC = () => {
               }
 
               if (has_badge) {
-                return <BadgePricingCard {...commonProps} badgeText={badge_text} />
+                return (
+                  <BadgePricingCard {...commonProps} badgeText={badge_text} />
+                )
               }
               return <NormalPricingCard {...commonProps} />
             })}
