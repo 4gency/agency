@@ -7,4 +7,5 @@
 
 ### Internal
 
+* fix: ajust pipeline environment secret. PR [#46](https://github.com/4gency/agency/pull/46) by [@gustavosett](https://github.com/gustavosett).
 * fix: deployment envs. PR [#45](https://github.com/4gency/agency/pull/45) by [@gustavosett](https://github.com/gustavosett).
