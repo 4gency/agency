@@ -1218,7 +1218,7 @@ export default function LandingPage() {
                 lineHeight: "1.2",
               }}
             >
-              Client’s experiences
+              Client's experiences
             </h2>
             <div className="block-group is-content-justification-center is-nowrap is-layout-flex container-core-group-is-layout-39 block-group-is-layout-flex">
               <p
@@ -1283,10 +1283,10 @@ export default function LandingPage() {
                       fontWeight: 400,
                     }}
                   >
-                    “I just wanted to thank you for the incredible service
+                    "I just wanted to thank you for the incredible service
                     λgency provides. I landed a job in less than a month! Your
                     AI really knows its stuff, matching me with a position that
-                    needed my exact skill set.”
+                    needed my exact skill set."
                   </p>
                 </div>
               </div>
@@ -1341,10 +1341,10 @@ export default function LandingPage() {
                       fontWeight: 400,
                     }}
                   >
-                    “Hey team, just dropping a note to say your system works
-                    wonders. I’ve gotten more callbacks in the past two weeks
+                    "Hey team, just dropping a note to say your system works
+                    wonders. I've gotten more callbacks in the past two weeks
                     than I did in the last six months. You guys are into
-                    something big here.”
+                    something big here."
                   </p>
                 </div>
               </div>
@@ -1399,10 +1399,10 @@ export default function LandingPage() {
                       fontWeight: 400,
                     }}
                   >
-                    “I was really impressed with how your AI took the time to
-                    understand the intricacies of each job posting. It’s like
-                    you’ve built a bridge directly to employers. Thanks for
-                    making job hunting less daunting.”
+                    "I was really impressed with how your AI took the time to
+                    understand the intricacies of each job posting. It's like
+                    you've built a bridge directly to employers. Thanks for
+                    making job hunting less daunting."
                   </p>
                 </div>
               </div>
@@ -1457,17 +1457,17 @@ export default function LandingPage() {
                       fontWeight: 400,
                     }}
                   >
-                    “I have to say, I was blown away by how accurately your AI
-                    mapped out the job landscape based on my skills. It’s
+                    "I have to say, I was blown away by how accurately your AI
+                    mapped out the job landscape based on my skills. It's
                     refreshing to see such a tailored approach in job
-                    applications.”
+                    applications."
                   </p>
                 </div>
               </div>
             </div>
           </div>
         </div>
-        <PricingSection />
+        <PricingSection isLandingPage={true} />
         <div
           className="block-group is-layout-constrained container-core-group-is-layout-60 block-group-is-layout-constrained"
           style={{

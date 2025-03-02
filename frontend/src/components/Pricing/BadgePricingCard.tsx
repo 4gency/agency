@@ -1,4 +1,16 @@
 import type React from "react"
+import {
+  Box,
+  Text,
+  VStack,
+  List,
+  ListItem,
+  ListIcon,
+  Button,
+  useColorModeValue,
+  Badge,
+} from "@chakra-ui/react"
+import { CheckIcon } from "@chakra-ui/icons"
 
 interface BadgePricingCardProps {
   title: string
@@ -11,6 +23,7 @@ interface BadgePricingCardProps {
   hasDiscount?: boolean
   priceWithoutDiscount?: number
   recurrence: string
+  isLandingPage?: boolean
 }
 
 const BadgePricingCard: React.FC<BadgePricingCardProps> = ({
@@ -24,131 +37,95 @@ const BadgePricingCard: React.FC<BadgePricingCardProps> = ({
   hasDiscount = false,
   priceWithoutDiscount,
   recurrence,
+  isLandingPage = false,
 }) => {
+  // Quando está na landing page, sempre usa o tema claro
+  // Quando não está, respeita o tema do usuário
+  const bgColor = isLandingPage ? "white" : useColorModeValue("white", "gray.800")
+  const textColor = isLandingPage ? "gray.700" : useColorModeValue("gray.700", "white")
+  const borderColor = isLandingPage ? "teal.100" : useColorModeValue("teal.100", "teal.800")
+  const priceColor = isLandingPage ? "teal.700" : useColorModeValue("teal.700", "teal.200")
+  const discountColor = isLandingPage ? "gray.400" : useColorModeValue("gray.400", "gray.500")
+  const highlightColor = isLandingPage ? "ui.main" : useColorModeValue("ui.main", "teal.300")
+  const badgeBg = isLandingPage ? "ui.main" : useColorModeValue("ui.main", "teal.300")
+  const badgeColor = isLandingPage ? "white" : useColorModeValue("white", "gray.800")
+
   return (
-    <div
-      style={{
-        backgroundColor: "#fff",
-        border: "1.5px solid #e2ffe0",
-        borderRadius: "20px",
-        width: "300px",
-        boxShadow: "0 6px 10px rgba(0, 150, 136, 0.1)",
-        padding: "24px",
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "space-between",
-        position: "relative",
-        minWidth: "300px",
-      }}
+    <Box
+      bg={bgColor}
+      borderRadius="xl"
+      borderWidth="2px"
+      borderColor={borderColor}
+      boxShadow="md"
+      width="300px"
+      minW="350px"
+      maxW="350px"
+      height="auto"
+      minH="400px"
+      p={6}
+      display="flex"
+      flexDirection="column"
+      justifyContent="space-between"
+      position="relative"
+      transition="all 0.3s"
+      _hover={{ transform: "translateY(-5px)", boxShadow: "lg" }}
     >
-      {/* Best Value Badge */}
-      <div
-        style={{
-          position: "absolute",
-          top: "-12px",
-          right: "-10px",
-          backgroundColor: "#009688",
-          color: "#fff",
-          padding: "6px 8px",
-          borderRadius: "4px",
-          fontSize: "14px",
-          fontWeight: 600,
-        }}
+      {/* Badge */}
+      <Badge
+        position="absolute"
+        top="-3"
+        right="-3"
+        bg={badgeBg}
+        color={badgeColor}
+        px={3}
+        py={1}
+        borderRadius="md"
+        fontSize="sm"
+        fontWeight="bold"
+        boxShadow="sm"
       >
         {badgeText}
-      </div>
-      <div>
-        <h3
-          style={{
-            fontSize: "24px",
-            fontWeight: 600,
-            marginBottom: "10px",
-            color: "#00766c",
-          }}
-        >
+      </Badge>
+
+      <VStack align="start" spacing={4} height="100%">
+        <Text fontSize="2xl" fontWeight="bold" color={highlightColor}>
           {title}
-        </h3>
+        </Text>
+        
         {hasDiscount && priceWithoutDiscount !== undefined && (
-          <p
-            style={{
-              fontSize: "14px",
-              fontWeight: 400,
-              color: "#a0aec0",
-              textDecoration: "line-through",
-            }}
-          >
+          <Text fontSize="md" color={discountColor} textDecoration="line-through">
             ${priceWithoutDiscount.toFixed(2)}
-          </p>
+          </Text>
         )}
-        <p
-          style={{
-            fontSize: "26px",
-            fontWeight: 600,
-            marginBottom: "20px",
-            color: "#00766c",
-          }}
-        >
+        
+        <Text fontSize="3xl" fontWeight="bold" color={priceColor}>
           ${price.toFixed(2)}/{recurrence}
-        </p>
-        <ul
-          style={{
-            listStyle: "none",
-            padding: 0,
-            margin: 0,
-            color: "#4a5568",
-          }}
-        >
+        </Text>
+        
+        <List spacing={4} w="100%" mt={2} flex="1">
           {benefits.map((benefit, index) => (
-            <li
-              key={index}
-              style={{
-                marginBottom: "8px",
-                display: "flex",
-                alignItems: "center",
-              }}
-            >
-              <svg
-                width="16"
-                height="16"
-                fill="#48bb78"
-                style={{ marginRight: "8px" }}
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M16.707 5.293a1 1 0 00-1.414 0L8 12.586 4.707 9.293a1 1 0 10-1.414 1.414l4 4a1 1 0 001.414 0l8-8a1 1 0 000-1.414z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              {benefit}
-            </li>
+            <ListItem key={index} display="flex" alignItems="center">
+              <ListIcon as={CheckIcon} color={highlightColor} boxSize={4} />
+              <Text color={textColor}>{benefit}</Text>
+            </ListItem>
           ))}
-        </ul>
-      </div>
-      <a
+        </List>
+      </VStack>
+      
+      <Button
+        as="a"
         href={buttonEnabled ? buttonLink : undefined}
         onClick={buttonEnabled ? undefined : (e) => e.preventDefault()}
-        style={{
-          display: "block",
-          textAlign: "center",
-          backgroundColor: "#009688",
-          color: "#fff",
-          padding: "12px",
-          borderRadius: "4px",
-          marginTop: "24px",
-          textDecoration: "none",
-          fontWeight: 600,
-          // Cursor "not-allowed" indica visualmente que está desabilitado.
-          cursor: buttonEnabled ? "pointer" : "not-allowed",
-          // Opacidade menor quando desabilitado.
-          opacity: buttonEnabled ? 1 : 0.5,
-          // Opcional: evita cliques em navegadores que ainda permitiriam clicar no link desabilitado.
-          pointerEvents: buttonEnabled ? "auto" : "none",
-        }}
+        variant="primary"
+        size="md"
+        h="55px"
+        w="100%"
+        mt={6}
+        isDisabled={!buttonEnabled}
       >
         {buttonText}
-      </a>
-    </div>
+      </Button>
+    </Box>
   )
 }
 

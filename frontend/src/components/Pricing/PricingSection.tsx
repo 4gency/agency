@@ -5,13 +5,32 @@ import {
   type SubscriptionPlansPublic,
   SubscriptionPlansService,
 } from "../../client"
+import {
+  Box,
+  Container,
+  Heading,
+  Text,
+  Flex,
+  Badge,
+  VStack,
+  useColorModeValue,
+  Spinner,
+  Center,
+} from "@chakra-ui/react"
 import BadgePricingCard from "./BadgePricingCard"
 import NormalPricingCard from "./NormalPricingCard"
 
-const PricingSection: React.FC = () => {
+interface PricingSectionProps {
+  isLandingPage?: boolean
+}
+
+const PricingSection: React.FC<PricingSectionProps> = ({ isLandingPage = false }) => {
   const [plans, setPlans] = useState<SubscriptionPlanPublic[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string>("")
+
+  const headingColor = isLandingPage ? "gray.800" : useColorModeValue("gray.800", "white")
+  const sectionBg = isLandingPage ? "gray.50" : useColorModeValue("gray.50", "gray.900")
 
   useEffect(() => {
     SubscriptionPlansService.readSubscriptionPlans({ onlyActive: false })
@@ -30,74 +49,80 @@ const PricingSection: React.FC = () => {
   }, [])
 
   if (loading) {
-    return <div />
+    return (
+      <Center py={20} bg={isLandingPage ? "gray.50" : undefined}>
+        <Spinner size="xl" color="ui.main" thickness="4px" />
+      </Center>
+    )
   }
 
   if (error) {
-    return <div />
+    return (
+      <Center py={20} bg={isLandingPage ? "gray.50" : undefined}>
+        <Text color="red.500" fontSize="lg">
+          {error}
+        </Text>
+      </Center>
+    )
   }
 
   return (
-    <div
+    <Box
       id="pricing"
-      className="block-group is-layout-flow block-group-is-layout-flow"
-      style={{
-        paddingTop: 80,
-        paddingRight: "5vw",
-        paddingBottom: 100,
-        paddingLeft: "5vw",
-      }}
+      py={20}
+      px={{ base: 4, md: "5vw" }}
+      bg={sectionBg}
     >
-      <div className="block-group is-vertical is-content-justification-center is-layout-flex container-core-group-is-layout-54 block-group-is-layout-flex">
-        <div
-          className="block-group has-theme-7-background-color has-background has-inter-font-family is-nowrap is-layout-flex container-core-group-is-layout-38 block-group-is-layout-flex"
-          style={{
-            borderRadius: 5,
-            paddingTop: 6,
-            paddingRight: 11,
-            paddingBottom: 6,
-            paddingLeft: 11,
-          }}
-        >
-          <h3
-            className="block-heading has-theme-3-color has-text-color has-link-color has-inter-font-family"
-            style={{
-              fontSize: 16,
-              fontStyle: "normal",
-              fontWeight: 600,
-              lineHeight: "1.3",
-            }}
+      <Container maxW="container.xl">
+        <VStack spacing={6} mb={12} textAlign="center">
+          <Badge
+            colorScheme="teal"
+            px={3}
+            py={1}
+            borderRadius="md"
+            fontSize="sm"
           >
             Our Pricing
-          </h3>
-        </div>
-        <h2
-          className="block-heading has-text-align-center has-theme-0-color has-text-color has-link-color has-h-1-alt-font-size"
-          style={{
-            fontStyle: "normal",
-            fontWeight: 600,
-            letterSpacing: "-0.02em",
-            lineHeight: "1.2",
+          </Badge>
+          
+          <Heading 
+            as="h2" 
+            size="2xl" 
+            fontWeight="bold"
+            color={headingColor}
+            letterSpacing="-0.02em"
+          >
+            Choose the Plan That Suits You
+          </Heading>
+          
+          <Text fontSize="lg" maxW="container.md" color={isLandingPage ? "gray.600" : undefined}>
+            {/* Texto adicional se necessário */}
+          </Text>
+        </VStack>
+
+        <Box 
+          overflowX={{ base: "auto" }} 
+          pb={6}
+          sx={{
+            "&::-webkit-scrollbar": {
+              height: "8px",
+              borderRadius: "8px",
+              backgroundColor: `rgba(0, 0, 0, 0.05)`,
+            },
+            "&::-webkit-scrollbar-thumb": {
+              backgroundColor: `rgba(0, 0, 0, 0.1)`,
+              borderRadius: "8px",
+            },
           }}
         >
-          Choose the Plan That Suits You
-        </h2>
-        <div
-          className="block-group is-content-justification-center is-nowrap is-layout-flex container-core-group-is-layout-39 block-group-is-layout-flex"
-          style={{ marginBottom: "40px" }}
-        >
-          <p style={{ fontSize: 18 }}>{/* Additional text if needed */}</p>
-        </div>
-        {/* Horizontally Scrollable Pricing Cards Container */}
-        <div style={{ maxWidth: "100%", overflowX: "auto", paddingBottom: 16 }}>
-          <div
-            style={{
-              display: "flex",
-              gap: "40px",
-              flexWrap: "nowrap",
-              padding: "20px",
-            }}
-            className="pricing-scroll-container"
+          <Flex 
+            gap={6} 
+            flexWrap={{ base: "nowrap", lg: "wrap" }}
+            justifyContent={{ base: "flex-start", lg: "center" }}
+            alignItems="stretch"
+            py={4}
+            px={{ base: 4, md: 0 }}
+            minW={{ base: "fit-content", lg: "auto" }}
           >
             {plans.map((plan) => {
               const {
@@ -127,6 +152,7 @@ const PricingSection: React.FC = () => {
                 hasDiscount: has_discount,
                 priceWithoutDiscount: price_without_discount,
                 recurrence: metric_type,
+                isLandingPage: isLandingPage,
               }
 
               if (has_badge) {
@@ -136,10 +162,10 @@ const PricingSection: React.FC = () => {
               }
               return <NormalPricingCard {...commonProps} />
             })}
-          </div>
-        </div>
-      </div>
-    </div>
+          </Flex>
+        </Box>
+      </Container>
+    </Box>
   )
 }
 
