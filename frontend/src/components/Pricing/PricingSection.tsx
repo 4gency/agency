@@ -97,19 +97,23 @@ const PricingSection: React.FC<PricingSectionProps> = ({ isLandingPage = false }
   const showPrevButton = currentSlide > 0
   const showNextButton = currentSlide < plans.length - slidesToShow
 
+  // Determine se devemos centralizar os slides (quando há poucos cards)
+  const shouldCenterSlides = plans.length <= slidesToShow
+  
   const settings = {
     dots: true,
     infinite: false,
     speed: 500,
-    slidesToShow: slidesToShow,
+    slidesToShow: shouldCenterSlides ? plans.length : slidesToShow,
     slidesToScroll: 1,
     arrows: false,
-    centerMode: false,
+    centerMode: shouldCenterSlides,
+    centerPadding: '0px',
     variableWidth: false,
     adaptiveHeight: false,
     swipeToSlide: true,
-    draggable: true,
-    beforeChange: (next: number) => setCurrentSlide(next),
+    draggable: !shouldCenterSlides,
+    beforeChange: (_current: number, next: number) => setCurrentSlide(next),
     afterChange: (current: number) => setCurrentSlide(current),
     responsive: [
       {
@@ -206,11 +210,15 @@ const PricingSection: React.FC<PricingSectionProps> = ({ isLandingPage = false }
             width="100%"
             mx="auto"
             pt={4} // Adicionando espaço superior para o badge não ser cortado
-            className={`pricing-carousel ${!isLandingPage ? 'pricing-carousel-sidebar' : ''}`}
+            className={`pricing-carousel ${!isLandingPage ? 'pricing-carousel-sidebar' : ''} ${shouldCenterSlides ? 'centered-slides' : ''}`}
             sx={{
               '.slick-track': {
                 display: 'flex !important',
                 width: '100% !important',
+                ...(shouldCenterSlides && {
+                  justifyContent: 'center !important',
+                  margin: '0 auto !important',
+                }),
               },
               '.slick-slide': {
                 height: 'inherit !important',

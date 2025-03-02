@@ -45,12 +45,24 @@ body {
   max-width: 100% !important;
 }
 
-/* Estilizando o track do carrossel para garantir altura igual */
+/* Ajustes para o modo centralizado */
+.pricing-carousel .slick-slider.slick-initialized {
+  display: flex;
+  justify-content: center;
+}
+
 .pricing-carousel .slick-track {
   display: flex !important;
   transition: transform 0.5s ease-in-out;
-  margin: 0 auto;
+  margin: 0 auto !important; /* Sempre centralizar o track */
   width: auto !important; /* Permite que o track seja apenas do tamanho necessário */
+}
+
+/* Quando em modo centralizado, garantir que os slides fiquem no centro */
+.pricing-carousel .slick-slider.slick-initialized.slick-center .slick-track {
+  transform: translate3d(0, 0, 0) !important;
+  display: flex !important;
+  justify-content: center !important;
 }
 
 .pricing-carousel .slick-slide {
@@ -122,10 +134,16 @@ body {
   .pricing-carousel-sidebar {
     max-width: calc(100vw - 30px);
   }
+
+  /* Centralização em dispositivos móveis */
+  .pricing-carousel .slick-slider.slick-initialized .slick-track {
+    margin: 0 auto !important;
+  }
 }
 
 /* Garante que o último slide do carrossel seja visível por completo */
 .pricing-carousel .slick-list::after {
+  content: '';
   display: block;
   width: 0;
   height: 0;
@@ -135,4 +153,48 @@ body {
 /* Ajuste da visibilidade do último item do carrossel */
 .pricing-carousel .slick-track {
   padding-right: 1px;
+}
+
+/* Estilos específicos para quando há poucos cards (slides centralizados) */
+.pricing-carousel.centered-slides {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.pricing-carousel.centered-slides .slick-track {
+  display: flex !important;
+  justify-content: center !important;
+  margin: 0 auto !important;
+  width: auto !important;
+  min-width: 100% !important;
+  transform: none !important;
+}
+
+.pricing-carousel.centered-slides .slick-slider {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.pricing-carousel.centered-slides .slick-slide {
+  float: none !important;
+  display: inline-block !important;
+}
+
+.pricing-carousel.centered-slides .slick-track {
+  display: flex !important;
+  justify-content: center !important;
+  width: 100% !important;
+  transform: translate3d(0, 0, 0) !important;
+}
+
+.pricing-carousel.centered-slides .slick-list {
+  width: 100% !important;
+  overflow: visible !important;
+}
+
+/* Este seletor força o transform a ser centralizado */
+.pricing-carousel.centered-slides .slick-track {
+  transform: translate3d(0, 0, 0) !important;
 } 

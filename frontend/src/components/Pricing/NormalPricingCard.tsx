@@ -58,6 +58,7 @@ const NormalPricingCard: React.FC<NormalPricingCardProps> = ({
       minW="320px"
       height="100%"
       maxHeight="450px"
+      minHeight="390px"
       p={{ base: 5, md: 6 }}
       display="flex"
       flexDirection="column"
