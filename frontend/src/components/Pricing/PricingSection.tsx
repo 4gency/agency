@@ -70,7 +70,7 @@ const PricingSection: React.FC<PricingSectionProps> = ({ isLandingPage = false }
   const [error, setError] = useState<string>("")
   const sliderRef = useRef<Slider>(null)
   const [currentSlide, setCurrentSlide] = useState(0)
-  const { handleSubscribeClick, isCheckoutLoading } = useCheckoutHandler()
+  const { handleSubscribeClick, isPlanLoading } = useCheckoutHandler()
 
   const headingColor = isLandingPage ? "gray.800" : useColorModeValue("gray.800", "white")
   const sectionBg = isLandingPage ? "gray.50" : useColorModeValue("gray.50", "gray.900")
@@ -172,11 +172,13 @@ const PricingSection: React.FC<PricingSectionProps> = ({ isLandingPage = false }
         {isLandingPage && (
           <VStack spacing={6} mb={12} textAlign="center">
             <Badge
-              colorScheme="teal"
+              textTransform="none"
+              bg="#E2FFE0"  // Cor de fundo
+              color="#009688" // Cor do texto
               px={3}
               py={1}
               borderRadius="md"
-              fontSize="sm"
+              fontSize="initial"
             >
               Our Pricing
             </Badge>
@@ -249,12 +251,15 @@ const PricingSection: React.FC<PricingSectionProps> = ({ isLandingPage = false }
                   benefits,
                 } = plan
 
+                // Check loading state for this specific plan
+                const isPlanCurrentlyLoading = isPlanLoading(id)
+
                 const commonProps = {
                   title: name,
                   price: price,
                   benefits: benefits ? benefits.map((b) => b.name) : [],
-                  buttonText: isCheckoutLoading ? "Loading..." : button_text,
-                  buttonEnabled: button_enabled && !isCheckoutLoading,
+                  buttonText: isPlanCurrentlyLoading ? "Loading..." : button_text,
+                  buttonEnabled: button_enabled && !isPlanCurrentlyLoading,
                   buttonLink: "",
                   disabled: !is_active,
                   hasDiscount: has_discount,

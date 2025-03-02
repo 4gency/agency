@@ -7,7 +7,6 @@ import {
   ListItem,
   ListIcon,
   Button,
-  Spinner,
 } from "@chakra-ui/react"
 import { CheckIcon } from "@chakra-ui/icons"
 import { useNormalPricingCardTheme } from "./hooks/useNormalPricingCardTheme"

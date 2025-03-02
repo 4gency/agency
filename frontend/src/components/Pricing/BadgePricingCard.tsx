@@ -8,7 +8,6 @@ import {
   ListIcon,
   Button,
   Badge,
-  Spinner,
 } from "@chakra-ui/react"
 import { CheckIcon } from "@chakra-ui/icons"
 import { useBadgePricingCardTheme } from "./hooks/useBadgePricingCardTheme"
