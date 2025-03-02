@@ -6,6 +6,7 @@ import {
   TabPanel,
   TabPanels,
   Tabs,
+  Box,
 } from "@chakra-ui/react"
 import { useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, redirect } from "@tanstack/react-router"
@@ -50,12 +51,18 @@ function UserSettings() {
       <Heading size="lg" textAlign={{ base: "center", md: "left" }} py={12}>
         User Settings
       </Heading>
-      <Tabs variant="enclosed">
-        <TabList>
-          {finalTabs.map((tab, index) => (
-            <Tab key={index}>{tab.title}</Tab>
-          ))}
-        </TabList>
+      <Tabs variant="enclosed" maxWidth="100%">
+        <Box overflowX="auto" overflowY="hidden" pb={2} sx={{
+          scrollbarWidth: 'thin',
+          '::-webkit-scrollbar': { height: '6px' },
+          '::-webkit-scrollbar-thumb': { backgroundColor: 'gray.300', borderRadius: 'full' },
+        }}>
+          <TabList width="max-content" minWidth="100%">
+            {finalTabs.map((tab, index) => (
+              <Tab key={index}>{tab.title}</Tab>
+            ))}
+          </TabList>
+        </Box>
         <TabPanels>
           {finalTabs.map((tab, index) => (
             <TabPanel key={index}>
