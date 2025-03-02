@@ -7,9 +7,9 @@ import {
   ListItem,
   ListIcon,
   Button,
-  useColorModeValue,
 } from "@chakra-ui/react"
 import { CheckIcon } from "@chakra-ui/icons"
+import { useNormalPricingCardTheme } from "./hooks/useNormalPricingCardTheme"
 
 interface NormalPricingCardProps {
   title: string
@@ -38,14 +38,14 @@ const NormalPricingCard: React.FC<NormalPricingCardProps> = ({
   priceWithoutDiscount,
   isLandingPage = false,
 }) => {
-  // Quando está na landing page, sempre usa o tema claro
-  // Quando não está, respeita o tema do usuário
-  const bgColor = isLandingPage ? "white" : useColorModeValue("white", "gray.800")
-  const textColor = isLandingPage ? "gray.700" : useColorModeValue("gray.700", "white")
-  const borderColor = isLandingPage ? "gray.200" : useColorModeValue("gray.200", "gray.700")
-  const priceColor = isLandingPage ? "gray.700" : useColorModeValue("gray.700", "gray.200")
-  const discountColor = isLandingPage ? "gray.400" : useColorModeValue("gray.400", "gray.500")
-  const iconColor = isLandingPage ? "ui.main" : useColorModeValue("ui.main", "teal.300")
+  const {
+    bgColor,
+    textColor,
+    borderColor,
+    priceColor,
+    discountColor,
+    iconColor,
+  } = useNormalPricingCardTheme(isLandingPage)
 
   return (
     <Box
@@ -54,20 +54,21 @@ const NormalPricingCard: React.FC<NormalPricingCardProps> = ({
       borderWidth="1px"
       borderColor={borderColor}
       boxShadow={disabled ? "md" : "sm"}
-      minW="350px"
-      maxW="350px"
-      height="auto"
-      minH="400px"
-      p={6}
+      width="100%"
+      minW="320px"
+      height="100%"
+      maxHeight="450px"
+      p={{ base: 5, md: 6 }}
       display="flex"
       flexDirection="column"
       justifyContent="space-between"
       filter={disabled ? "blur(5px)" : "none"}
       pointerEvents={disabled ? "none" : "auto"}
       transition="all 0.3s"
+      mx="auto"
       _hover={!disabled ? { transform: "translateY(-5px)", boxShadow: "md" } : {}}
     >
-      <VStack align="start" spacing={4} height="100%">
+      <VStack align="start" spacing={0.1} height="100%">
         <Text fontSize="2xl" fontWeight="bold" color={textColor}>
           {title}
         </Text>
@@ -82,11 +83,13 @@ const NormalPricingCard: React.FC<NormalPricingCardProps> = ({
           ${price.toFixed(2)}/{recurrence}
         </Text>
         
-        <List spacing={4} w="100%" mt={2} flex="1">
+        <List spacing={1} w="100%" mt={2} flex="1" overflow="auto" maxH="180px">
           {benefits.map((benefit, index) => (
-            <ListItem key={index} display="flex" alignItems="center">
-              <ListIcon as={CheckIcon} color={iconColor} boxSize={4} />
-              <Text color={textColor}>{benefit}</Text>
+            <ListItem key={index} display="flex" alignItems="flex-start" py={1}>
+              <ListIcon as={CheckIcon} color={iconColor} boxSize={4} mt="5px" />
+              <Text color={textColor}>
+                {benefit}
+              </Text>
             </ListItem>
           ))}
         </List>

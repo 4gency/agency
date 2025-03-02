@@ -11,7 +11,7 @@ interface LogoProps {
 
 const Logo = ({
   width = "100%",
-  height = "auto",
+  height = "100%",
   className = "",
   alt = "Logo",
 }: LogoProps) => {

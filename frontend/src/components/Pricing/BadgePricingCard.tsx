@@ -7,10 +7,10 @@ import {
   ListItem,
   ListIcon,
   Button,
-  useColorModeValue,
   Badge,
 } from "@chakra-ui/react"
 import { CheckIcon } from "@chakra-ui/icons"
+import { useBadgePricingCardTheme } from "./hooks/useBadgePricingCardTheme"
 
 interface BadgePricingCardProps {
   title: string
@@ -39,16 +39,16 @@ const BadgePricingCard: React.FC<BadgePricingCardProps> = ({
   recurrence,
   isLandingPage = false,
 }) => {
-  // Quando está na landing page, sempre usa o tema claro
-  // Quando não está, respeita o tema do usuário
-  const bgColor = isLandingPage ? "white" : useColorModeValue("white", "gray.800")
-  const textColor = isLandingPage ? "gray.700" : useColorModeValue("gray.700", "white")
-  const borderColor = isLandingPage ? "teal.100" : useColorModeValue("teal.100", "teal.800")
-  const priceColor = isLandingPage ? "teal.700" : useColorModeValue("teal.700", "teal.200")
-  const discountColor = isLandingPage ? "gray.400" : useColorModeValue("gray.400", "gray.500")
-  const highlightColor = isLandingPage ? "ui.main" : useColorModeValue("ui.main", "teal.300")
-  const badgeBg = isLandingPage ? "ui.main" : useColorModeValue("ui.main", "teal.300")
-  const badgeColor = isLandingPage ? "white" : useColorModeValue("white", "gray.800")
+  const {
+    bgColor,
+    textColor,
+    borderColor,
+    priceColor,
+    discountColor,
+    highlightColor,
+    badgeBg,
+    badgeColor,
+  } = useBadgePricingCardTheme(isLandingPage)
 
   return (
     <Box
@@ -57,16 +57,17 @@ const BadgePricingCard: React.FC<BadgePricingCardProps> = ({
       borderWidth="2px"
       borderColor={borderColor}
       boxShadow="md"
-      minW="350px"
-      maxW="350px"
-      height="auto"
-      minH="400px"
-      p={6}
+      width="100%"
+      minW="320px"
+      height="100%"
+      maxHeight="450px"
+      p={{ base: 5, md: 6 }}
       display="flex"
       flexDirection="column"
       justifyContent="space-between"
       position="relative"
       transition="all 0.3s"
+      mx="auto"
       _hover={{ transform: "translateY(-5px)", boxShadow: "lg" }}
     >
       {/* Badge */}
@@ -86,7 +87,7 @@ const BadgePricingCard: React.FC<BadgePricingCardProps> = ({
         {badgeText}
       </Badge>
 
-      <VStack align="start" spacing={4} height="100%">
+      <VStack align="start" spacing={0.1} height="100%">
         <Text fontSize="2xl" fontWeight="bold" color={highlightColor}>
           {title}
         </Text>
@@ -101,11 +102,13 @@ const BadgePricingCard: React.FC<BadgePricingCardProps> = ({
           ${price.toFixed(2)}/{recurrence}
         </Text>
         
-        <List spacing={4} w="100%" mt={2} flex="1">
+        <List spacing={1} w="100%" mt={2} flex="1" overflow="auto" maxH="180px">
           {benefits.map((benefit, index) => (
-            <ListItem key={index} display="flex" alignItems="center">
-              <ListIcon as={CheckIcon} color={highlightColor} boxSize={4} />
-              <Text color={textColor}>{benefit}</Text>
+            <ListItem key={index} display="flex" alignItems="flex-start" py={1}>
+              <ListIcon as={CheckIcon} color={highlightColor} boxSize={4} mt="5px" />
+              <Text color={textColor}>
+                {benefit}
+              </Text>
             </ListItem>
           ))}
         </List>
