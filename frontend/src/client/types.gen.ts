@@ -311,6 +311,20 @@ export type SubscriptionPublic = {
   subscription_plan?: SubscriptionPlan | null
 }
 
+export type SubscriptionPublicExtended = {
+  id: string
+  user_id: string
+  subscription_plan_id: string
+  start_date: string
+  end_date: string
+  is_active: boolean
+  metric_type: SubscriptionMetric
+  metric_status: number
+  payment_recurrence_status: PaymentRecurrenceStatus
+  subscription_plan?: SubscriptionPlan | null
+  payments?: Array<PaymentPublic>
+}
+
 export type Token = {
   access_token: string
   token_type?: string
@@ -533,6 +547,12 @@ export type GetUserSubscriptionsData = {
 }
 
 export type GetUserSubscriptionsResponse = Array<SubscriptionPublic>
+
+export type GetUserSubscriptionData = {
+  subscriptionId: string
+}
+
+export type GetUserSubscriptionResponse = SubscriptionPublicExtended
 
 export type GetUserSubscriptionsByIdData = {
   onlyActive?: boolean | null

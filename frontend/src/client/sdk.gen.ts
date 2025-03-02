@@ -53,6 +53,8 @@ import type {
   DeleteSubscriptionPlanResponse,
   GetUserSubscriptionsData,
   GetUserSubscriptionsResponse,
+  GetUserSubscriptionData,
+  GetUserSubscriptionResponse,
   GetUserSubscriptionsByIdData,
   GetUserSubscriptionsByIdResponse,
   CancelUserSubscriptionData,
@@ -702,6 +704,29 @@ export class SubscriptionsService {
   }
 
   /**
+   * Get User Subscription
+   * Get user subscription.
+   * @param data The data for the request.
+   * @param data.subscriptionId
+   * @returns SubscriptionPublicExtended Successful Response
+   * @throws ApiError
+   */
+  public static getUserSubscription(
+    data: GetUserSubscriptionData,
+  ): CancelablePromise<GetUserSubscriptionResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/users/me/subscriptions/{subscription_id}",
+      path: {
+        subscription_id: data.subscriptionId,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
    * Get User Subscriptions By Id
    * Get user subscription by id.
    * @param data The data for the request.
@@ -1040,6 +1065,29 @@ export class UsersService {
       url: "/api/v1/users/me/subscriptions",
       query: {
         only_active: data.onlyActive,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Get User Subscription
+   * Get user subscription.
+   * @param data The data for the request.
+   * @param data.subscriptionId
+   * @returns SubscriptionPublicExtended Successful Response
+   * @throws ApiError
+   */
+  public static getUserSubscription(
+    data: GetUserSubscriptionData,
+  ): CancelablePromise<GetUserSubscriptionResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/users/me/subscriptions/{subscription_id}",
+      path: {
+        subscription_id: data.subscriptionId,
       },
       errors: {
         422: "Validation Error",
