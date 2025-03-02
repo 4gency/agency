@@ -169,6 +169,7 @@ const PricingSection: React.FC<PricingSectionProps> = ({ isLandingPage = false }
       bg={isLandingPage ? sectionBg : 'transparent'}
       width="100%"
       overflow="hidden"
+      zIndex="-1"
     >
       <Container maxW={isLandingPage ? "container.xl" : "100%"} p={isLandingPage ? { base: 2, md: 4 } : 0}>
         {isLandingPage && (

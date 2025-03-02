@@ -43,6 +43,7 @@ const Sidebar = () => {
         fontSize="20px"
         m={4}
         icon={<FiMenu />}
+        zIndex="200"
       />
       <Drawer isOpen={isOpen} placement="left" onClose={onClose}>
         <DrawerOverlay />
