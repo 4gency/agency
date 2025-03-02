@@ -22,6 +22,16 @@ interface CheckoutSuccessSearchParams {
   sessionId?: string
 }
 
+// Define error interface for proper typing
+interface ApiError {
+  response?: {
+    status: number
+  }
+  status?: number
+  name?: string
+  message?: string
+}
+
 export const Route = createFileRoute("/checkout-success")({
   component: CheckoutSuccess,
   validateSearch: (search: Record<string, unknown>): CheckoutSuccessSearchParams => {
@@ -97,10 +107,28 @@ function CheckoutSuccess() {
         // Trigger confetti and show card
         triggerConfetti()
         setShouldShowCard(true)
-      } catch (error) {
+      } catch (error: unknown) {
         console.error("Failed to process checkout:", error)
-        navigate({ to: "/checkout-failed", search: { sessionId } })
-        showToast("Payment Processing Failed", "We were unable to process your payment.", "error")
+        
+        // More robust error checking for 404 responses
+        const apiError = error as ApiError
+        
+        // Check different possible ways a 404 might be represented
+        const is404 = 
+          (apiError.response && apiError.response.status === 404) || 
+          apiError.status === 404 || 
+          (apiError.message && apiError.message.includes("404")) ||
+          (apiError.name && apiError.name.includes("NotFound"));
+          
+        if (is404) {
+          console.log("404 error detected, redirecting to dashboard");
+          // If 404, redirect directly to dashboard without showing any modal
+          navigate({ to: "/" })
+        } else {
+          // For other errors, redirect to the failed page
+          navigate({ to: "/checkout-failed", search: { sessionId } })
+          showToast("Payment Processing Failed", "We were unable to process your payment.", "error")
+        }
       }
     }
 
