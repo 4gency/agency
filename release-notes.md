@@ -2,6 +2,7 @@
 
 ### Features
 
+* chore: refactor pricing cards. PR [#49](https://github.com/4gency/agency/pull/49) by [@gustavosett](https://github.com/gustavosett).
 * feat: checkout success and failed. PR [#48](https://github.com/4gency/agency/pull/48) by [@gustavosett](https://github.com/gustavosett).
 * feat: dinamic logo color. PR [#47](https://github.com/4gency/agency/pull/47) by [@gustavosett](https://github.com/gustavosett).
 * feat: button disabled. PR [#44](https://github.com/4gency/agency/pull/44) by [@gustavosett](https://github.com/gustavosett).
