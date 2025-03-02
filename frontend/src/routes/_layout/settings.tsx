@@ -13,6 +13,8 @@ import type { UserPublic } from "../../client"
 import Appearance from "../../components/UserSettings/Appearance"
 import ChangePassword from "../../components/UserSettings/ChangePassword"
 import DeleteAccount from "../../components/UserSettings/DeleteAccount"
+import Payments from "../../components/UserSettings/Payments"
+import Subscriptions from "../../components/UserSettings/Subscriptions"
 import UserInformation from "../../components/UserSettings/UserInformation"
 import { isLoggedIn } from "../../hooks/useAuth"
 
@@ -20,6 +22,8 @@ const tabsConfig = [
   { title: "My profile", component: UserInformation },
   { title: "Password", component: ChangePassword },
   { title: "Appearance", component: Appearance },
+  { title: "Subscriptions", component: Subscriptions },
+  { title: "Payments", component: Payments },
   { title: "Danger zone", component: DeleteAccount },
 ]
 
@@ -38,7 +42,7 @@ function UserSettings() {
   const queryClient = useQueryClient()
   const currentUser = queryClient.getQueryData<UserPublic>(["currentUser"])
   const finalTabs = currentUser?.is_superuser
-    ? tabsConfig.slice(0, 3)
+    ? tabsConfig.filter(tab => tab.title !== "Danger zone")
     : tabsConfig
 
   return (
