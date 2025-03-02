@@ -95,6 +95,7 @@ const useAuth = () => {
     isLoading,
     error,
     resetError: () => setError(null),
+    isLoggedIn,
   }
 }
 
