@@ -184,7 +184,9 @@ class SubscriptionBase(SQLModel):
     is_active: bool = Field(default=True)
     metric_type: SubscriptionMetric
     metric_status: int
-    payment_recurrence_status: PaymentRecurrenceStatus = Field(default=PaymentRecurrenceStatus.ACTIVE)
+    payment_recurrence_status: PaymentRecurrenceStatus = Field(
+        default=PaymentRecurrenceStatus.ACTIVE
+    )
 
 
 class SubscriptionPublic(SQLModel):
@@ -197,7 +199,7 @@ class SubscriptionPublic(SQLModel):
     metric_type: SubscriptionMetric
     metric_status: int
     payment_recurrence_status: PaymentRecurrenceStatus
-    
+
     subscription_plan: SubscriptionPlan | None = None
 
 
@@ -239,7 +241,9 @@ class Subscription(SQLModel, table=True):
     is_active: bool = Field(default=True)
     metric_type: SubscriptionMetric
     metric_status: int
-    payment_recurrence_status: PaymentRecurrenceStatus = Field(default=PaymentRecurrenceStatus.ACTIVE)
+    payment_recurrence_status: PaymentRecurrenceStatus = Field(
+        default=PaymentRecurrenceStatus.ACTIVE
+    )
 
     stripe_subscription_id: str | None = Field(default=None, index=True)
 

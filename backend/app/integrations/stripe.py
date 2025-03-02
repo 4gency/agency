@@ -468,7 +468,9 @@ def cancel_subscription_recurring_payment(
         )
     else:
         # A assinatura fica "ativa" até o fim do período, mas com status pendente de cancelamento
-        subscription.payment_recurrence_status = PaymentRecurrenceStatus.PENDING_CANCELLATION
+        subscription.payment_recurrence_status = (
+            PaymentRecurrenceStatus.PENDING_CANCELLATION
+        )
 
     session.add(subscription)
     session.commit()
