@@ -20,6 +20,7 @@ import { Route as CheckoutFailedImport } from './routes/checkout-failed'
 import { Route as LayoutImport } from './routes/_layout'
 import { Route as LayoutIndexImport } from './routes/_layout/index'
 import { Route as LayoutSettingsImport } from './routes/_layout/settings'
+import { Route as LayoutResumeImport } from './routes/_layout/resume'
 import { Route as LayoutPricingImport } from './routes/_layout/pricing'
 import { Route as LayoutJobPreferencesImport } from './routes/_layout/job-preferences'
 import { Route as LayoutAdminImport } from './routes/_layout/admin'
@@ -68,6 +69,11 @@ const LayoutIndexRoute = LayoutIndexImport.update({
 
 const LayoutSettingsRoute = LayoutSettingsImport.update({
   path: '/settings',
+  getParentRoute: () => LayoutRoute,
+} as any)
+
+const LayoutResumeRoute = LayoutResumeImport.update({
+  path: '/resume',
   getParentRoute: () => LayoutRoute,
 } as any)
 
@@ -130,6 +136,10 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutPricingImport
       parentRoute: typeof LayoutImport
     }
+    '/_layout/resume': {
+      preLoaderRoute: typeof LayoutResumeImport
+      parentRoute: typeof LayoutImport
+    }
     '/_layout/settings': {
       preLoaderRoute: typeof LayoutSettingsImport
       parentRoute: typeof LayoutImport
@@ -148,6 +158,7 @@ export const routeTree = rootRoute.addChildren([
     LayoutAdminRoute,
     LayoutJobPreferencesRoute,
     LayoutPricingRoute,
+    LayoutResumeRoute,
     LayoutSettingsRoute,
     LayoutIndexRoute,
   ]),
