@@ -57,7 +57,6 @@ const BadgePricingCard: React.FC<BadgePricingCardProps> = ({
       borderWidth="2px"
       borderColor={borderColor}
       boxShadow="md"
-      width="300px"
       minW="350px"
       maxW="350px"
       height="auto"

@@ -54,7 +54,6 @@ const NormalPricingCard: React.FC<NormalPricingCardProps> = ({
       borderWidth="1px"
       borderColor={borderColor}
       boxShadow={disabled ? "md" : "sm"}
-      width="300px"
       minW="350px"
       maxW="350px"
       height="auto"
