@@ -15,6 +15,8 @@ import { Route as SignupImport } from './routes/signup'
 import { Route as ResetPasswordImport } from './routes/reset-password'
 import { Route as RecoverPasswordImport } from './routes/recover-password'
 import { Route as LoginImport } from './routes/login'
+import { Route as CheckoutSuccessImport } from './routes/checkout-success'
+import { Route as CheckoutFailedImport } from './routes/checkout-failed'
 import { Route as LayoutImport } from './routes/_layout'
 import { Route as LayoutIndexImport } from './routes/_layout/index'
 import { Route as LayoutSettingsImport } from './routes/_layout/settings'
@@ -41,6 +43,16 @@ const RecoverPasswordRoute = RecoverPasswordImport.update({
 
 const LoginRoute = LoginImport.update({
   path: '/login',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const CheckoutSuccessRoute = CheckoutSuccessImport.update({
+  path: '/checkout-success',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const CheckoutFailedRoute = CheckoutFailedImport.update({
+  path: '/checkout-failed',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -80,6 +92,14 @@ declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
     '/_layout': {
       preLoaderRoute: typeof LayoutImport
+      parentRoute: typeof rootRoute
+    }
+    '/checkout-failed': {
+      preLoaderRoute: typeof CheckoutFailedImport
+      parentRoute: typeof rootRoute
+    }
+    '/checkout-success': {
+      preLoaderRoute: typeof CheckoutSuccessImport
       parentRoute: typeof rootRoute
     }
     '/login': {
@@ -131,6 +151,8 @@ export const routeTree = rootRoute.addChildren([
     LayoutSettingsRoute,
     LayoutIndexRoute,
   ]),
+  CheckoutFailedRoute,
+  CheckoutSuccessRoute,
   LoginRoute,
   RecoverPasswordRoute,
   ResetPasswordRoute,

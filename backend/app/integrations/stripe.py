@@ -399,8 +399,8 @@ def create_checkout_subscription_session(
         payment_method_types=["card"],
         line_items=[{"price": subscription_plan.stripe_price_id, "quantity": 1}],
         mode="subscription",
-        success_url=f"{settings.FRONTEND_HOST}/checkout/{{CHECKOUT_SESSION_ID}}/success",
-        cancel_url=f"{settings.FRONTEND_HOST}/checkout/{{CHECKOUT_SESSION_ID}}/failed",
+        success_url=f"{settings.FRONTEND_HOST}/checkout-success?sessionId={{CHECKOUT_SESSION_ID}}",
+        cancel_url=f"{settings.FRONTEND_HOST}/checkout-failed?sessionId={{CHECKOUT_SESSION_ID}}",
         metadata={
             "user_id": str(user.id),
             "plan_id": str(subscription_plan.id),
