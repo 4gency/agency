@@ -7,6 +7,7 @@ import {
   ListItem,
   ListIcon,
   Button,
+  useBreakpointValue,
 } from "@chakra-ui/react"
 import { CheckIcon } from "@chakra-ui/icons"
 import { useNormalPricingCardTheme } from "./hooks/useNormalPricingCardTheme"
@@ -55,6 +56,10 @@ const NormalPricingCard: React.FC<NormalPricingCardProps> = ({
   // Check if button is in loading state
   const isLoading = buttonEnabled && buttonText === "Loading...";
 
+  // Responsividade para a largura do card
+  const minWidth = useBreakpointValue({ base: "280px", sm: "300px", md: "320px" });
+  const horizontalPadding = useBreakpointValue({ base: 4, md: 6 });
+
   return (
     <Box
       bg={bgColor}
@@ -63,11 +68,11 @@ const NormalPricingCard: React.FC<NormalPricingCardProps> = ({
       borderColor={borderColor}
       boxShadow={disabled ? "md" : "sm"}
       width="100%"
-      minW="320px"
+      minW={minWidth}
       height="100%"
       maxHeight="450px"
       minHeight="390px"
-      p={{ base: 5, md: 6 }}
+      p={{ base: horizontalPadding, md: 6 }}
       display="flex"
       flexDirection="column"
       justifyContent="space-between"

@@ -78,6 +78,8 @@ const PricingSection: React.FC<PricingSectionProps> = ({ isLandingPage = false }
   // Número de slides a mostrar baseado no breakpoint
   const slidesToShow = useBreakpointValue({ base: 1, md: 2, lg: 3 }) || 1
   const showArrows = useBreakpointValue({ base: false, md: true }) || false
+  // Ajuste de padding para dispositivos móveis
+  const cardPadding = useBreakpointValue({ base: 1, sm: 2, md: 2 }) || 1
 
   useEffect(() => {
     SubscriptionPlansService.readSubscriptionPlans({ onlyActive: false })
@@ -270,7 +272,7 @@ const PricingSection: React.FC<PricingSectionProps> = ({ isLandingPage = false }
                 }
 
                 return (
-                  <Box key={id} height="100%" px={2} pt={2}>
+                  <Box key={id} height="100%" px={cardPadding} pt={2}>
                     {has_badge ? (
                       <BadgePricingCard 
                         {...commonProps} 

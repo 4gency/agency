@@ -8,6 +8,7 @@ import {
   ListIcon,
   Button,
   Badge,
+  useBreakpointValue,
 } from "@chakra-ui/react"
 import { CheckIcon } from "@chakra-ui/icons"
 import { useBadgePricingCardTheme } from "./hooks/useBadgePricingCardTheme"
@@ -57,6 +58,10 @@ const BadgePricingCard: React.FC<BadgePricingCardProps> = ({
   // Check if button is in loading state
   const isLoading = buttonEnabled && buttonText === "Loading...";
 
+  // Responsividade para a largura do card
+  const minWidth = useBreakpointValue({ base: "280px", sm: "300px", md: "320px" });
+  const horizontalPadding = useBreakpointValue({ base: 4, md: 6 });
+
   return (
     <Box
       bg={bgColor}
@@ -65,11 +70,11 @@ const BadgePricingCard: React.FC<BadgePricingCardProps> = ({
       borderColor={borderColor}
       boxShadow="md"
       width="100%"
-      minW="320px"
+      minW={minWidth}
       height="100%"
       maxHeight="450px"
       minHeight="390px"
-      p={{ base: 5, md: 6 }}
+      p={{ base: horizontalPadding, md: 6 }}
       display="flex"
       flexDirection="column"
       justifyContent="space-between"

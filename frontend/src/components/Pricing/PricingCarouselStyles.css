@@ -128,16 +128,28 @@ body {
 /* Ajustes para telas pequenas */
 @media (max-width: 768px) {
   .pricing-carousel {
-    max-width: calc(100vw - 20px);
+    max-width: 98vw;
+    padding-left: 5px;
+    padding-right: 5px;
   }
   
   .pricing-carousel-sidebar {
-    max-width: calc(100vw - 30px);
+    max-width: calc(100vw - 20px);
   }
 
   /* Centralização em dispositivos móveis */
   .pricing-carousel .slick-slider.slick-initialized .slick-track {
     margin: 0 auto !important;
+  }
+
+  /* Ajuste para melhor visualização em mobile */
+  .pricing-carousel .slick-slide {
+    padding: 0 3px;
+  }
+
+  /* Ajuste das margens nos cards para telas pequenas */
+  .pricing-carousel .slick-slide > div > div {
+    padding: 0;
   }
 }
 
