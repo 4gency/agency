@@ -25,7 +25,7 @@ import {
 } from "@chakra-ui/react"
 import { useMutation } from "@tanstack/react-query"
 import type React from "react"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useLayoutEffect, useRef } from "react"
 import { useForm } from "react-hook-form"
 import { type ApiError, type ConfigPublic, ConfigsService } from "../../client"
 
@@ -290,6 +290,10 @@ const LoadingSkeleton = () => {
 const JobPreferencesPage: React.FC = () => {
   const { data: subscriptions, isLoading } = useSubscriptions()
   const [selectedSubId, setSelectedSubId] = useState<string>("")
+  const [scrollPosition, setScrollPosition] = useState<number>(0)
+  const [isDataLoaded, setIsDataLoaded] = useState<boolean>(false)
+  const [containerHeight, setContainerHeight] = useState<number | null>(null)
+  const pageContainerRef = useRef<HTMLDivElement>(null)
   const showToast = useCustomToast()
 
   // Default form data for first render
@@ -327,18 +331,70 @@ const JobPreferencesPage: React.FC = () => {
     }
   }, [subscriptions, selectedSubId])
 
+  // Adicionar um useLayoutEffect para garantir que a página não role após o carregamento dos dados
+  useLayoutEffect(() => {
+    if (isDataLoaded && scrollPosition > 0) {
+      // Forçar a restauração da posição do scroll após o React terminar de renderizar
+      window.scrollTo({
+        top: scrollPosition,
+        behavior: 'auto'
+      });
+    }
+  }, [isDataLoaded, scrollPosition]);
+
   /** When a subscription is selected, fetch the config and populate the form. */
   useEffect(() => {
     if (selectedSubId) {
+      setIsDataLoaded(false);
+      
+      // Captura a altura atual do container antes de buscar os dados
+      if (pageContainerRef.current) {
+        setContainerHeight(pageContainerRef.current.getBoundingClientRect().height);
+      }
+
+      // Store current scroll position before updating form
+      const currentScrollPosition = window.scrollY
+      setScrollPosition(currentScrollPosition)
+      
       ConfigsService.getConfig({ subscriptionId: selectedSubId })
         .then((config) => {
           // Transform API config -> form shape
           const transformed = transformToForm(config)
-          reset(transformed)
+          
+          // Use reset with callback para garantir conclusão da atualização
+          reset(transformed, {
+            keepDirty: false,
+            keepErrors: false,
+            keepDefaultValues: false,
+            keepValues: false,
+            keepIsSubmitted: false,
+            keepTouched: false,
+            keepIsValid: false,
+            keepSubmitCount: false,
+          });
+          
+          // Usar múltiplos timeouts para garantir que o DOM seja atualizado completamente
+          setTimeout(() => {
+            window.scrollTo({
+              top: currentScrollPosition,
+              behavior: 'auto'
+            });
+          }, 100);
+          
+          setTimeout(() => {
+            window.scrollTo({
+              top: currentScrollPosition,
+              behavior: 'auto'
+            });
+            setIsDataLoaded(true);
+            setContainerHeight(null); // Remover a altura fixa após o carregamento
+          }, 300);
         })
         .catch((err: ApiError) => {
           const detail = (err.body as any)?.detail || err.message
           showToast("Error fetching preferences", String(detail), "error")
+          setIsDataLoaded(true);
+          setContainerHeight(null); // Remover a altura fixa em caso de erro
         })
     }
   }, [selectedSubId, reset, showToast])
@@ -413,7 +469,14 @@ const JobPreferencesPage: React.FC = () => {
   const hasSubscriptions = subscriptions && subscriptions.length > 0
 
   return (
-    <Container maxW={{ base: "full", md: "60%" }} ml={{ base: 0, md: 0 }} pb="100px">
+    <Container 
+      maxW={{ base: "full", md: "60%" }} 
+      ml={{ base: 0, md: 0 }} 
+      pb="100px" 
+      ref={pageContainerRef}
+      h={containerHeight ? `${containerHeight}px` : 'auto'}
+      position="relative"
+    >
       <Heading size="lg" textAlign={{ base: "center", md: "left" }} py={12}>
         Job Preferences
       </Heading>

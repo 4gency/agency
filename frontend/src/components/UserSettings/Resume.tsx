@@ -281,6 +281,7 @@ export const ResumePage: React.FC = () => {
   const buttonColor = useColorModeValue("white", "white")
   const [subscriptionId, setSubscriptionId] = useState<string>("")
   const [isLoadingSubscription, setIsLoadingSubscription] = useState<boolean>(true)
+  const [_scrollPosition, setScrollPosition] = useState<number>(0)
 
   // Form setup
   const {
@@ -368,8 +369,31 @@ export const ResumePage: React.FC = () => {
   // Parse and set form data when API response is received
   useEffect(() => {
     if (resumeData) {
+      // Store current scroll position before form data is set
+      const currentScrollPosition = window.scrollY
+      setScrollPosition(currentScrollPosition)
+      
       const formData = transformApiResponseToFormData(resumeData)
-      reset(formData)
+      
+      // Use reset with callback para garantir conclusão da atualização
+      reset(formData, {
+        keepDirty: false,
+        keepErrors: false,
+        keepDefaultValues: false,
+        keepValues: false,
+        keepIsSubmitted: false,
+        keepTouched: false,
+        keepIsValid: false,
+        keepSubmitCount: false,
+      });
+      
+      // Usar um timeout mais longo para garantir que o DOM tenha tempo de renderizar completamente
+      setTimeout(() => {
+        window.scrollTo({
+          top: currentScrollPosition,
+          behavior: 'auto'
+        });
+      }, 100);
     }
   }, [resumeData, reset])
 
