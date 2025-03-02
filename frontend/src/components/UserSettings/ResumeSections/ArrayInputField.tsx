@@ -8,10 +8,9 @@ import {
   Tag,
   TagCloseButton,
   TagLabel,
-  useColorModeValue,
 } from "@chakra-ui/react"
 import { AddIcon } from "@chakra-ui/icons"
-import { useState } from "react"
+import React, { useState } from "react"
 
 interface ArrayInputFieldProps {
   label: string

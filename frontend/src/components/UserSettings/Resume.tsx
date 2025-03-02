@@ -380,8 +380,6 @@ export const ResumePage: React.FC = () => {
             <Divider />
             
             <SkillsSection 
-              register={register} 
-              errors={errors} 
               setValue={setValue} 
               getValues={getValues} 
             />
@@ -396,21 +394,19 @@ export const ResumePage: React.FC = () => {
             
             <Divider />
             
-            <AvailabilitySection register={register} errors={errors} />
+            <AvailabilitySection register={register} />
             
             <Divider />
             
-            <SalaryExpectationSection register={register} errors={errors} />
+            <SalaryExpectationSection register={register} />
             
             <Divider />
             
-            <WorkPreferenceSection register={register} errors={errors} />
+            <WorkPreferenceSection register={register} />
             
             <Divider />
             
             <InterestsSection 
-              register={register} 
-              errors={errors} 
               setValue={setValue} 
               getValues={getValues} 
             />

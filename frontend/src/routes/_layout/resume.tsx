@@ -1,5 +1,4 @@
 import { createFileRoute, redirect } from "@tanstack/react-router"
-import { z } from "zod"
 import ResumePage from "../../components/UserSettings/Resume"
 import { isLoggedIn } from "../../hooks/useAuth"
 import { UsersService } from "../../client"
