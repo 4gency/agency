@@ -1,6 +1,5 @@
 import { 
   FormControl,
-  FormLabel,
 } from "@chakra-ui/react"
 import { UseFormGetValues, UseFormWatch } from "react-hook-form"
 import SectionContainer from "./SectionContainer"
@@ -37,9 +36,8 @@ const SkillsSection: React.FC<SkillsSectionProps> = ({
   return (
     <SectionContainer title="Skills">
       <FormControl>
-        <FormLabel>Skills</FormLabel>
         <ArrayInputField
-          label="Skill"
+          label="Add skill"
           items={displaySkills}
           onChange={(newItems) => setValue("skills", newItems)}
           placeholder="Add a skill (e.g., JavaScript, Project Management, Leadership)"

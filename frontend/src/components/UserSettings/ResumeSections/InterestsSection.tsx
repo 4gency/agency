@@ -1,6 +1,5 @@
 import {
   FormControl,
-  FormLabel,
 } from "@chakra-ui/react"
 import { UseFormGetValues, UseFormWatch } from "react-hook-form"
 import SectionContainer from "./SectionContainer"
@@ -37,9 +36,8 @@ const InterestsSection: React.FC<InterestsSectionProps> = ({
   return (
     <SectionContainer title="Interests">
       <FormControl>
-        <FormLabel>Interests</FormLabel>
         <ArrayInputField
-          label="Interest"
+          label="Add interest"
           items={displayInterests}
           onChange={(newItems) => setValue("interests", newItems)}
           placeholder="Add an interest (e.g., Photography, Hiking, Machine Learning)"

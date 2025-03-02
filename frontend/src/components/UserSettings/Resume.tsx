@@ -6,7 +6,6 @@ import {
   Heading,
   Skeleton,
   Stack,
-  useColorModeValue,
 } from "@chakra-ui/react"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { useForm } from "react-hook-form"
@@ -276,9 +275,6 @@ const LoadingSkeleton: React.FC = () => (
 // Main component
 export const ResumePage: React.FC = () => {
   const showToast = useCustomToast()
-  const buttonBg = useColorModeValue("#00766C", "#00766C")
-  const buttonHoverBg = useColorModeValue("#005f57", "#005f57")
-  const buttonColor = useColorModeValue("white", "white")
   const [subscriptionId, setSubscriptionId] = useState<string>("")
   const [isLoadingSubscription, setIsLoadingSubscription] = useState<boolean>(true)
   const [_scrollPosition, setScrollPosition] = useState<number>(0)
@@ -405,7 +401,7 @@ export const ResumePage: React.FC = () => {
   const isLoading = isLoadingSubscriptions || isLoadingSubscription || isLoadingResume
 
   return (
-  <Container maxW={{ base: "full", md: "60%" }} ml={{ base: 0, md: 0 }}>
+  <Container maxW={{ base: "full", md: "60%" }} ml={{ base: 0, md: 0 }} pb="100px">
       <Heading size="lg" textAlign={{ base: "center", md: "left" }} py={12}>
         Resume
       </Heading>
@@ -488,9 +484,6 @@ export const ResumePage: React.FC = () => {
               <Button
                 type="submit"
                 isLoading={isSubmitting || updateResumeMutation.isPending}
-                bg={buttonBg}
-                color={buttonColor}
-                _hover={{ bg: buttonHoverBg }}
                 isDisabled={!isDirty || !subscriptionId}
               >
                 Save Resume

@@ -4,7 +4,7 @@ import PricingSection from "../../Pricing/PricingSection"
 export const Pricing = () => {
   return (
     <Box width="100%" maxWidth="100%" overflow="hidden" position="relative">
-      <Heading size="lg" textAlign={{ base: "center", md: "left" }} py={6} px={4} zIndex="-10">
+      <Heading size="lg" textAlign={{ base: "center", md: "left" }} py={12}>
         Our Plans
       </Heading>
       <Box 
