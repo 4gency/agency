@@ -2,6 +2,7 @@
 
 ### Features
 
+* Feat config forms. PR [#51](https://github.com/4gency/agency/pull/51) by [@gustavosett](https://github.com/gustavosett).
 * Feat fluxo checkout. PR [#50](https://github.com/4gency/agency/pull/50) by [@gustavosett](https://github.com/gustavosett).
 * chore: refactor pricing cards. PR [#49](https://github.com/4gency/agency/pull/49) by [@gustavosett](https://github.com/gustavosett).
 * feat: checkout success and failed. PR [#48](https://github.com/4gency/agency/pull/48) by [@gustavosett](https://github.com/gustavosett).
