@@ -24,6 +24,7 @@ from app.models.core import (
     PaymentsPublic,
     Subscription,
     SubscriptionPublic,
+    SubscriptionPublicExtended,
     UpdatePassword,
     User,
     UserCreate,
@@ -254,6 +255,32 @@ def get_user_subscriptions(
             status_code=status.HTTP_404_NOT_FOUND, detail="No subscriptions found"
         )
     return subscriptions
+
+
+@router.get(
+    "/me/subscriptions/{subscription_id}",
+    response_model=SubscriptionPublicExtended,
+    tags=["subscriptions"],
+)
+def get_user_subscription(
+    user: CurrentUser,
+    subscription_id: uuid.UUID,
+    session: SessionDep,
+) -> Any:
+    """
+    Get user subscription.
+    """
+    subscription = session.get(Subscription, subscription_id)
+    if not subscription:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found"
+        )
+    if subscription.user_id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Subscription not found"
+        )
+
+    return subscription
 
 
 @router.get(

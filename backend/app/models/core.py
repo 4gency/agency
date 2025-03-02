@@ -203,6 +203,10 @@ class SubscriptionPublic(SQLModel):
     subscription_plan: SubscriptionPlan | None = None
 
 
+class SubscriptionPublicExtended(SubscriptionPublic):
+    payments: list["PaymentPublic"] = []
+
+
 class SubscriptionCreate(SubscriptionBase):
     pass
 
