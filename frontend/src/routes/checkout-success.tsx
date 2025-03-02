@@ -2,11 +2,8 @@ import { useEffect, useState } from "react"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import {
   Button,
-  Card,
   Container,
-  Flex,
   Heading,
-  Icon,
   Text,
   useColorModeValue,
   VStack,
@@ -17,6 +14,8 @@ import { CheckoutService } from "../client/sdk.gen"
 import useAuth from "../hooks/useAuth"
 import useCustomToast from "../hooks/useCustomToast"
 import confetti from "canvas-confetti"
+import { AnimatedCard } from "../components/Common/AnimatedCard"
+import { CircleIcon } from "../components/Common/CircleIcon"
 
 // Define search params
 interface CheckoutSuccessSearchParams {
@@ -37,6 +36,7 @@ function CheckoutSuccess() {
   const { user: authUser, isLoading } = useAuth()
   const showToast = useCustomToast()
   const navigate = useNavigate()
+  const [shouldShowCard, setShouldShowCard] = useState(false)
 
   // Colors for theming - usar uma cor mais escura para o tema escuro
   const cardBgColor = useColorModeValue("white", "#2D3748") // Cores mais escuras para o tema escuro
@@ -77,9 +77,6 @@ function CheckoutSuccess() {
     }, 200)
   }
 
-  // Animation for card - animação mais rápida
-  const [animate, setAnimate] = useState(false)
-
   useEffect(() => {
     if (!isLoading && !authUser) {
       navigate({ to: "/login" })
@@ -97,11 +94,9 @@ function CheckoutSuccess() {
         // Call the API with sessionId
         await CheckoutService.stripeSuccess({ sessionId })
         
-        // Start animations faster
-        setTimeout(() => {
-          setAnimate(true)
-          triggerConfetti()
-        }, 200) // Reduzido de 300ms para 200ms
+        // Trigger confetti and show card
+        triggerConfetti()
+        setShouldShowCard(true)
       } catch (error) {
         console.error("Failed to process checkout:", error)
         navigate({ to: "/checkout-failed", search: { sessionId } })
@@ -113,6 +108,18 @@ function CheckoutSuccess() {
       processCheckout()
     }
   }, [authUser, sessionId, isLoading, navigate, showToast])
+
+  if (!shouldShowCard) {
+    return (
+      <Container 
+        maxW="100%" 
+        height="100vh" 
+        display="flex" 
+        alignItems="center" 
+        justifyContent="center"
+      />
+    )
+  }
 
   return (
     <Container 
@@ -128,35 +135,26 @@ function CheckoutSuccess() {
         position="relative"
         zIndex={1} // Garante que a modal fique na frente do confete
       >
-        <Card
+        <AnimatedCard
           width="100%"
           p={8}
           borderRadius="lg"
           bg={cardBgColor}
           boxShadow="lg"
-          transform={animate ? "scale(1)" : "scale(0.95)"}
-          opacity={animate ? 1 : 0}
-          transition="all 0.5s ease-in-out" // Animação mais rápida (0.5s em vez de 1s)
         >
-          <VStack spacing={4} align="flex-start"> {/* Alinhamento à esquerda e espaçamento reduzido */}
-            <Flex
-              bg={checkBgColor}
-              w="45px" // Reduzido de 60px para 45px
-              h="45px" // Reduzido de 60px para 45px
-              borderRadius="full"
-              justifyContent="center"
-              alignItems="center"
-              mb={1}
-            >
-              <Icon as={CheckIcon} w={5} h={5} color="white" /> {/* Reduzido de w={6} h={6} para w={5} h={5} */}
-            </Flex>
+          <VStack spacing={4} align="flex-start">
+            <CircleIcon 
+              icon={CheckIcon} 
+              bgColor={checkBgColor}
+              iconSize={5}
+            />
             
             <Heading as="h2" size="xl" color={textColor} fontWeight="bold">
               Payment succeeded!
             </Heading>
             
             <Box>
-              <Text color={textColor} mb={2}> {/* Espaçamento reduzido entre os textos */}
+              <Text color={textColor} mb={2}>
                 Thank you for processing your most recent payment.
               </Text>
               
@@ -178,7 +176,7 @@ function CheckoutSuccess() {
               Your dashboard
             </Button>
           </VStack>
-        </Card>
+        </AnimatedCard>
       </Box>
     </Container>
   )

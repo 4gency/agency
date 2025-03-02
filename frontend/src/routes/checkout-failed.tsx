@@ -1,18 +1,16 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import {
   Button,
-  Card,
   Container,
-  Flex,
   Heading,
-  Icon,
   Text,
   useColorModeValue,
   VStack,
   Box,
 } from "@chakra-ui/react"
 import { CloseIcon } from "@chakra-ui/icons"
-import { useState, useEffect } from "react"
+import { AnimatedCard } from "../components/Common/AnimatedCard"
+import { CircleIcon } from "../components/Common/CircleIcon"
 
 // Define search params
 interface CheckoutFailedSearchParams {
@@ -37,16 +35,6 @@ function CheckoutFailed() {
   const errorBgColor = useColorModeValue("red.500", "red.600")
   const textColor = useColorModeValue("gray.800", "white")
 
-  // Animation for card
-  const [animate, setAnimate] = useState(false)
-
-  useEffect(() => {
-    // Start animation after a short delay
-    setTimeout(() => {
-      setAnimate(true)
-    }, 200)
-  }, [])
-
   return (
     <Container 
       maxW="100%" 
@@ -60,28 +48,19 @@ function CheckoutFailed() {
         maxW="md"
         position="relative"
       >
-        <Card
+        <AnimatedCard
           width="100%"
           p={8}
           borderRadius="lg"
           bg={cardBgColor}
           boxShadow="lg"
-          transform={animate ? "scale(1)" : "scale(0.95)"}
-          opacity={animate ? 1 : 0}
-          transition="all 0.5s ease-in-out"
         >
           <VStack spacing={4} align="flex-start">
-            <Flex
-              bg={errorBgColor}
-              w="45px"
-              h="45px"
-              borderRadius="full"
-              justifyContent="center"
-              alignItems="center"
-              mb={1}
-            >
-              <Icon as={CloseIcon} w={4} h={4} color="white" />
-            </Flex>
+            <CircleIcon 
+              icon={CloseIcon} 
+              bgColor={errorBgColor}
+              iconSize={4}
+            />
             
             <Heading as="h2" size="xl" color={textColor} fontWeight="bold">
               Payment Failed
@@ -104,7 +83,7 @@ function CheckoutFailed() {
               Return to Dashboard
             </Button>
           </VStack>
-        </Card>
+        </AnimatedCard>
       </Box>
     </Container>
   )
