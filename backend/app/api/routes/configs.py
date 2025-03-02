@@ -17,22 +17,36 @@ router = APIRouter()
     "/{subscription_id}/job-preferences",
     response_model=ConfigPublic,
     responses={
-        403: {
-            "model": ErrorMessage,
-            "description": "Authorization error",
+        401: {
+            "model": "ErrorMessage",
+            "description": "Authentication error",
             "content": {
                 "application/json": {
                     "examples": {
-                        "could_not_validate": {
-                            "summary": "Could not validate credentials",
-                            "value": {"detail": "Could not validate credentials"},
+                        "not_authenticated": {
+                            "summary": "Not authenticated",
+                            "value": {"detail": "Not authenticated"},
+                        }
+                    }
+                }
+            },
+        },
+        403: {
+            "model": "ErrorMessage",
+            "description": "Permission error",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "not_authorized": {
+                            "summary": "Not authorized",
+                            "value": {"detail": "Not authorized to access this subscription"},
                         }
                     }
                 }
             },
         },
         404: {
-            "model": ErrorMessage,
+            "model": "ErrorMessage",
             "description": "Resource not found",
             "content": {
                 "application/json": {
@@ -41,13 +55,9 @@ router = APIRouter()
                             "summary": "Subscription not found",
                             "value": {"detail": "Subscription not found"},
                         },
-                        "user_not_found": {
-                            "summary": "User not found",
-                            "value": {"detail": "User not found"},
-                        },
-                        "inactive_user": {
-                            "summary": "Inactive user",
-                            "value": {"detail": "Inactive user"},
+                        "config_not_found": {
+                            "summary": "Config not found",
+                            "value": {"detail": "Config not found"},
                         },
                     }
                 }
@@ -95,22 +105,36 @@ def get_config(
     "/{subscription_id}/resume",
     response_model=PlainTextResumePublic,
     responses={
-        403: {
-            "model": ErrorMessage,
-            "description": "Authorization error",
+        401: {
+            "model": "ErrorMessage",
+            "description": "Authentication error",
             "content": {
                 "application/json": {
                     "examples": {
-                        "could_not_validate": {
-                            "summary": "Could not validate credentials",
-                            "value": {"detail": "Could not validate credentials"},
+                        "not_authenticated": {
+                            "summary": "Not authenticated",
+                            "value": {"detail": "Not authenticated"},
+                        }
+                    }
+                }
+            },
+        },
+        403: {
+            "model": "ErrorMessage",
+            "description": "Permission error",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "not_authorized": {
+                            "summary": "Not authorized",
+                            "value": {"detail": "Not authorized to access this subscription"},
                         }
                     }
                 }
             },
         },
         404: {
-            "model": ErrorMessage,
+            "model": "ErrorMessage",
             "description": "Resource not found",
             "content": {
                 "application/json": {
@@ -119,13 +143,9 @@ def get_config(
                             "summary": "Subscription not found",
                             "value": {"detail": "Subscription not found"},
                         },
-                        "user_not_found": {
-                            "summary": "User not found",
-                            "value": {"detail": "User not found"},
-                        },
-                        "inactive_user": {
-                            "summary": "Inactive user",
-                            "value": {"detail": "Inactive user"},
+                        "resume_not_found": {
+                            "summary": "Resume not found",
+                            "value": {"detail": "Resume not found"},
                         },
                     }
                 }
@@ -173,22 +193,40 @@ def get_plain_text_resume(
     "/{subscription_id}/job-preferences",
     status_code=status.HTTP_202_ACCEPTED,
     responses={
-        403: {
-            "model": ErrorMessage,
-            "description": "Authorization error",
+        200: {
+            "description": "Successful Response",
+            "content": {"application/json": {"schema": {}}},
+        },
+        401: {
+            "model": "ErrorMessage",
+            "description": "Authentication error",
             "content": {
                 "application/json": {
                     "examples": {
-                        "could_not_validate": {
-                            "summary": "Could not validate credentials",
-                            "value": {"detail": "Could not validate credentials"},
+                        "not_authenticated": {
+                            "summary": "Not authenticated",
+                            "value": {"detail": "Not authenticated"},
+                        }
+                    }
+                }
+            },
+        },
+        403: {
+            "model": "ErrorMessage",
+            "description": "Permission error",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "not_authorized": {
+                            "summary": "Not authorized",
+                            "value": {"detail": "Not authorized to access this subscription"},
                         }
                     }
                 }
             },
         },
         404: {
-            "model": ErrorMessage,
+            "model": "ErrorMessage",
             "description": "Resource not found",
             "content": {
                 "application/json": {
@@ -197,13 +235,9 @@ def get_plain_text_resume(
                             "summary": "Subscription not found",
                             "value": {"detail": "Subscription not found"},
                         },
-                        "user_not_found": {
-                            "summary": "User not found",
-                            "value": {"detail": "User not found"},
-                        },
-                        "inactive_user": {
-                            "summary": "Inactive user",
-                            "value": {"detail": "Inactive user"},
+                        "config_not_found": {
+                            "summary": "Config not found",
+                            "value": {"detail": "Config not found"},
                         },
                     }
                 }
@@ -259,22 +293,40 @@ def update_config(
     "/{subscription_id}/resume",
     status_code=status.HTTP_202_ACCEPTED,
     responses={
-        403: {
-            "model": ErrorMessage,
-            "description": "Authorization error",
+        500: {
+            "description": "Successful Response",
+            "content": {"application/json": {"schema": {}}},
+        },
+        401: {
+            "model": "ErrorMessage",
+            "description": "Authentication error",
             "content": {
                 "application/json": {
                     "examples": {
-                        "could_not_validate": {
-                            "summary": "Could not validate credentials",
-                            "value": {"detail": "Could not validate credentials"},
+                        "not_authenticated": {
+                            "summary": "Not authenticated",
+                            "value": {"detail": "Not authenticated"},
+                        }
+                    }
+                }
+            },
+        },
+        403: {
+            "model": "ErrorMessage",
+            "description": "Permission error",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "not_authorized": {
+                            "summary": "Not authorized",
+                            "value": {"detail": "Not authorized to access this subscription"},
                         }
                     }
                 }
             },
         },
         404: {
-            "model": ErrorMessage,
+            "model": "ErrorMessage",
             "description": "Resource not found",
             "content": {
                 "application/json": {
@@ -282,14 +334,6 @@ def update_config(
                         "subscription_not_found": {
                             "summary": "Subscription not found",
                             "value": {"detail": "Subscription not found"},
-                        },
-                        "user_not_found": {
-                            "summary": "User not found",
-                            "value": {"detail": "User not found"},
-                        },
-                        "inactive_user": {
-                            "summary": "Inactive user",
-                            "value": {"detail": "Inactive user"},
                         },
                     }
                 }
