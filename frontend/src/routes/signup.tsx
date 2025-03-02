@@ -73,7 +73,7 @@ function SignUp() {
           centerContent
         >
           <Box maxW="2xs" alignSelf="center" mb={4}>
-            <Logo height="auto" alt="Lambdagency logo" />
+            <Logo height="100%" alt="Lambdagency logo" />
           </Box>
           <FormControl id="full_name" isInvalid={!!errors.full_name}>
             <FormLabel htmlFor="full_name" srOnly>

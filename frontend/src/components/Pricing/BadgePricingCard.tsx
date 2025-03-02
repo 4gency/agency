@@ -58,9 +58,26 @@ const BadgePricingCard: React.FC<BadgePricingCardProps> = ({
   // Check if button is in loading state
   const isLoading = buttonEnabled && buttonText === "Loading...";
 
-  // Responsividade para a largura do card
-  const minWidth = useBreakpointValue({ base: "280px", sm: "300px", md: "320px" });
-  const horizontalPadding = useBreakpointValue({ base: 4, md: 6 });
+  // Responsividade extrema para a largura do card
+  const minWidth = useBreakpointValue({ 
+    base: "240px", 
+    xs: "260px", 
+    sm: "280px", 
+    md: "320px" 
+  });
+  
+  // Padding responsivo para dispositivos muito pequenos
+  const horizontalPadding = useBreakpointValue({ 
+    base: 3, 
+    sm: 4, 
+    md: 6 
+  });
+  
+  // Ajustar tamanho de fonte para dispositivos muito pequenos
+  const titleFontSize = useBreakpointValue({ base: "xl", sm: "2xl" });
+  const priceFontSize = useBreakpointValue({ base: "2xl", sm: "3xl" });
+  const benefitFontSize = useBreakpointValue({ base: "sm", sm: "md" });
+  const badgeFontSize = useBreakpointValue({ base: "xs", sm: "sm" });
 
   return (
     <Box
@@ -71,9 +88,10 @@ const BadgePricingCard: React.FC<BadgePricingCardProps> = ({
       boxShadow="md"
       width="100%"
       minW={minWidth}
+      maxW={{ base: "100%", sm: "100%", md: "400px" }}
       height="100%"
-      maxHeight="450px"
-      minHeight="390px"
+      maxHeight={{ base: "430px", sm: "450px" }}
+      minHeight={{ base: "370px", sm: "390px" }}
       p={{ base: horizontalPadding, md: 6 }}
       display="flex"
       flexDirection="column"
@@ -81,6 +99,7 @@ const BadgePricingCard: React.FC<BadgePricingCardProps> = ({
       position="relative"
       transition="all 0.3s"
       mx="auto"
+      my={2}
       _hover={{ transform: "translateY(-5px)", boxShadow: "lg" }}
     >
       {/* Badge */}
@@ -90,10 +109,10 @@ const BadgePricingCard: React.FC<BadgePricingCardProps> = ({
         right="-3"
         bg={badgeBg}
         color={badgeColor}
-        px={3}
-        py={1}
+        px={2.5}
+        py={0.5}
         borderRadius="md"
-        fontSize="sm"
+        fontSize={badgeFontSize}
         fontWeight="bold"
         boxShadow="sm"
       >
@@ -101,17 +120,17 @@ const BadgePricingCard: React.FC<BadgePricingCardProps> = ({
       </Badge>
 
       <VStack align="start" spacing={0.1} height="100%">
-        <Text fontSize="2xl" fontWeight="bold" color={highlightColor}>
+        <Text fontSize={titleFontSize} fontWeight="bold" color={highlightColor}>
           {title}
         </Text>
         
         {hasDiscount && priceWithoutDiscount !== undefined && (
-          <Text fontSize="md" color={discountColor} textDecoration="line-through">
+          <Text fontSize={benefitFontSize} color={discountColor} textDecoration="line-through">
             ${priceWithoutDiscount.toFixed(2)}
           </Text>
         )}
         
-        <Text fontSize="3xl" fontWeight="bold" color={priceColor}>
+        <Text fontSize={priceFontSize} fontWeight="bold" color={priceColor}>
           ${price.toFixed(2)}/{recurrence}
         </Text>
         
@@ -119,7 +138,7 @@ const BadgePricingCard: React.FC<BadgePricingCardProps> = ({
           {benefits.map((benefit, index) => (
             <ListItem key={index} display="flex" alignItems="flex-start" py={1}>
               <ListIcon as={CheckIcon} color={highlightColor} boxSize={4} mt="5px" />
-              <Text color={textColor}>
+              <Text color={textColor} fontSize={benefitFontSize}>
                 {benefit}
               </Text>
             </ListItem>
@@ -131,13 +150,14 @@ const BadgePricingCard: React.FC<BadgePricingCardProps> = ({
         <Button
           variant="primary"
           size="md"
-          h="55px"
+          h={{ base: "45px", sm: "55px" }}
           w="100%"
-          mt={6}
+          mt={4}
           isDisabled={!buttonEnabled}
           onClick={handleClick}
           isLoading={isLoading}
           loadingText="Loading..."
+          fontSize={benefitFontSize}
         >
           {buttonText}
         </Button>
@@ -147,10 +167,11 @@ const BadgePricingCard: React.FC<BadgePricingCardProps> = ({
           href={buttonEnabled ? buttonLink : undefined}
           variant="primary"
           size="md"
-          h="55px"
+          h={{ base: "45px", sm: "55px" }}
           w="100%"
-          mt={6}
+          mt={4}
           isDisabled={!buttonEnabled}
+          fontSize={benefitFontSize}
         >
           {buttonText}
         </Button>

@@ -56,9 +56,25 @@ const NormalPricingCard: React.FC<NormalPricingCardProps> = ({
   // Check if button is in loading state
   const isLoading = buttonEnabled && buttonText === "Loading...";
 
-  // Responsividade para a largura do card
-  const minWidth = useBreakpointValue({ base: "280px", sm: "300px", md: "320px" });
-  const horizontalPadding = useBreakpointValue({ base: 4, md: 6 });
+  // Responsividade extrema para a largura do card
+  const minWidth = useBreakpointValue({ 
+    base: "240px", 
+    xs: "260px", 
+    sm: "280px", 
+    md: "320px" 
+  });
+  
+  // Padding responsivo para dispositivos muito pequenos
+  const horizontalPadding = useBreakpointValue({ 
+    base: 3, 
+    sm: 4, 
+    md: 6 
+  });
+  
+  // Ajustar tamanho de fonte para dispositivos muito pequenos
+  const titleFontSize = useBreakpointValue({ base: "xl", sm: "2xl" });
+  const priceFontSize = useBreakpointValue({ base: "2xl", sm: "3xl" });
+  const benefitFontSize = useBreakpointValue({ base: "sm", sm: "md" });
 
   return (
     <Box
@@ -69,9 +85,10 @@ const NormalPricingCard: React.FC<NormalPricingCardProps> = ({
       boxShadow={disabled ? "md" : "sm"}
       width="100%"
       minW={minWidth}
+      maxW={{ base: "100%", sm: "100%", md: "400px" }}
       height="100%"
-      maxHeight="450px"
-      minHeight="390px"
+      maxHeight={{ base: "430px", sm: "450px" }}
+      minHeight={{ base: "370px", sm: "390px" }}
       p={{ base: horizontalPadding, md: 6 }}
       display="flex"
       flexDirection="column"
@@ -80,20 +97,21 @@ const NormalPricingCard: React.FC<NormalPricingCardProps> = ({
       pointerEvents={disabled ? "none" : "auto"}
       transition="all 0.3s"
       mx="auto"
+      my={2}
       _hover={!disabled ? { transform: "translateY(-5px)", boxShadow: "md" } : {}}
     >
       <VStack align="start" spacing={0.1} height="100%">
-        <Text fontSize="2xl" fontWeight="bold" color={textColor}>
+        <Text fontSize={titleFontSize} fontWeight="bold" color={textColor}>
           {title}
         </Text>
         
         {hasDiscount && priceWithoutDiscount !== undefined && (
-          <Text fontSize="md" color={discountColor} textDecoration="line-through">
+          <Text fontSize={benefitFontSize} color={discountColor} textDecoration="line-through">
             ${priceWithoutDiscount.toFixed(2)}
           </Text>
         )}
         
-        <Text fontSize="3xl" fontWeight="bold" color={priceColor}>
+        <Text fontSize={priceFontSize} fontWeight="bold" color={priceColor}>
           ${price.toFixed(2)}/{recurrence}
         </Text>
         
@@ -101,7 +119,7 @@ const NormalPricingCard: React.FC<NormalPricingCardProps> = ({
           {benefits.map((benefit, index) => (
             <ListItem key={index} display="flex" alignItems="flex-start" py={1}>
               <ListIcon as={CheckIcon} color={iconColor} boxSize={4} mt="5px" />
-              <Text color={textColor}>
+              <Text color={textColor} fontSize={benefitFontSize}>
                 {benefit}
               </Text>
             </ListItem>
@@ -113,13 +131,14 @@ const NormalPricingCard: React.FC<NormalPricingCardProps> = ({
         <Button
           variant="primary"
           size="md"
-          h="55px"
+          h={{ base: "45px", sm: "55px" }}
           w="100%"
-          mt={6}
+          mt={4}
           isDisabled={!buttonEnabled}
           onClick={handleClick}
           isLoading={isLoading}
           loadingText="Loading..."
+          fontSize={benefitFontSize}
         >
           {buttonText}
         </Button>
@@ -129,10 +148,11 @@ const NormalPricingCard: React.FC<NormalPricingCardProps> = ({
           href={buttonEnabled ? buttonLink : undefined}
           variant="primary"
           size="md"
-          h="55px"
+          h={{ base: "45px", sm: "55px" }}
           w="100%"
-          mt={6}
+          mt={4}
           isDisabled={!buttonEnabled}
+          fontSize={benefitFontSize}
         >
           {buttonText}
         </Button>

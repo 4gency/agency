@@ -9,105 +9,107 @@ body {
 .pricing-carousel {
   width: 100%;
   margin: 0 auto;
-  padding-bottom: 50px;
-  padding-top: 15px; /* Espaço adicional para o badge superior */
-  overflow: hidden;
+  padding-bottom: 60px;
   position: relative;
-  max-width: 100vw;
+  overflow: visible;
 }
 
 /* Ajustes específicos para o carrossel na sidebar */
 .pricing-carousel-sidebar {
-  max-width: calc(100vw - 40px);
+  max-width: calc(100vw - 30px);
+}
+
+/* Estilizando o container interno do carrossel */
+.pricing-carousel-inner {
+  margin: 0 auto;
+  width: 100%;
 }
 
 /* Estilizando os pontos de navegação */
-.pricing-carousel .slick-dots {
-  bottom: -40px;
+.slick-dots {
+  bottom: -40px !important;
+  display: flex !important;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+  text-align: center;
+  position: absolute;
 }
 
-.pricing-carousel .slick-dots li button:before {
+.slick-dots li {
+  position: relative;
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  margin: 0 5px;
+  padding: 0;
+  cursor: pointer;
+}
+
+.slick-dots li button {
+  font-size: 0;
+  line-height: 0;
+  display: block;
+  width: 20px;
+  height: 20px;
+  padding: 5px;
+  cursor: pointer;
+  color: transparent;
+  border: 0;
+  outline: none;
+  background: transparent;
+}
+
+.slick-dots li button:before {
+  font-family: 'slick';
   font-size: 12px;
+  line-height: 20px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 20px;
+  height: 20px;
+  content: '•';
+  text-align: center;
   color: #CBD5E0;
   opacity: 0.5;
 }
 
-.pricing-carousel .slick-dots li.slick-active button:before {
+.slick-dots li.slick-active button:before {
   color: #4FD1C5;
   opacity: 1;
 }
 
-/* Estilizando o slide */
-.pricing-carousel .slick-slide {
+/* Estilizando o slide e os cards */
+.slick-slide {
+  padding: 8px 12px;
   transition: all 0.3s ease;
-  height: auto;
-  width: auto !important;
-  max-width: 100% !important;
+  max-width: 420px; /* Limitando a largura máxima do slide */
 }
 
-/* Ajustes para o modo centralizado */
-.pricing-carousel .slick-slider.slick-initialized {
-  display: flex;
-  justify-content: center;
-}
-
-.pricing-carousel .slick-track {
-  display: flex !important;
-  transition: transform 0.5s ease-in-out;
-  margin: 0 auto !important; /* Sempre centralizar o track */
-  width: auto !important; /* Permite que o track seja apenas do tamanho necessário */
-}
-
-/* Quando em modo centralizado, garantir que os slides fiquem no centro */
-.pricing-carousel .slick-slider.slick-initialized.slick-center .slick-track {
-  transform: translate3d(0, 0, 0) !important;
-  display: flex !important;
-  justify-content: center !important;
-}
-
-.pricing-carousel .slick-slide {
-  height: inherit !important;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.pricing-carousel .slick-slide > div {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  justify-content: center;
-}
-
-/* Removendo borda azul de foco */
-.pricing-carousel .slick-slide:focus,
-.pricing-carousel .slick-slide div:focus {
-  outline: none !important;
-  border: none !important;
-  box-shadow: none !important;
-}
-
-.pricing-carousel .slick-list {
-  overflow: hidden !important;
-  margin: 0;
-  width: 100%;
+.slick-list {
+  overflow: visible !important;
+  margin: 0 auto;
+  padding: 0 !important;
   max-width: 100%;
 }
 
-/* Ajuste para evitar scroll horizontal */
-.pricing-carousel .slick-list {
-  width: 100% !important;
-  max-width: 100% !important;
-  transform-style: preserve-3d;
-  overflow-y: visible; /* Importante para o badge não ser cortado */
+.slick-track {
+  display: flex !important;
+  justify-content: center !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
 }
 
-/* Container interno do slide */
-.pricing-carousel .slick-slide > div > div {
-  display: flex;
-  justify-content: center;
-  width: 100%;
-  position: relative; /* Importante para o posicionamento do badge */
+/* Removendo borda azul de foco */
+.slick-slide:focus,
+.slick-slide div:focus {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 /* Customizando as setas de navegação */
@@ -120,36 +122,45 @@ body {
   transform: translateY(-50%) scale(1.1);
 }
 
-/* Removendo qualquer scroll horizontal de containers */
-.pricing-scroll-container {
-  overflow-x: hidden !important;
-}
-
 /* Ajustes para telas pequenas */
 @media (max-width: 768px) {
   .pricing-carousel {
-    max-width: 98vw;
-    padding-left: 5px;
-    padding-right: 5px;
+    padding-bottom: 50px;
   }
   
-  .pricing-carousel-sidebar {
-    max-width: calc(100vw - 20px);
+  .slick-slide {
+    padding: 5px;
   }
-
-  /* Centralização em dispositivos móveis */
-  .pricing-carousel .slick-slider.slick-initialized .slick-track {
-    margin: 0 auto !important;
+  
+  .slick-dots {
+    bottom: -35px !important;
   }
-
-  /* Ajuste para melhor visualização em mobile */
-  .pricing-carousel .slick-slide {
-    padding: 0 3px;
+  
+  .slick-dots li {
+    width: 15px;
+    height: 15px;
   }
+  
+  .slick-dots li button {
+    width: 15px;
+    height: 15px;
+  }
+  
+  .slick-dots li button:before {
+    font-size: 10px;
+    width: 15px;
+    height: 15px;
+  }
+}
 
-  /* Ajuste das margens nos cards para telas pequenas */
-  .pricing-carousel .slick-slide > div > div {
-    padding: 0;
+/* Ajustes para telas muito pequenas */
+@media (max-width: 360px) {
+  .pricing-carousel {
+    padding-bottom: 45px;
+  }
+  
+  .slick-slide {
+    padding: 3px;
   }
 }
 

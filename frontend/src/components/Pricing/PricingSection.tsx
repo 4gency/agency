@@ -78,8 +78,6 @@ const PricingSection: React.FC<PricingSectionProps> = ({ isLandingPage = false }
   // Número de slides a mostrar baseado no breakpoint
   const slidesToShow = useBreakpointValue({ base: 1, md: 2, lg: 3 }) || 1
   const showArrows = useBreakpointValue({ base: false, md: true }) || false
-  // Ajuste de padding para dispositivos móveis
-  const cardPadding = useBreakpointValue({ base: 1, sm: 2, md: 2 }) || 1
 
   useEffect(() => {
     SubscriptionPlansService.readSubscriptionPlans({ onlyActive: false })
@@ -104,6 +102,7 @@ const PricingSection: React.FC<PricingSectionProps> = ({ isLandingPage = false }
   // Determine se devemos centralizar os slides (quando há poucos cards)
   const shouldCenterSlides = plans.length <= slidesToShow
   
+  // Configurações simplificadas para o Slider
   const settings = {
     dots: true,
     infinite: false,
@@ -111,12 +110,14 @@ const PricingSection: React.FC<PricingSectionProps> = ({ isLandingPage = false }
     slidesToShow: shouldCenterSlides ? plans.length : slidesToShow,
     slidesToScroll: 1,
     arrows: false,
-    centerMode: shouldCenterSlides,
-    centerPadding: '0px',
+    centerMode: true,
+    centerPadding: '10px',
     variableWidth: false,
-    adaptiveHeight: false,
+    adaptiveHeight: true,
     swipeToSlide: true,
-    draggable: !shouldCenterSlides,
+    draggable: true,
+    className: "pricing-carousel-inner",
+    dotsClass: "slick-dots",
     beforeChange: (_current: number, next: number) => setCurrentSlide(next),
     afterChange: (current: number) => setCurrentSlide(current),
     responsive: [
@@ -125,6 +126,9 @@ const PricingSection: React.FC<PricingSectionProps> = ({ isLandingPage = false }
         settings: {
           slidesToShow: 2,
           slidesToScroll: 1,
+          dots: true,
+          centerMode: true,
+          centerPadding: '10px',
         }
       },
       {
@@ -132,6 +136,9 @@ const PricingSection: React.FC<PricingSectionProps> = ({ isLandingPage = false }
         settings: {
           slidesToShow: 1,
           slidesToScroll: 1,
+          dots: true,
+          centerMode: true,
+          centerPadding: '0px',
         }
       }
     ]
@@ -158,36 +165,29 @@ const PricingSection: React.FC<PricingSectionProps> = ({ isLandingPage = false }
   return (
     <Box
       id="pricing"
-      py={10}
+      py={{ base: 6, md: 10 }}
       bg={isLandingPage ? sectionBg : 'transparent'}
       width="100%"
       overflow="hidden"
-      sx={{
-        ".chakra-container": {
-          maxWidth: "100% !important",
-          padding: isLandingPage ? undefined : "0 !important",
-          overflow: "hidden"
-        }
-      }}
     >
-      <Container maxW={isLandingPage ? "container.xl" : "100%"} px={isLandingPage ? { base: 4, md: 8 } : 0}>
+      <Container maxW={isLandingPage ? "container.xl" : "100%"} p={isLandingPage ? { base: 2, md: 4 } : 0}>
         {isLandingPage && (
-          <VStack spacing={6} mb={12} textAlign="center">
+          <VStack spacing={{ base: 4, md: 6 }} mb={{ base: 8, md: 12 }} textAlign="center">
             <Badge
               textTransform="none"
-              bg="#E2FFE0"  // Cor de fundo
-              color="#009688" // Cor do texto
+              bg="#E2FFE0"
+              color="#009688"
               px={3}
               py={1}
               borderRadius="md"
-              fontSize="initial"
+              fontSize={{ base: "sm", md: "initial" }}
             >
               Our Pricing
             </Badge>
             
             <Heading 
               as="h2" 
-              size="2xl" 
+              size={{ base: "xl", md: "2xl" }} 
               fontWeight="bold"
               color={headingColor}
               letterSpacing="-0.02em"
@@ -195,46 +195,28 @@ const PricingSection: React.FC<PricingSectionProps> = ({ isLandingPage = false }
               Choose the Plan That Suits You
             </Heading>
             
-            <Text fontSize="lg" maxW="container.md" color={isLandingPage ? "gray.600" : undefined}>
+            <Text fontSize={{ base: "md", md: "lg" }} maxW="container.md" color={isLandingPage ? "gray.600" : undefined}>
               {/* Texto adicional se necessário */}
             </Text>
           </VStack>
         )}
 
         <Box 
-          position="relative" 
-          width="100%"
+          position="relative"
+          width="100%" 
+          maxW="1300px"
           mx="auto"
-          px={isLandingPage ? { base: 6, md: 10 } : { base: 0, md: 6 }}
-          overflow="hidden"
+          className={`pricing-carousel ${!isLandingPage ? 'pricing-carousel-sidebar' : ''}`}
         >
           {showArrows && showPrevButton && (
             <CarouselArrow direction="left" onClick={() => sliderRef.current?.slickPrev()} />
           )}
           
           <Box 
-            width="100%"
-            mx="auto"
-            pt={4} // Adicionando espaço superior para o badge não ser cortado
-            className={`pricing-carousel ${!isLandingPage ? 'pricing-carousel-sidebar' : ''} ${shouldCenterSlides ? 'centered-slides' : ''}`}
-            sx={{
-              '.slick-track': {
-                display: 'flex !important',
-                width: '100% !important',
-                ...(shouldCenterSlides && {
-                  justifyContent: 'center !important',
-                  margin: '0 auto !important',
-                }),
-              },
-              '.slick-slide': {
-                height: 'inherit !important',
-                '> div': {
-                  height: '100%',
-                  display: 'flex',
-                  justifyContent: 'center',
-                }
-              }
-            }}
+            width="100%" 
+            pb={6}
+            mx="auto" 
+            px={{ base: 1, md: 4 }}
           >
             <Slider ref={sliderRef} {...settings}>
               {plans.map((plan) => {
@@ -272,7 +254,7 @@ const PricingSection: React.FC<PricingSectionProps> = ({ isLandingPage = false }
                 }
 
                 return (
-                  <Box key={id} height="100%" px={cardPadding} pt={2}>
+                  <Box key={id} px={2} py={2}>
                     {has_badge ? (
                       <BadgePricingCard 
                         {...commonProps} 
