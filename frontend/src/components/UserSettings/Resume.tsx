@@ -93,24 +93,56 @@ const transformApiResponseToFormData = (apiData: GetPlainTextResumeResponse): Re
           linkedin: apiData.personal_information.linkedin,
           github: apiData.personal_information.github,
         },
-        education: [],
-        work_experience: [],
-        projects: [],
-        skills: [],
-        languages: [],
+        education: Array.isArray(apiData.education_details) ? apiData.education_details.map(edu => ({
+          institution: edu.institution || "",
+          degree: edu.education_level || "",
+          field_of_study: edu.field_of_study || "",
+          start_date: edu.start_date || "",
+          end_date: edu.year_of_completion || "",
+          current: false,
+          description: ""
+        })) : [],
+        work_experience: Array.isArray(apiData.experience_details) ? apiData.experience_details.map(exp => ({
+          company: exp.company || "",
+          position: exp.position || "",
+          start_date: exp.employment_period ? exp.employment_period.split("-")[0]?.trim() || "" : "",
+          end_date: exp.employment_period ? exp.employment_period.split("-")[1]?.trim() || "" : "",
+          current: false,
+          description: (exp.key_responsibilities || []).join("\n"),
+          location: exp.location || ""
+        })) : [],
+        projects: Array.isArray(apiData.projects) ? apiData.projects.map(proj => ({
+          name: proj.name || "",
+          description: proj.description || "",
+          url: proj.link || "",
+          start_date: "",
+          end_date: "",
+          current: false
+        })) : [],
+        skills: Array.isArray(apiData.experience_details) 
+          ? apiData.experience_details.flatMap(exp => exp.skills_acquired || [])
+          : [],
+        languages: Array.isArray(apiData.languages) ? apiData.languages.map(lang => ({
+          name: lang.language || "",
+          level: lang.proficiency || ""
+        })) : [],
         availability: apiData.availability?.notice_period || "",
         salary_expectation: {
-          minimum: undefined,
-          maximum: undefined,
-          currency: "",
+          minimum: apiData.salary_expectations?.salary_range_usd 
+            ? parseInt(apiData.salary_expectations.salary_range_usd.split("-")[0]?.replace(/\D/g, "")) || undefined
+            : undefined,
+          maximum: apiData.salary_expectations?.salary_range_usd 
+            ? parseInt(apiData.salary_expectations.salary_range_usd.split("-")[1]?.replace(/\D/g, "")) || undefined 
+            : undefined,
+          currency: "USD"
         },
         work_preference: {
           remote: apiData.work_preferences?.remote_work || false,
-          hybrid: false,
+          hybrid: false, // API doesn't have hybrid option
           on_site: apiData.work_preferences?.in_person_work || false,
           relocation: apiData.work_preferences?.open_to_relocation || false,
         },
-        interests: apiData.interests || [],
+        interests: Array.isArray(apiData.interests) ? apiData.interests : [],
       }
     }
     
@@ -139,9 +171,40 @@ const transformFormToApiData = (data: ResumeForm): GetPlainTextResumeResponse =>
         linkedin: data.personal_information.linkedin,
         github: data.personal_information.github,
       },
+      education_details: data.education.map(edu => ({
+        institution: edu.institution,
+        education_level: edu.degree,
+        field_of_study: edu.field_of_study,
+        start_date: edu.start_date,
+        year_of_completion: edu.end_date,
+      })),
+      experience_details: data.work_experience.map(exp => ({
+        company: exp.company,
+        position: exp.position,
+        employment_period: exp.start_date && exp.end_date 
+          ? `${exp.start_date} - ${exp.end_date}` 
+          : exp.start_date || '',
+        location: exp.location,
+        key_responsibilities: exp.description ? [exp.description] : [],
+        skills_acquired: []
+      })),
+      projects: data.projects.map(proj => ({
+        name: proj.name,
+        description: proj.description,
+        link: proj.url
+      })),
+      languages: data.languages.map(lang => ({
+        language: lang.name,
+        proficiency: lang.level
+      })),
       interests: data.interests,
       availability: {
         notice_period: data.availability,
+      },
+      salary_expectations: {
+        salary_range_usd: data.salary_expectation.minimum && data.salary_expectation.maximum
+          ? `${data.salary_expectation.minimum} - ${data.salary_expectation.maximum}`
+          : undefined
       },
       work_preferences: {
         remote_work: data.work_preference.remote,
@@ -278,8 +341,8 @@ export const ResumePage: React.FC = () => {
   const isLoading = isLoadingSubscriptions || isLoadingSubscription || isLoadingResume
 
   return (
-    <Container maxW="6xl" py={8}>
-      <Heading as="h1" mb={8} fontSize="2xl" fontWeight="bold">
+  <Container maxW={{ base: "full", md: "60%" }} ml={{ base: 0, md: 0 }}>
+      <Heading size="lg" textAlign={{ base: "center", md: "left" }} py={12}>
         Resume
       </Heading>
 
