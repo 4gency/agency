@@ -13,7 +13,6 @@ import { createFileRoute, redirect } from "@tanstack/react-router"
 import type { UserPublic } from "../../client"
 import Appearance from "../../components/UserSettings/Appearance"
 import ChangePassword from "../../components/UserSettings/ChangePassword"
-import DeleteAccount from "../../components/UserSettings/DeleteAccount"
 import Payments from "../../components/UserSettings/Payments"
 import Subscriptions from "../../components/UserSettings/Subscriptions"
 import UserInformation from "../../components/UserSettings/UserInformation"
@@ -25,7 +24,6 @@ const tabsConfig = [
   { title: "Appearance", component: Appearance },
   { title: "Subscriptions", component: Subscriptions },
   { title: "Payments", component: Payments },
-  { title: "Danger zone", component: DeleteAccount },
 ]
 
 export const Route = createFileRoute("/_layout/settings")({
