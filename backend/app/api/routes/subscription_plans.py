@@ -11,7 +11,6 @@ from app.models.core import (
     SubscriptionPlanPublic,
     SubscriptionPlansPublic,
     SubscriptionPlanUpdate,
-    ErrorMessage,
 )
 from app.models.crud import subscription as crud_subs
 
@@ -72,22 +71,26 @@ def read_subscription_plans(
     return SubscriptionPlansPublic(plans=public_plans)
 
 
-@router.get("/{id}", response_model=SubscriptionPlanPublic, responses={
-    404: {
-        "model": "ErrorMessage",
-        "description": "Subscription plan not found",
-        "content": {
-            "application/json": {
-                "examples": {
-                    "plan_not_found": {
-                        "summary": "Subscription plan not found",
-                        "value": {"detail": "Subscription plan not found"},
+@router.get(
+    "/{id}",
+    response_model=SubscriptionPlanPublic,
+    responses={
+        404: {
+            "model": "ErrorMessage",
+            "description": "Subscription plan not found",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "plan_not_found": {
+                            "summary": "Subscription plan not found",
+                            "value": {"detail": "Subscription plan not found"},
+                        }
                     }
                 }
-            }
+            },
         },
     },
-})
+)
 def read_subscription_plan(
     *,
     session: SessionDep,
@@ -145,7 +148,9 @@ def read_subscription_plan(
                     "examples": {
                         "not_superuser": {
                             "summary": "The user doesn't have enough privileges",
-                            "value": {"detail": "The user doesn't have enough privileges"},
+                            "value": {
+                                "detail": "The user doesn't have enough privileges"
+                            },
                         }
                     }
                 }
@@ -199,7 +204,9 @@ def create_subscription_plan(
                     "examples": {
                         "not_superuser": {
                             "summary": "The user doesn't have enough privileges",
-                            "value": {"detail": "The user doesn't have enough privileges"},
+                            "value": {
+                                "detail": "The user doesn't have enough privileges"
+                            },
                         }
                     }
                 }
@@ -275,7 +282,9 @@ def update_subscription_plan(
                     "examples": {
                         "not_superuser": {
                             "summary": "The user doesn't have enough privileges",
-                            "value": {"detail": "The user doesn't have enough privileges"},
+                            "value": {
+                                "detail": "The user doesn't have enough privileges"
+                            },
                         }
                     }
                 }

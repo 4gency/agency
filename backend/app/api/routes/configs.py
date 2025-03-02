@@ -4,7 +4,6 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, status
 
 from app.api.deps import CurrentUser, NosqlSessionDep, SessionDep
-from app.models.core import ErrorMessage
 from app.models.crud import config as config_crud
 from app.models.crud import subscription as subscription_crud
 from app.models.preference import ConfigPublic
@@ -39,7 +38,9 @@ router = APIRouter()
                     "examples": {
                         "not_authorized": {
                             "summary": "Not authorized",
-                            "value": {"detail": "Not authorized to access this subscription"},
+                            "value": {
+                                "detail": "Not authorized to access this subscription"
+                            },
                         }
                     }
                 }
@@ -127,7 +128,9 @@ def get_config(
                     "examples": {
                         "not_authorized": {
                             "summary": "Not authorized",
-                            "value": {"detail": "Not authorized to access this subscription"},
+                            "value": {
+                                "detail": "Not authorized to access this subscription"
+                            },
                         }
                     }
                 }
@@ -219,7 +222,9 @@ def get_plain_text_resume(
                     "examples": {
                         "not_authorized": {
                             "summary": "Not authorized",
-                            "value": {"detail": "Not authorized to access this subscription"},
+                            "value": {
+                                "detail": "Not authorized to access this subscription"
+                            },
                         }
                     }
                 }
@@ -319,7 +324,9 @@ def update_config(
                     "examples": {
                         "not_authorized": {
                             "summary": "Not authorized",
-                            "value": {"detail": "Not authorized to access this subscription"},
+                            "value": {
+                                "detail": "Not authorized to access this subscription"
+                            },
                         }
                     }
                 }

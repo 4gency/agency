@@ -11,7 +11,6 @@ from app.core.config import settings
 from app.core.security import get_password_hash
 from app.models import crud
 from app.models.core import (
-    ErrorMessage,
     Message,
     NewPassword,
     Token,
@@ -95,7 +94,9 @@ def test_token(current_user: CurrentUser) -> Any:
                     "examples": {
                         "user_not_found": {
                             "summary": "User not found",
-                            "value": {"detail": "The user with this email does not exist in the system."},
+                            "value": {
+                                "detail": "The user with this email does not exist in the system."
+                            },
                         }
                     }
                 }
@@ -151,7 +152,9 @@ def recover_password(email: str, session: SessionDep) -> Message:
                     "examples": {
                         "user_not_found": {
                             "summary": "User not found",
-                            "value": {"detail": "The user with this email does not exist in the system."},
+                            "value": {
+                                "detail": "The user with this email does not exist in the system."
+                            },
                         },
                         "inactive_user": {
                             "summary": "Inactive user",
@@ -202,7 +205,9 @@ def reset_password(session: SessionDep, body: NewPassword) -> Message:
                     "examples": {
                         "user_not_found": {
                             "summary": "User not found",
-                            "value": {"detail": "The user with this username does not exist in the system."},
+                            "value": {
+                                "detail": "The user with this username does not exist in the system."
+                            },
                         }
                     }
                 }
@@ -230,7 +235,9 @@ def reset_password(session: SessionDep, body: NewPassword) -> Message:
                     "examples": {
                         "not_superuser": {
                             "summary": "The user doesn't have enough privileges",
-                            "value": {"detail": "The user doesn't have enough privileges"},
+                            "value": {
+                                "detail": "The user doesn't have enough privileges"
+                            },
                         }
                     }
                 }

@@ -18,7 +18,6 @@ from app.integrations.stripe import (
 from app.models import crud
 from app.models.core import (
     # Item,
-    ErrorMessage,
     Message,
     Payment,
     PaymentPublic,
@@ -75,7 +74,9 @@ def read_users(session: SessionDep, skip: int = 0, limit: int = 100) -> Any:
                     "examples": {
                         "user_exists": {
                             "summary": "User already exists",
-                            "value": {"detail": "The user with this email already exists in the system."},
+                            "value": {
+                                "detail": "The user with this email already exists in the system."
+                            },
                         }
                     }
                 }
@@ -103,7 +104,9 @@ def read_users(session: SessionDep, skip: int = 0, limit: int = 100) -> Any:
                     "examples": {
                         "not_superuser": {
                             "summary": "The user doesn't have enough privileges",
-                            "value": {"detail": "The user doesn't have enough privileges"},
+                            "value": {
+                                "detail": "The user doesn't have enough privileges"
+                            },
                         }
                     }
                 }
@@ -267,7 +270,9 @@ def read_user_me(current_user: CurrentUser) -> Any:
                     "examples": {
                         "user_exists": {
                             "summary": "User already exists",
-                            "value": {"detail": "The user with this email already exists in the system."},
+                            "value": {
+                                "detail": "The user with this email already exists in the system."
+                            },
                         }
                     }
                 }
@@ -537,7 +542,7 @@ def get_user_subscriptions_by_id(
                     }
                 }
             },
-        }
+        },
     },
 )
 def cancel_user_subscription(
