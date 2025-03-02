@@ -3,15 +3,7 @@ import { CheckoutService } from "../client/sdk.gen"
 import { useNavigate } from "@tanstack/react-router"
 import useCustomToast from "./useCustomToast"
 import confetti from "canvas-confetti"
-
-interface ApiError {
-  response?: {
-    status: number
-  }
-  status?: number
-  name?: string
-  message?: string
-}
+import { is404Error } from "../utils/errorUtils"
 
 interface UseSuccessCheckoutParams {
   authUser: any
@@ -76,7 +68,8 @@ export function useProcessSuccessCheckout({
     // Since we've checked sessionId is not null/undefined, we can safely pass it to API
     const validSessionId = sessionId
 
-    async function processCheckout() {
+    // Using function expression instead of function declaration
+    const processCheckout = async () => {
       try {
         // Call the API with sessionId
         await CheckoutService.stripeSuccess({ sessionId: validSessionId })
@@ -87,15 +80,8 @@ export function useProcessSuccessCheckout({
       } catch (error: unknown) {
         console.error("Failed to process checkout:", error)
         
-        // Check different possible ways a 404 might be represented
-        const apiError = error as ApiError
-        const is404 = 
-          (apiError.response && apiError.response.status === 404) || 
-          apiError.status === 404 || 
-          (apiError.message && apiError.message.includes("404")) ||
-          (apiError.name && apiError.name.includes("NotFound"))
-          
-        if (is404) {
+        // Use the utility function to check for 404 errors
+        if (is404Error(error)) {
           console.log("404 error detected, redirecting to dashboard")
           // If 404, redirect directly to dashboard without showing any modal
           navigate({ to: "/" })
