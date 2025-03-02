@@ -68,7 +68,6 @@ import type {
   CreateUserData,
   CreateUserResponse,
   ReadUserMeResponse,
-  DeleteUserMeResponse,
   UpdateUserMeData,
   UpdateUserMeResponse,
   UpdatePasswordMeData,
@@ -883,19 +882,6 @@ export class UsersService {
   public static readUserMe(): CancelablePromise<ReadUserMeResponse> {
     return __request(OpenAPI, {
       method: "GET",
-      url: "/api/v1/users/me",
-    })
-  }
-
-  /**
-   * Delete User Me
-   * Delete own user.
-   * @returns Message Successful Response
-   * @throws ApiError
-   */
-  public static deleteUserMe(): CancelablePromise<DeleteUserMeResponse> {
-    return __request(OpenAPI, {
-      method: "DELETE",
       url: "/api/v1/users/me",
     })
   }
