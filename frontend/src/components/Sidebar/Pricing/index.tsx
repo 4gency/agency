@@ -1,15 +1,42 @@
-import { Container, Flex, Heading } from "@chakra-ui/react"
-import { PricingContainer } from "./PricingContainer"
+import { Heading, Box } from "@chakra-ui/react"
+import PricingSection from "../../Pricing/PricingSection"
 
 export const Pricing = () => {
   return (
-    <Container maxW="full">
-      <Heading size="lg" textAlign={{ base: "center", md: "left" }} py={12}>
+    <Box width="100%" maxWidth="100%" overflow="hidden" position="relative">
+      <Heading size="lg" textAlign={{ base: "center", md: "left" }} py={6} px={4}>
         Our Plans
       </Heading>
-      <Flex align="center" justify="center">
-        <PricingContainer />
-      </Flex>
-    </Container>
+      <Box 
+        width="100%" 
+        maxWidth="100%" 
+        overflow="hidden" 
+        position="relative"
+        sx={{
+          "&:after": {
+            display: "block",
+            position: "absolute",
+            right: 0,
+            top: 0,
+            height: "100%",
+            width: "20px",
+            background: "linear-gradient(to right, transparent, var(--chakra-colors-gray-800, #1A202C))",
+            zIndex: 1,
+          },
+          "&:before": {
+            display: "block",
+            position: "absolute",
+            left: 0,
+            top: 0,
+            height: "100%",
+            width: "20px",
+            background: "linear-gradient(to left, transparent, var(--chakra-colors-gray-800, #1A202C))",
+            zIndex: 1,
+          }
+        }}
+      >
+        <PricingSection isLandingPage={false} />
+      </Box>
+    </Box>
   )
 }

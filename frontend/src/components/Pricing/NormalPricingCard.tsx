@@ -1,4 +1,15 @@
 import type React from "react"
+import {
+  Box,
+  Text,
+  VStack,
+  List,
+  ListItem,
+  ListIcon,
+  Button,
+} from "@chakra-ui/react"
+import { CheckIcon } from "@chakra-ui/icons"
+import { useNormalPricingCardTheme } from "./hooks/useNormalPricingCardTheme"
 
 interface NormalPricingCardProps {
   title: string
@@ -11,6 +22,7 @@ interface NormalPricingCardProps {
   disabled?: boolean
   hasDiscount?: boolean
   priceWithoutDiscount?: number
+  isLandingPage?: boolean
 }
 
 const NormalPricingCard: React.FC<NormalPricingCardProps> = ({
@@ -24,117 +36,79 @@ const NormalPricingCard: React.FC<NormalPricingCardProps> = ({
   disabled = false,
   hasDiscount = false,
   priceWithoutDiscount,
+  isLandingPage = false,
 }) => {
-  return (
-    <div
-      style={{
-        backgroundColor: "#fff",
-        ...(disabled
-          ? { boxShadow: "0 4px 10px rgba(0,0,0,0.2)" }
-          : { boxShadow: "0 4px 10px rgba(0,0,0,0.1)" }),
-        borderRadius: "20px",
-        width: "300px",
-        minWidth: "300px",
-        padding: "24px",
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "space-between",
-        ...(disabled ? { filter: "blur(5px)", pointerEvents: "none" } : {}),
-      }}
-    >
-      <div>
-        <h3
-          style={{
-            fontSize: "24px",
-            fontWeight: 600,
-            marginBottom: "10px",
-            color: "#2d3748",
-          }}
-        >
-          {title}
-        </h3>
-        {hasDiscount && priceWithoutDiscount !== undefined && (
-          <p
-            style={{
-              fontSize: "14px",
-              fontWeight: 400,
+  const {
+    bgColor,
+    textColor,
+    borderColor,
+    priceColor,
+    discountColor,
+    iconColor,
+  } = useNormalPricingCardTheme(isLandingPage)
 
-              color: "#a0aec0",
-              textDecoration: "line-through",
-            }}
-          >
+  return (
+    <Box
+      bg={bgColor}
+      borderRadius="xl"
+      borderWidth="1px"
+      borderColor={borderColor}
+      boxShadow={disabled ? "md" : "sm"}
+      width="100%"
+      minW="320px"
+      height="100%"
+      maxHeight="450px"
+      p={{ base: 5, md: 6 }}
+      display="flex"
+      flexDirection="column"
+      justifyContent="space-between"
+      filter={disabled ? "blur(5px)" : "none"}
+      pointerEvents={disabled ? "none" : "auto"}
+      transition="all 0.3s"
+      mx="auto"
+      _hover={!disabled ? { transform: "translateY(-5px)", boxShadow: "md" } : {}}
+    >
+      <VStack align="start" spacing={0.1} height="100%">
+        <Text fontSize="2xl" fontWeight="bold" color={textColor}>
+          {title}
+        </Text>
+        
+        {hasDiscount && priceWithoutDiscount !== undefined && (
+          <Text fontSize="md" color={discountColor} textDecoration="line-through">
             ${priceWithoutDiscount.toFixed(2)}
-          </p>
+          </Text>
         )}
-        <p
-          style={{
-            fontSize: "26px",
-            fontWeight: 600,
-            marginBottom: "20px",
-            color: "#2d3748",
-          }}
-        >
+        
+        <Text fontSize="3xl" fontWeight="bold" color={priceColor}>
           ${price.toFixed(2)}/{recurrence}
-        </p>
-        <ul
-          style={{
-            listStyle: "none",
-            padding: 0,
-            margin: 0,
-            color: "#4a5568",
-          }}
-        >
+        </Text>
+        
+        <List spacing={1} w="100%" mt={2} flex="1" overflow="auto" maxH="180px">
           {benefits.map((benefit, index) => (
-            <li
-              key={index}
-              style={{
-                marginBottom: "8px",
-                display: "flex",
-                alignItems: "center",
-              }}
-            >
-              <svg
-                width="16"
-                height="16"
-                fill="#000000"
-                style={{ marginRight: "8px" }}
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M16.707 5.293a1 1 0 00-1.414 0L8 12.586 4.707 9.293a1 1 0 10-1.414 1.414l4 4a1 1 0 001.414 0l8-8a1 1 0 000-1.414z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              {benefit}
-            </li>
+            <ListItem key={index} display="flex" alignItems="flex-start" py={1}>
+              <ListIcon as={CheckIcon} color={iconColor} boxSize={4} mt="5px" />
+              <Text color={textColor}>
+                {benefit}
+              </Text>
+            </ListItem>
           ))}
-        </ul>
-      </div>
-      <a
+        </List>
+      </VStack>
+      
+      <Button
+        as="a"
         href={buttonEnabled ? buttonLink : undefined}
         onClick={buttonEnabled ? undefined : (e) => e.preventDefault()}
-        style={{
-          display: "block",
-          textAlign: "center",
-          backgroundColor: "#3a3a3a",
-          color: "#fff",
-          padding: "12px",
-          borderRadius: "4px",
-          marginTop: "24px",
-          textDecoration: "none",
-          fontWeight: 600,
-          // Cursor "not-allowed" indica visualmente que o link está desabilitado.
-          cursor: buttonEnabled ? "pointer" : "not-allowed",
-          // Opacidade menor quando desabilitado.
-          opacity: buttonEnabled ? 1 : 0.5,
-          // pointerEvents "none" impede qualquer interação no estado desabilitado.
-          pointerEvents: buttonEnabled ? "auto" : "none",
-        }}
+        variant="primary"
+        size="md"
+        h="55px"
+        w="100%"
+        mt={6}
+        isDisabled={!buttonEnabled}
       >
         {buttonText}
-      </a>
-    </div>
+      </Button>
+    </Box>
   )
 }
 
