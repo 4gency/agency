@@ -109,7 +109,7 @@ const PricingSection: React.FC<PricingSectionProps> = ({ isLandingPage = false }
     adaptiveHeight: false,
     swipeToSlide: true,
     draggable: true,
-    beforeChange: (current: number, next: number) => setCurrentSlide(next),
+    beforeChange: (next: number) => setCurrentSlide(next),
     afterChange: (current: number) => setCurrentSlide(current),
     responsive: [
       {
