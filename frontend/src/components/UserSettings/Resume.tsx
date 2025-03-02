@@ -7,7 +7,6 @@ import {
   Skeleton,
   Stack,
   useColorModeValue,
-  useToast,
 } from "@chakra-ui/react"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { useForm } from "react-hook-form"
@@ -20,6 +19,7 @@ import {
 } from "../../client/types.gen"
 import React, { useEffect, useState } from "react"
 import { ResumeForm } from "./types"
+import useCustomToast from "../../hooks/useCustomToast"
 
 // Import all section components
 import PersonalInformationSection from "./ResumeSections/PersonalInformationSection"
@@ -62,6 +62,12 @@ const defaultValues: ResumeForm = {
 // Function to transform API response to our form model
 const transformApiResponseToFormData = (apiData: GetPlainTextResumeResponse): ResumeForm => {
   try {
+    // Check if apiData is null or undefined
+    if (!apiData) {
+      console.warn("API data is null or undefined, using default values")
+      return defaultValues
+    }
+
     // Check if we received a JSON string and parse it
     if (typeof apiData === 'string') {
       try {
@@ -78,6 +84,36 @@ const transformApiResponseToFormData = (apiData: GetPlainTextResumeResponse): Re
     
     // Handle case where we have plain text resume in the actual structure
     if (apiData.personal_information) {
+      // Extract skills from experience details
+      let skills: string[] = []
+      
+      // Collect skills from experience details
+      if (Array.isArray(apiData.experience_details)) {
+        const skillsFromExperience = apiData.experience_details
+          .flatMap(exp => exp.skills_acquired || [])
+          .filter((skill: string) => skill && skill.trim() !== '')
+        
+        skills = [...skills, ...skillsFromExperience]
+      }
+      
+      // Add direct skills if available in any custom properties
+      const apiDataAny = apiData as any
+      if (Array.isArray(apiDataAny.skills)) {
+        const directSkills = apiDataAny.skills
+          .filter((skill: string) => skill && skill.trim() !== '')
+        skills = [...skills, ...directSkills]
+      }
+      
+      // Remove duplicates
+      skills = Array.from(new Set(skills))
+
+      // Ensure we always have an array for interests
+      let interests: string[] = []
+      if (Array.isArray(apiData.interests)) {
+        interests = apiData.interests.filter((interest: string) => 
+          interest && typeof interest === 'string' && interest.trim() !== '')
+      }
+      
       return {
         personal_information: {
           name: apiData.personal_information.name || "",
@@ -119,9 +155,7 @@ const transformApiResponseToFormData = (apiData: GetPlainTextResumeResponse): Re
           end_date: "",
           current: false
         })) : [],
-        skills: Array.isArray(apiData.experience_details) 
-          ? apiData.experience_details.flatMap(exp => exp.skills_acquired || [])
-          : [],
+        skills: skills,
         languages: Array.isArray(apiData.languages) ? apiData.languages.map(lang => ({
           name: lang.language || "",
           level: lang.proficiency || ""
@@ -142,13 +176,20 @@ const transformApiResponseToFormData = (apiData: GetPlainTextResumeResponse): Re
           on_site: apiData.work_preferences?.in_person_work || false,
           relocation: apiData.work_preferences?.open_to_relocation || false,
         },
-        interests: Array.isArray(apiData.interests) ? apiData.interests : [],
+        interests: interests,
       }
     }
     
     return defaultValues
   } catch (error) {
     console.error("Error transforming API response:", error)
+    // Log the structure of apiData to help with debugging
+    if (apiData) {
+      console.error("Failed to transform API data structure:", 
+        typeof apiData === 'object' ? JSON.stringify(apiData, null, 2) : typeof apiData)
+    }
+    
+    // Always return defaultValues as fallback to prevent application crashes
     return defaultValues
   }
 }
@@ -234,7 +275,7 @@ const LoadingSkeleton: React.FC = () => (
 
 // Main component
 export const ResumePage: React.FC = () => {
-  const toast = useToast()
+  const showToast = useCustomToast()
   const buttonBg = useColorModeValue("#00766C", "#00766C")
   const buttonHoverBg = useColorModeValue("#005f57", "#005f57")
   const buttonColor = useColorModeValue("white", "white")
@@ -250,6 +291,7 @@ export const ResumePage: React.FC = () => {
     getValues,
     reset,
     formState: { errors, isDirty, isSubmitting },
+    watch,
   } = useForm<ResumeForm>({
     defaultValues,
   })
@@ -274,7 +316,9 @@ export const ResumePage: React.FC = () => {
   const { data: resumeData, isLoading: isLoadingResume } = useQuery({
     queryKey: ["plainTextResume", subscriptionId],
     queryFn: async () => {
-      if (!subscriptionId) return null
+      if (!subscriptionId) {
+        return null
+      }
       return await ConfigsService.getPlainTextResume({ subscriptionId })
     },
     enabled: !!subscriptionId && !isLoadingSubscription,
@@ -284,20 +328,20 @@ export const ResumePage: React.FC = () => {
   // Handle resume fetch error
   useEffect(() => {
     if (!isLoadingResume && !resumeData && subscriptionId) {
-      toast({
-        title: "Error fetching resume",
-        description: "There was an error loading your resume data.",
-        status: "error",
-        duration: 5000,
-        isClosable: true,
-      })
+      showToast(
+        "Error fetching resume",
+        "There was an error loading your resume data.",
+        "error"
+      )
     }
-  }, [isLoadingResume, resumeData, subscriptionId, toast])
+  }, [isLoadingResume, resumeData, subscriptionId, showToast])
 
   // Update resume mutation
   const updateResumeMutation = useMutation({
     mutationFn: async (data: ResumeForm) => {
-      if (!subscriptionId) throw new Error("No subscription ID available")
+      if (!subscriptionId) {
+        throw new Error("No subscription ID available")
+      }
       const apiData = transformFormToApiData(data)
       return await ConfigsService.updatePlainTextResume({
         subscriptionId,
@@ -305,23 +349,19 @@ export const ResumePage: React.FC = () => {
       })
     },
     onSuccess: () => {
-      toast({
-        title: "Resume updated",
-        description: "Your resume has been successfully updated.",
-        status: "success",
-        duration: 5000,
-        isClosable: true,
-      })
+      showToast(
+        "Resume updated",
+        "Your resume has been successfully updated.",
+        "success"
+      )
     },
     onError: (error: Error) => {
       console.error("Error updating resume:", error)
-      toast({
-        title: "Error updating resume",
-        description: "There was an error saving your resume data.",
-        status: "error",
-        duration: 5000,
-        isClosable: true,
-      })
+      showToast(
+        "Error updating resume",
+        "There was an error saving your resume data.",
+        "error"
+      )
     },
   })
 
@@ -359,6 +399,7 @@ export const ResumePage: React.FC = () => {
               register={register} 
               errors={errors} 
               control={control} 
+              watch={watch}
             />
             
             <Divider />
@@ -367,6 +408,7 @@ export const ResumePage: React.FC = () => {
               register={register} 
               errors={errors} 
               control={control} 
+              watch={watch}
             />
             
             <Divider />
@@ -375,13 +417,17 @@ export const ResumePage: React.FC = () => {
               register={register} 
               errors={errors} 
               control={control} 
+              watch={watch}
             />
             
             <Divider />
             
             <SkillsSection 
-              setValue={setValue} 
+              setValue={(field, value) => {
+                setValue(field, value, { shouldDirty: true })
+              }} 
               getValues={getValues} 
+              watch={watch}
             />
             
             <Divider />
@@ -407,8 +453,11 @@ export const ResumePage: React.FC = () => {
             <Divider />
             
             <InterestsSection 
-              setValue={setValue} 
+              setValue={(field, value) => {
+                setValue(field, value, { shouldDirty: true })
+              }} 
               getValues={getValues} 
+              watch={watch}
             />
             
             <Flex justify="flex-end" mt={6}>

@@ -13,7 +13,7 @@ import {
   useColorModeValue,
 } from "@chakra-ui/react"
 import { AddIcon, DeleteIcon } from "@chakra-ui/icons"
-import { Control, FieldErrors, UseFormRegister, useFieldArray } from "react-hook-form"
+import { Control, FieldErrors, UseFormRegister, useFieldArray, UseFormWatch } from "react-hook-form"
 import SectionContainer from "./SectionContainer"
 import { ResumeForm } from "../types"
 
@@ -21,12 +21,14 @@ interface EducationSectionProps {
   register: UseFormRegister<ResumeForm>
   errors: FieldErrors<ResumeForm>
   control: Control<ResumeForm>
+  watch: UseFormWatch<ResumeForm>
 }
 
 const EducationSection: React.FC<EducationSectionProps> = ({
   register,
   errors,
   control,
+  watch,
 }) => {
   const { fields, append, remove } = useFieldArray({
     control,
@@ -151,7 +153,7 @@ const EducationSection: React.FC<EducationSectionProps> = ({
                 <Input
                   type="date"
                   {...register(`education.${index}.end_date` as const)}
-                  isDisabled={!!control._formValues.education[index]?.current}
+                  isDisabled={!!watch(`education.${index}.current`)}
                 />
               </FormControl>
             </GridItem>

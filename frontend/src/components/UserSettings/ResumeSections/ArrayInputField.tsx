@@ -31,12 +31,12 @@ const ArrayInputField: React.FC<ArrayInputFieldProps> = ({
   onBlur
 }) => {
   const [inputValue, setInputValue] = useState("")
-  const buttonBgColor = "#00766C" // Mantendo a cor padrão usada no JobPreferences
-  const buttonHoverColor = "#00655D"
-
+  
   const handleAdd = () => {
     const trimmed = inputValue.trim()
-    if (!trimmed) return
+    if (!trimmed) {
+      return
+    }
     if (!items.includes(trimmed)) {
       onChange([...items, trimmed])
     }
@@ -70,14 +70,11 @@ const ArrayInputField: React.FC<ArrayInputFieldProps> = ({
           aria-label="Add item"
           icon={<AddIcon />}
           onClick={handleAdd}
-          bg={buttonBgColor}
-          color="white"
-          _hover={{ bg: buttonHoverColor }}
         />
       </Flex>
-      <HStack flexWrap="wrap" spacing={2}>
+      <HStack wrap="wrap">
         {items.map((item) => (
-          <Tag key={item} m="2px" variant="subtle" colorScheme="teal">
+          <Tag key={item} m="2px" variant="subtle">
             <TagLabel>{item}</TagLabel>
             <TagCloseButton onClick={() => handleRemove(item)} />
           </Tag>

@@ -13,7 +13,7 @@ import {
   useColorModeValue,
 } from "@chakra-ui/react"
 import { AddIcon, DeleteIcon } from "@chakra-ui/icons"
-import { Control, FieldErrors, UseFormRegister, useFieldArray } from "react-hook-form"
+import { Control, FieldErrors, UseFormRegister, useFieldArray, UseFormWatch } from "react-hook-form"
 import SectionContainer from "./SectionContainer"
 import { ResumeForm } from "../types"
 
@@ -21,17 +21,28 @@ interface ProjectsSectionProps {
   register: UseFormRegister<ResumeForm>
   errors: FieldErrors<ResumeForm>
   control: Control<ResumeForm>
+  watch?: UseFormWatch<ResumeForm>
 }
 
 const ProjectsSection: React.FC<ProjectsSectionProps> = ({
   register,
   errors,
   control,
+  watch,
 }) => {
   const { fields, append, remove } = useFieldArray({
     control,
     name: "projects",
   })
+
+  // Função para verificar se é um projeto atual
+  const isCurrentProject = (index: number): boolean => {
+    if (watch) {
+      return !!watch(`projects.${index}.current`)
+    }
+    // Fallback para comportamento anterior se watch não estiver disponível
+    return !!control._formValues?.projects?.[index]?.current
+  }
 
   const buttonBg = useColorModeValue("#00766C", "#00766C")
   const buttonHoverBg = useColorModeValue("#005f57", "#005f57")
@@ -126,7 +137,7 @@ const ProjectsSection: React.FC<ProjectsSectionProps> = ({
                 <Input
                   type="date"
                   {...register(`projects.${index}.end_date` as const)}
-                  isDisabled={!!control._formValues.projects[index]?.current}
+                  isDisabled={isCurrentProject(index)}
                 />
               </FormControl>
             </GridItem>

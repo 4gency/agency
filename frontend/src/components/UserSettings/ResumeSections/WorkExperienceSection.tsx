@@ -13,7 +13,7 @@ import {
   useColorModeValue,
 } from "@chakra-ui/react"
 import { AddIcon, DeleteIcon } from "@chakra-ui/icons"
-import { Control, FieldErrors, UseFormRegister, useFieldArray } from "react-hook-form"
+import { Control, FieldErrors, UseFormRegister, useFieldArray, UseFormWatch } from "react-hook-form"
 import SectionContainer from "./SectionContainer"
 import { ResumeForm } from "../types"
 
@@ -21,17 +21,28 @@ interface WorkExperienceSectionProps {
   register: UseFormRegister<ResumeForm>
   errors: FieldErrors<ResumeForm>
   control: Control<ResumeForm>
+  watch?: UseFormWatch<ResumeForm>
 }
 
 const WorkExperienceSection: React.FC<WorkExperienceSectionProps> = ({
   register,
   errors,
   control,
+  watch,
 }) => {
   const { fields, append, remove } = useFieldArray({
     control,
     name: "work_experience",
   })
+
+  // Função para verificar se é um trabalho atual
+  const isCurrentJob = (index: number): boolean => {
+    if (watch) {
+      return !!watch(`work_experience.${index}.current`)
+    }
+    // Fallback para comportamento anterior se watch não estiver disponível
+    return !!control._formValues?.work_experience?.[index]?.current
+  }
 
   const buttonBg = useColorModeValue("#00766C", "#00766C")
   const buttonHoverBg = useColorModeValue("#005f57", "#005f57")
@@ -151,7 +162,7 @@ const WorkExperienceSection: React.FC<WorkExperienceSectionProps> = ({
                 <Input
                   type="date"
                   {...register(`work_experience.${index}.end_date` as const)}
-                  isDisabled={!!control._formValues.work_experience[index]?.current}
+                  isDisabled={isCurrentJob(index)}
                 />
               </FormControl>
             </GridItem>
