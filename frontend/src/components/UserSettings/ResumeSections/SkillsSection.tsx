@@ -2,7 +2,7 @@ import {
   FormControl,
   FormLabel,
 } from "@chakra-ui/react"
-import { UseFormSetValue, UseFormGetValues, UseFormWatch } from "react-hook-form"
+import { UseFormGetValues, UseFormWatch } from "react-hook-form"
 import SectionContainer from "./SectionContainer"
 import { ResumeForm } from "../types"
 import ArrayInputField from "./ArrayInputField"
