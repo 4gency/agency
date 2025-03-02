@@ -11,7 +11,8 @@ import {
   Input,
   Radio,
   RadioGroup,
-  Select,
+  Skeleton,
+  SkeletonText,
   Slider,
   SliderFilledTrack,
   SliderThumb,
@@ -37,6 +38,8 @@ import useSubscriptions from "../../hooks/userSubscriptions"
 /** The shape we'll use internally for form data (more user-friendly). */
 type JobPreferencesForm = {
   remote: boolean
+  hybrid: boolean
+  onsite: boolean
   experience_levels: string[]
   job_types: string[]
   posting_date: string
@@ -46,6 +49,7 @@ type JobPreferencesForm = {
   locations: string[]
   company_blacklist: string[]
   title_blacklist: string[]
+  location_blacklist: string[]
 }
 
 /**
@@ -77,6 +81,8 @@ function transformToForm(config: ConfigPublic): JobPreferencesForm {
 
   return {
     remote: config.remote ?? false,
+    hybrid: config.hybrid ?? false,
+    onsite: config.onsite ?? false,
     experience_levels,
     job_types,
     posting_date,
@@ -86,6 +92,7 @@ function transformToForm(config: ConfigPublic): JobPreferencesForm {
     locations: config.locations || [],
     company_blacklist: config.company_blacklist || [],
     title_blacklist: config.title_blacklist || [],
+    location_blacklist: config.location_blacklist || [],
   }
 }
 
@@ -95,6 +102,8 @@ function transformToForm(config: ConfigPublic): JobPreferencesForm {
 function transformFromForm(formData: JobPreferencesForm): ConfigPublic {
   return {
     remote: formData.remote,
+    hybrid: formData.hybrid,
+    onsite: formData.onsite,
     experience_level: {
       intership: formData.experience_levels.includes("internship"),
       entry: formData.experience_levels.includes("entry"),
@@ -124,6 +133,7 @@ function transformFromForm(formData: JobPreferencesForm): ConfigPublic {
     locations: formData.locations,
     company_blacklist: formData.company_blacklist,
     title_blacklist: formData.title_blacklist,
+    location_blacklist: formData.location_blacklist,
   }
 }
 
@@ -244,6 +254,37 @@ const ArrayInput: React.FC<ArrayInputProps> = ({
   )
 }
 
+/* --------------------------- LOADING SKELETON --------------------------- */
+
+const LoadingSkeleton = () => {
+  return (
+    <Box width="full">
+      <SkeletonText mt="4" noOfLines={1} spacing="4" skeletonHeight="10" width="200px" />
+      
+      <Skeleton height="40px" mt="8" width="150px" />
+      
+      <Flex wrap="wrap" gap={2} mt="6">
+        <Skeleton height="35px" width="100px" />
+        <Skeleton height="35px" width="90px" />
+        <Skeleton height="35px" width="120px" />
+      </Flex>
+      
+      <Skeleton height="40px" mt="8" width="150px" />
+      
+      <Flex wrap="wrap" gap={2} mt="6">
+        <Skeleton height="35px" width="100px" />
+        <Skeleton height="35px" width="110px" />
+        <Skeleton height="35px" width="90px" />
+      </Flex>
+      
+      <Skeleton height="140px" mt="8" />
+      <Skeleton height="140px" mt="8" />
+      
+      <Skeleton height="40px" mt="8" width="150px" />
+    </Box>
+  )
+}
+
 /* --------------------------- MAIN COMPONENT --------------------------- */
 
 const JobPreferencesPage: React.FC = () => {
@@ -254,6 +295,8 @@ const JobPreferencesPage: React.FC = () => {
   // Default form data for first render
   const defaultFormValues: JobPreferencesForm = {
     remote: true,
+    hybrid: true,
+    onsite: true,
     experience_levels: [],
     job_types: [],
     posting_date: "all_time",
@@ -263,6 +306,7 @@ const JobPreferencesPage: React.FC = () => {
     locations: ["USA"],
     company_blacklist: [],
     title_blacklist: [],
+    location_blacklist: [],
   }
 
   const {
@@ -275,6 +319,13 @@ const JobPreferencesPage: React.FC = () => {
   } = useForm<JobPreferencesForm>({
     defaultValues: defaultFormValues,
   })
+
+  // Automatically select the first subscription when data is loaded
+  useEffect(() => {
+    if (subscriptions && subscriptions.length > 0 && !selectedSubId) {
+      setSelectedSubId(subscriptions[0].id)
+    }
+  }, [subscriptions, selectedSubId])
 
   /** When a subscription is selected, fetch the config and populate the form. */
   useEffect(() => {
@@ -311,7 +362,7 @@ const JobPreferencesPage: React.FC = () => {
   /** Handle form submit */
   const onSubmit = (data: JobPreferencesForm) => {
     if (!selectedSubId) {
-      showToast("Attention", "Select a subscription before saving.", "error")
+      showToast("Attention", "No subscription available.", "error")
       return
     }
     // Convert form data -> API shape
@@ -324,6 +375,7 @@ const JobPreferencesPage: React.FC = () => {
   const locations = watch("locations")
   const companyBlacklist = watch("company_blacklist")
   const titleBlacklist = watch("title_blacklist")
+  const locationBlacklist = watch("location_blacklist")
   const experienceLevels = watch("experience_levels")
   const jobTypes = watch("job_types")
 
@@ -348,13 +400,20 @@ const JobPreferencesPage: React.FC = () => {
   ]
 
   if (isLoading) {
-    return <Text>Loading subscriptions...</Text>
+    return (
+      <Container maxW={{ base: "full", md: "60%" }} ml={{ base: 0, md: 0 }}>
+        <Heading size="lg" textAlign={{ base: "center", md: "left" }} py={12}>
+          Job Preferences
+        </Heading>
+        <LoadingSkeleton />
+      </Container>
+    )
   }
 
   const hasSubscriptions = subscriptions && subscriptions.length > 0
 
   return (
-    <Container maxW="full">
+    <Container maxW={{ base: "full", md: "60%" }} ml={{ base: 0, md: 0 }} pb="100px">
       <Heading size="lg" textAlign={{ base: "center", md: "left" }} py={12}>
         Job Preferences
       </Heading>
@@ -362,175 +421,217 @@ const JobPreferencesPage: React.FC = () => {
       {!hasSubscriptions ? (
         <Text>No subscriptions available.</Text>
       ) : (
-        <FormControl mb={4} width="300px">
-          <FormLabel>Select your subscription</FormLabel>
-          <Select
-            placeholder="Choose a subscription"
-            value={selectedSubId}
-            onChange={(e) => setSelectedSubId(e.target.value)}
+        <Box as="form" onSubmit={handleSubmit(onSubmit)}>
+          {/* Remote */}
+          <FormControl mb={4}>
+            <FormLabel>Remote</FormLabel>
+            <Input type="hidden" {...register("remote")} />
+            <Button
+              bg={
+                watch("remote")
+                  ? "#00766C"
+                  : useColorModeValue("white", "gray.800")
+              }
+              color={
+                watch("remote") ? "white" : useColorModeValue("black", "white")
+              }
+              border="1px solid #00766C"
+              _hover={{
+                bg: watch("remote")
+                  ? "#00655D"
+                  : useColorModeValue("gray.100", "gray.700"),
+              }}
+              onClick={() => setValue("remote", !watch("remote"))}
+            >
+              {watch("remote") ? "Remote Allowed" : "Remote Not Allowed"}
+            </Button>
+          </FormControl>
+
+          {/* Hybrid */}
+          <FormControl mb={4}>
+            <FormLabel>Hybrid</FormLabel>
+            <Input type="hidden" {...register("hybrid")} />
+            <Button
+              bg={
+                watch("hybrid")
+                  ? "#00766C"
+                  : useColorModeValue("white", "gray.800")
+              }
+              color={
+                watch("hybrid") ? "white" : useColorModeValue("black", "white")
+              }
+              border="1px solid #00766C"
+              _hover={{
+                bg: watch("hybrid")
+                  ? "#00655D"
+                  : useColorModeValue("gray.100", "gray.700"),
+              }}
+              onClick={() => setValue("hybrid", !watch("hybrid"))}
+            >
+              {watch("hybrid") ? "Hybrid Allowed" : "Hybrid Not Allowed"}
+            </Button>
+          </FormControl>
+
+          {/* Onsite */}
+          <FormControl mb={4}>
+            <FormLabel>Onsite</FormLabel>
+            <Input type="hidden" {...register("onsite")} />
+            <Button
+              bg={
+                watch("onsite")
+                  ? "#00766C"
+                  : useColorModeValue("white", "gray.800")
+              }
+              color={
+                watch("onsite") ? "white" : useColorModeValue("black", "white")
+              }
+              border="1px solid #00766C"
+              _hover={{
+                bg: watch("onsite")
+                  ? "#00655D"
+                  : useColorModeValue("gray.100", "gray.700"),
+              }}
+              onClick={() => setValue("onsite", !watch("onsite"))}
+            >
+              {watch("onsite") ? "Onsite Allowed" : "Onsite Not Allowed"}
+            </Button>
+          </FormControl>
+
+          {/* EXPERIENCE LEVELS (custom multi-select toggle) */}
+          <FormControl mb={4}>
+            <FormLabel>Experience Levels</FormLabel>
+            <MultiSelectToggle
+              options={experienceOptions}
+              selected={experienceLevels}
+              onChange={(values) => setValue("experience_levels", values)}
+            />
+          </FormControl>
+
+          {/* JOB TYPES (custom multi-select toggle) */}
+          <FormControl mb={4}>
+            <FormLabel>Job Types</FormLabel>
+            <MultiSelectToggle
+              options={jobTypeOptions}
+              selected={jobTypes}
+              onChange={(values) => setValue("job_types", values)}
+            />
+          </FormControl>
+
+          {/* POSTING DATE (single select) */}
+          <FormControl mb={4}>
+            <FormLabel>Posting Date</FormLabel>
+            <RadioGroup
+              value={watch("posting_date")}
+              onChange={(val) => setValue("posting_date", val)}
+            >
+              <Flex direction="column" gap={2}>
+                <Radio value="all_time">All time</Radio>
+                <Radio value="month">Last Month</Radio>
+                <Radio value="week">Last Week</Radio>
+                <Radio value="hours">Last 24 Hours</Radio>
+              </Flex>
+            </RadioGroup>
+          </FormControl>
+
+          {/* APPLY ONCE AT COMPANY */}
+          <FormControl mb={4}>
+            <FormLabel>Apply Once Per Company</FormLabel>
+            <Input type="hidden" {...register("apply_once_at_company")} />
+            <Button
+              bg={
+                watch("apply_once_at_company")
+                  ? "#00766C"
+                  : useColorModeValue("white", "gray.800")
+              }
+              color={
+                watch("apply_once_at_company")
+                  ? "white"
+                  : useColorModeValue("black", "white")
+              }
+              border="1px solid #00766C"
+              _hover={{
+                bg: watch("apply_once_at_company")
+                  ? "#00655D"
+                  : useColorModeValue("gray.100", "gray.700"),
+              }}
+              onClick={() =>
+                setValue("apply_once_at_company", !watch("apply_once_at_company"))
+              }
+            >
+              {watch("apply_once_at_company")
+                ? "Apply Once Per Company"
+                : "Apply Multiple Times"}
+            </Button>
+          </FormControl>
+
+          {/* DISTANCE SLIDER */}
+          <FormControl mb={4}>
+            <FormLabel>Distance (miles)</FormLabel>
+            <Slider
+              min={0}
+              max={200}
+              step={10}
+              value={watch("distance")}
+              onChange={(val) => setValue("distance", val)}
+            >
+              <SliderTrack>
+                <SliderFilledTrack />
+              </SliderTrack>
+              <SliderThumb />
+            </Slider>
+            <Text mt={2}>Selected Distance: {watch("distance")}</Text>
+          </FormControl>
+
+          {/* POSITIONS */}
+          <ArrayInput
+            label="Positions"
+            items={positions}
+            onChange={(newItems) => setValue("positions", newItems)}
+            placeholder="e.g. Developer, Frontend"
+          />
+
+          {/* LOCATIONS */}
+          <ArrayInput
+            label="Locations"
+            items={locations}
+            onChange={(newItems) => setValue("locations", newItems)}
+            placeholder="e.g. USA, Canada"
+          />
+
+          {/* COMPANY BLACKLIST */}
+          <ArrayInput
+            label="Company Blacklist"
+            items={companyBlacklist}
+            onChange={(newItems) => setValue("company_blacklist", newItems)}
+            placeholder="e.g. Gupy, Lever"
+          />
+
+          {/* TITLE BLACKLIST */}
+          <ArrayInput
+            label="Title Blacklist"
+            items={titleBlacklist}
+            onChange={(newItems) => setValue("title_blacklist", newItems)}
+            placeholder="e.g. Senior, Jr"
+          />
+
+          {/* LOCATION BLACKLIST */}
+          <ArrayInput
+            label="Location Blacklist"
+            items={locationBlacklist}
+            onChange={(newItems) => setValue("location_blacklist", newItems)}
+            placeholder="e.g. Brazil, Mexico"
+          />
+
+          <Button
+            mt={6}
+            type="submit"
+            isDisabled={!hasSubscriptions}
+            isLoading={isSubmitting || mutation.status === "pending"}
           >
-            {subscriptions.map((sub) => (
-              <option key={sub.id} value={sub.id}>
-                {sub.id}
-              </option>
-            ))}
-          </Select>
-        </FormControl>
+            Save Preferences
+          </Button>
+        </Box>
       )}
-
-      <Box as="form" onSubmit={handleSubmit(onSubmit)}>
-        {/* Remote */}
-        <FormControl mb={4}>
-          <FormLabel>Remote</FormLabel>
-          <Input type="hidden" {...register("remote")} />
-          <Button
-            // MUDANÇA AQUI
-            bg={
-              watch("remote")
-                ? "#00766C"
-                : useColorModeValue("white", "gray.800")
-            }
-            color={
-              watch("remote") ? "white" : useColorModeValue("black", "white")
-            }
-            border="1px solid #00766C"
-            _hover={{
-              bg: watch("remote")
-                ? "#00655D"
-                : useColorModeValue("gray.100", "gray.700"),
-            }}
-            onClick={() => setValue("remote", !watch("remote"))}
-          >
-            {watch("remote") ? "Remote Allowed" : "Remote Not Allowed"}
-          </Button>
-        </FormControl>
-
-        {/* EXPERIENCE LEVELS (custom multi-select toggle) */}
-        <FormControl mb={4}>
-          <FormLabel>Experience Levels</FormLabel>
-          <MultiSelectToggle
-            options={experienceOptions}
-            selected={experienceLevels}
-            onChange={(values) => setValue("experience_levels", values)}
-          />
-        </FormControl>
-
-        {/* JOB TYPES (custom multi-select toggle) */}
-        <FormControl mb={4}>
-          <FormLabel>Job Types</FormLabel>
-          <MultiSelectToggle
-            options={jobTypeOptions}
-            selected={jobTypes}
-            onChange={(values) => setValue("job_types", values)}
-          />
-        </FormControl>
-
-        {/* POSTING DATE (single select) */}
-        <FormControl mb={4}>
-          <FormLabel>Posting Date</FormLabel>
-          <RadioGroup
-            value={watch("posting_date")}
-            onChange={(val) => setValue("posting_date", val)}
-          >
-            <Flex direction="column" gap={2}>
-              <Radio value="all_time">All time</Radio>
-              <Radio value="month">Last Month</Radio>
-              <Radio value="week">Last Week</Radio>
-              <Radio value="hours">Last 24 Hours</Radio>
-            </Flex>
-          </RadioGroup>
-        </FormControl>
-
-        {/* APPLY ONCE AT COMPANY */}
-        <FormControl mb={4}>
-          <Input type="hidden" {...register("apply_once_at_company")} />
-          <Button
-            // MUDANÇA AQUI
-            bg={
-              watch("apply_once_at_company")
-                ? "#00766C"
-                : useColorModeValue("white", "gray.800")
-            }
-            color={
-              watch("apply_once_at_company")
-                ? "white"
-                : useColorModeValue("black", "white")
-            }
-            border="1px solid #00766C"
-            _hover={{
-              bg: watch("apply_once_at_company")
-                ? "#00655D"
-                : useColorModeValue("gray.100", "gray.700"),
-            }}
-            onClick={() =>
-              setValue("apply_once_at_company", !watch("apply_once_at_company"))
-            }
-          >
-            {watch("apply_once_at_company")
-              ? "Apply Once Per Company"
-              : "Apply Multiple Times"}
-          </Button>
-        </FormControl>
-
-        {/* DISTANCE SLIDER */}
-        <FormControl mb={4}>
-          <FormLabel>Distance (miles or km?)</FormLabel>
-          <Slider
-            min={0}
-            max={200}
-            step={10}
-            value={watch("distance")}
-            onChange={(val) => setValue("distance", val)}
-          >
-            <SliderTrack>
-              <SliderFilledTrack />
-            </SliderTrack>
-            <SliderThumb />
-          </Slider>
-          <Text mt={2}>Selected Distance: {watch("distance")}</Text>
-        </FormControl>
-
-        {/* POSITIONS */}
-        <ArrayInput
-          label="Positions"
-          items={positions}
-          onChange={(newItems) => setValue("positions", newItems)}
-          placeholder="e.g. Developer, Frontend"
-        />
-
-        {/* LOCATIONS */}
-        <ArrayInput
-          label="Locations"
-          items={locations}
-          onChange={(newItems) => setValue("locations", newItems)}
-          placeholder="e.g. USA, Canada"
-        />
-
-        {/* COMPANY BLACKLIST */}
-        <ArrayInput
-          label="Company Blacklist"
-          items={companyBlacklist}
-          onChange={(newItems) => setValue("company_blacklist", newItems)}
-          placeholder="e.g. Gupy, Lever"
-        />
-
-        {/* TITLE BLACKLIST */}
-        <ArrayInput
-          label="Title Blacklist"
-          items={titleBlacklist}
-          onChange={(newItems) => setValue("title_blacklist", newItems)}
-          placeholder="e.g. Senior, Jr"
-        />
-
-        <Button
-          mt={6}
-          type="submit"
-          isDisabled={!hasSubscriptions}
-          isLoading={isSubmitting || mutation.status === "pending"}
-        >
-          Save Preferences
-        </Button>
-      </Box>
     </Container>
   )
 }

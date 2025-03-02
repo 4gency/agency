@@ -1,15 +1,13 @@
 import { createFileRoute, redirect } from "@tanstack/react-router"
 import { z } from "zod"
-import JobPreferencesPage from "../../components/UserSettings/JobPreferences"
+import ResumePage from "../../components/UserSettings/Resume"
 import { isLoggedIn } from "../../hooks/useAuth"
 import { UsersService } from "../../client"
 
-const jobPreferencesSearchSchema = z.object({})
-
-export const Route = createFileRoute("/_layout/job-preferences")({
-  component: JobPreferencesPage,
+export const Route = createFileRoute("/_layout/resume")({
+  component: ResumePage,
   beforeLoad: async () => {
-    // Check if user is logged in
+    // Check if the user is logged in
     if (!isLoggedIn()) {
       throw redirect({
         to: "/",
@@ -17,21 +15,24 @@ export const Route = createFileRoute("/_layout/job-preferences")({
     }
 
     try {
-      // Fetch subscriptions data
+      // If the user is logged in, fetch their subscriptions
       const subscriptions = await UsersService.getUserSubscriptions()
-
-      // Redirect to root if user is not a subscriber
+      
+      // If the user has no subscriptions, redirect to root
       if (!subscriptions || subscriptions.length === 0) {
         throw redirect({
           to: "/",
         })
       }
+
+      return {
+        subscriptions,
+      }
     } catch (error) {
-      // If there's an error fetching subscriptions, redirect to home
+      // If there's an error or the user has no subscriptions, redirect
       throw redirect({
         to: "/",
       })
     }
   },
-  validateSearch: (search) => jobPreferencesSearchSchema.parse(search),
-})
+}) 
