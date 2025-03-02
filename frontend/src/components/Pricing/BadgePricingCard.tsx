@@ -8,6 +8,7 @@ import {
   ListIcon,
   Button,
   Badge,
+  Spinner,
 } from "@chakra-ui/react"
 import { CheckIcon } from "@chakra-ui/icons"
 import { useBadgePricingCardTheme } from "./hooks/useBadgePricingCardTheme"
@@ -19,11 +20,12 @@ interface BadgePricingCardProps {
   benefits: string[]
   buttonText: string
   buttonEnabled?: boolean
-  buttonLink: string
+  buttonLink?: string
   hasDiscount?: boolean
   priceWithoutDiscount?: number
   recurrence: string
   isLandingPage?: boolean
+  onButtonClick?: () => void
 }
 
 const BadgePricingCard: React.FC<BadgePricingCardProps> = ({
@@ -38,6 +40,7 @@ const BadgePricingCard: React.FC<BadgePricingCardProps> = ({
   priceWithoutDiscount,
   recurrence,
   isLandingPage = false,
+  onButtonClick,
 }) => {
   const {
     bgColor,
@@ -49,6 +52,11 @@ const BadgePricingCard: React.FC<BadgePricingCardProps> = ({
     badgeBg,
     badgeColor,
   } = useBadgePricingCardTheme(isLandingPage)
+
+  const handleClick = buttonEnabled && onButtonClick ? onButtonClick : undefined;
+
+  // Check if button is in loading state
+  const isLoading = buttonEnabled && buttonText === "Loading...";
 
   return (
     <Box
@@ -115,19 +123,34 @@ const BadgePricingCard: React.FC<BadgePricingCardProps> = ({
         </List>
       </VStack>
       
-      <Button
-        as="a"
-        href={buttonEnabled ? buttonLink : undefined}
-        onClick={buttonEnabled ? undefined : (e) => e.preventDefault()}
-        variant="primary"
-        size="md"
-        h="55px"
-        w="100%"
-        mt={6}
-        isDisabled={!buttonEnabled}
-      >
-        {buttonText}
-      </Button>
+      {onButtonClick ? (
+        <Button
+          variant="primary"
+          size="md"
+          h="55px"
+          w="100%"
+          mt={6}
+          isDisabled={!buttonEnabled}
+          onClick={handleClick}
+          isLoading={isLoading}
+          loadingText="Loading..."
+        >
+          {buttonText}
+        </Button>
+      ) : (
+        <Button
+          as="a"
+          href={buttonEnabled ? buttonLink : undefined}
+          variant="primary"
+          size="md"
+          h="55px"
+          w="100%"
+          mt={6}
+          isDisabled={!buttonEnabled}
+        >
+          {buttonText}
+        </Button>
+      )}
     </Box>
   )
 }
