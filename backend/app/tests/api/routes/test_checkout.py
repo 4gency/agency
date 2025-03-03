@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 from unittest.mock import patch
 
@@ -129,23 +129,84 @@ def test_stripe_success(
     _ = create_dummy_subscription_plan(db, plan_id)
     dummy_session_id = "dummy-session-id"
     # Create a checkout session with the dummy user.
-    create_dummy_checkout_session(db, dummy_session_id, plan_id, dummy_user.id)
+    _checkout = create_dummy_checkout_session(
+        db, dummy_session_id, plan_id, dummy_user.id
+    )
 
-    with patch(
+    # APPROACH: Patch the specific Stripe API calls and database operations
+
+    # TEST CASE 1: No subscription exists
+    with patch("stripe.checkout.Session.retrieve") as mock_retrieve, patch(
         "app.integrations.stripe.handle_success_callback"
-    ) as mock_handle_success:
+    ) as mock_success_callback, patch(
+        "app.integrations.stripe.handle_invoice_payment_succeeded_in_checkout_callback"
+    ) as mock_invoice_callback:
+        # Configure mocks
+        mock_retrieve.return_value = {"subscription": None}
+        mock_success_callback.return_value = None
+        mock_invoice_callback.return_value = None
+
+        # Make the request
         response = client.post(
             f"{checkout_base_url}/success",
             params={"session_id": dummy_session_id},
             headers=superuser_token_headers,
         )
-        # Should be 200 if the authenticated user (dummy_user) matches checkout.user_id.
+
+        # Verify response
         assert response.status_code == 200, f"Response: {response.text}"
-        data: dict[str, Any] = response.json()
+        data = response.json()
+        assert data["message"] == "Your premium subscription will begin shortly."
+
+    # TEST CASE 2: Subscription with end_date exists
+    test_date = datetime.now(timezone.utc) + timedelta(days=30)
+    formatted_date = test_date.strftime("%B %d, %Y")
+
+    # Create a subscription in the database
+    from app.models.core import Subscription
+
+    stripe_subscription_id = "sub_123456"
+    subscription = Subscription(
+        id=uuid.uuid4(),
+        user_id=dummy_user.id,
+        subscription_plan_id=plan_id,
+        start_date=datetime.now(timezone.utc),
+        end_date=test_date,
+        is_active=True,
+        metric_type=SubscriptionMetric.DAY,
+        metric_status=30,
+        stripe_subscription_id=stripe_subscription_id,
+    )
+    db.add(subscription)
+    db.commit()
+    db.refresh(subscription)
+
+    with patch("stripe.checkout.Session.retrieve") as mock_retrieve, patch(
+        "app.integrations.stripe.handle_success_callback"
+    ) as mock_success_callback, patch(
+        "app.integrations.stripe.handle_invoice_payment_succeeded_in_checkout_callback"
+    ) as mock_invoice_callback:
+        # Configure mocks
+        mock_retrieve.return_value = {"subscription": stripe_subscription_id}
+        mock_success_callback.return_value = None
+        mock_invoice_callback.return_value = None
+
+        # Make the request
+        response = client.post(
+            f"{checkout_base_url}/success",
+            params={"session_id": dummy_session_id},
+            headers=superuser_token_headers,
+        )
+
+        # Verify response
+        assert response.status_code == 200, f"Response: {response.text}"
+        data = response.json()
         assert (
-            data["message"] == "Success callback processed"
-        ), "Unexpected success message"
-        mock_handle_success.assert_called_once()
+            "expire on" in data["message"].lower()
+        ), f"Expected expiration message not found, got: {data['message']}"
+        assert (
+            formatted_date in data["message"]
+        ), f"Expected date '{formatted_date}' not found in: {data['message']}"
 
 
 def test_get_stripe_checkout_session_by_id(

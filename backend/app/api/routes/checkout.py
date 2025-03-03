@@ -113,7 +113,7 @@ def stripe_success(
         logger.error(
             f"Error handling invoice payment succeeded in checkout callback: {e}"
         )
-    
+
     # Check if a subscription was created for this checkout session
     subscription = None
     try:
@@ -129,12 +129,14 @@ def stripe_success(
             ).first()
     except Exception as e:
         logger.error(f"Error retrieving subscription info: {e}")
-    
+
     # If subscription exists and has an end_date, include it in the response
     if subscription and subscription.end_date:
         # Format the date to a human-readable format like "June 2, 2025"
         formatted_date = subscription.end_date.strftime("%B %d, %Y")
-        return {"message": f"Your premium subscription will expire on {formatted_date}."}
+        return {
+            "message": f"Your premium subscription will expire on {formatted_date}."
+        }
 
     return {"message": "Your premium subscription will begin shortly."}
 
