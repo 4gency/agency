@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from app.api.deps import OptionalCurrentUser, SessionDep, get_current_active_superuser
 from app.integrations import stripe
 from app.models.core import (
+    ErrorMessage,
     Message,
     SubscriptionPlanCreate,
     SubscriptionPlanPublic,
@@ -76,7 +77,7 @@ def read_subscription_plans(
     response_model=SubscriptionPlanPublic,
     responses={
         404: {
-            "model": "ErrorMessage",
+            "model": ErrorMessage,
             "description": "Subscription plan not found",
             "content": {
                 "application/json": {
@@ -113,7 +114,7 @@ def read_subscription_plan(
     response_model=SubscriptionPlanPublic,
     responses={
         400: {
-            "model": "ErrorMessage",
+            "model": ErrorMessage,
             "description": "Validation error",
             "content": {
                 "application/json": {
@@ -127,7 +128,7 @@ def read_subscription_plan(
             },
         },
         401: {
-            "model": "ErrorMessage",
+            "model": ErrorMessage,
             "description": "Authentication error",
             "content": {
                 "application/json": {
@@ -141,7 +142,7 @@ def read_subscription_plan(
             },
         },
         403: {
-            "model": "ErrorMessage",
+            "model": ErrorMessage,
             "description": "Permission error",
             "content": {
                 "application/json": {
@@ -183,7 +184,7 @@ def create_subscription_plan(
     response_model=Message,
     responses={
         401: {
-            "model": "ErrorMessage",
+            "model": ErrorMessage,
             "description": "Authentication error",
             "content": {
                 "application/json": {
@@ -197,7 +198,7 @@ def create_subscription_plan(
             },
         },
         403: {
-            "model": "ErrorMessage",
+            "model": ErrorMessage,
             "description": "Permission error",
             "content": {
                 "application/json": {
@@ -213,7 +214,7 @@ def create_subscription_plan(
             },
         },
         404: {
-            "model": "ErrorMessage",
+            "model": ErrorMessage,
             "description": "Subscription plan not found",
             "content": {
                 "application/json": {
@@ -261,7 +262,7 @@ def update_subscription_plan(
     response_model=Message,
     responses={
         401: {
-            "model": "ErrorMessage",
+            "model": ErrorMessage,
             "description": "Authentication error",
             "content": {
                 "application/json": {
@@ -275,7 +276,7 @@ def update_subscription_plan(
             },
         },
         403: {
-            "model": "ErrorMessage",
+            "model": ErrorMessage,
             "description": "Permission error",
             "content": {
                 "application/json": {
@@ -291,7 +292,7 @@ def update_subscription_plan(
             },
         },
         404: {
-            "model": "ErrorMessage",
+            "model": ErrorMessage,
             "description": "Subscription plan not found",
             "content": {
                 "application/json": {

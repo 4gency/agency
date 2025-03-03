@@ -4,6 +4,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, status
 
 from app.api.deps import CurrentUser, NosqlSessionDep, SessionDep
+from app.models.core import ErrorMessage
 from app.models.crud import config as config_crud
 from app.models.crud import subscription as subscription_crud
 from app.models.preference import ConfigPublic
@@ -17,7 +18,7 @@ router = APIRouter()
     response_model=ConfigPublic,
     responses={
         401: {
-            "model": "ErrorMessage",
+            "model": ErrorMessage,
             "description": "Authentication error",
             "content": {
                 "application/json": {
@@ -31,7 +32,7 @@ router = APIRouter()
             },
         },
         403: {
-            "model": "ErrorMessage",
+            "model": ErrorMessage,
             "description": "Permission error",
             "content": {
                 "application/json": {
@@ -47,7 +48,7 @@ router = APIRouter()
             },
         },
         404: {
-            "model": "ErrorMessage",
+            "model": ErrorMessage,
             "description": "Resource not found",
             "content": {
                 "application/json": {
@@ -107,7 +108,7 @@ def get_config(
     response_model=PlainTextResumePublic,
     responses={
         401: {
-            "model": "ErrorMessage",
+            "model": ErrorMessage,
             "description": "Authentication error",
             "content": {
                 "application/json": {
@@ -121,7 +122,7 @@ def get_config(
             },
         },
         403: {
-            "model": "ErrorMessage",
+            "model": ErrorMessage,
             "description": "Permission error",
             "content": {
                 "application/json": {
@@ -137,7 +138,7 @@ def get_config(
             },
         },
         404: {
-            "model": "ErrorMessage",
+            "model": ErrorMessage,
             "description": "Resource not found",
             "content": {
                 "application/json": {
@@ -201,7 +202,7 @@ def get_plain_text_resume(
             "content": {"application/json": {"schema": {}}},
         },
         401: {
-            "model": "ErrorMessage",
+            "model": ErrorMessage,
             "description": "Authentication error",
             "content": {
                 "application/json": {
@@ -215,7 +216,7 @@ def get_plain_text_resume(
             },
         },
         403: {
-            "model": "ErrorMessage",
+            "model": ErrorMessage,
             "description": "Permission error",
             "content": {
                 "application/json": {
@@ -231,7 +232,7 @@ def get_plain_text_resume(
             },
         },
         404: {
-            "model": "ErrorMessage",
+            "model": ErrorMessage,
             "description": "Resource not found",
             "content": {
                 "application/json": {
@@ -303,7 +304,7 @@ def update_config(
             "content": {"application/json": {"schema": {}}},
         },
         401: {
-            "model": "ErrorMessage",
+            "model": ErrorMessage,
             "description": "Authentication error",
             "content": {
                 "application/json": {
@@ -317,7 +318,7 @@ def update_config(
             },
         },
         403: {
-            "model": "ErrorMessage",
+            "model": ErrorMessage,
             "description": "Permission error",
             "content": {
                 "application/json": {
@@ -333,7 +334,7 @@ def update_config(
             },
         },
         404: {
-            "model": "ErrorMessage",
+            "model": ErrorMessage,
             "description": "Resource not found",
             "content": {
                 "application/json": {

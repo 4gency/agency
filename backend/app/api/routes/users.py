@@ -18,6 +18,7 @@ from app.integrations.stripe import (
 from app.models import crud
 from app.models.core import (
     # Item,
+    ErrorMessage,
     Message,
     Payment,
     PaymentPublic,
@@ -67,7 +68,7 @@ def read_users(session: SessionDep, skip: int = 0, limit: int = 100) -> Any:
     response_model=UserPublic,
     responses={
         400: {
-            "model": "ErrorMessage",
+            "model": ErrorMessage,
             "description": "User already exists",
             "content": {
                 "application/json": {
@@ -83,7 +84,7 @@ def read_users(session: SessionDep, skip: int = 0, limit: int = 100) -> Any:
             },
         },
         401: {
-            "model": "ErrorMessage",
+            "model": ErrorMessage,
             "description": "Authentication error",
             "content": {
                 "application/json": {
@@ -97,7 +98,7 @@ def read_users(session: SessionDep, skip: int = 0, limit: int = 100) -> Any:
             },
         },
         403: {
-            "model": "ErrorMessage",
+            "model": ErrorMessage,
             "description": "Permission error",
             "content": {
                 "application/json": {
@@ -143,7 +144,7 @@ def create_user(*, session: SessionDep, user_in: UserCreate) -> Any:
     response_model=UserPublic,
     responses={
         400: {
-            "model": "ErrorMessage",
+            "model": ErrorMessage,
             "description": "Email already registered",
             "content": {
                 "application/json": {
@@ -157,7 +158,7 @@ def create_user(*, session: SessionDep, user_in: UserCreate) -> Any:
             },
         },
         401: {
-            "model": "ErrorMessage",
+            "model": ErrorMessage,
             "description": "Authentication error",
             "content": {
                 "application/json": {
@@ -199,7 +200,7 @@ def update_user_me(
     response_model=Message,
     responses={
         400: {
-            "model": "ErrorMessage",
+            "model": ErrorMessage,
             "description": "Current password error",
             "content": {
                 "application/json": {
@@ -213,7 +214,7 @@ def update_user_me(
             },
         },
         401: {
-            "model": "ErrorMessage",
+            "model": ErrorMessage,
             "description": "Authentication error",
             "content": {
                 "application/json": {
@@ -263,7 +264,7 @@ def read_user_me(current_user: CurrentUser) -> Any:
     response_model=UserPublic,
     responses={
         400: {
-            "model": "ErrorMessage",
+            "model": ErrorMessage,
             "description": "User already exists",
             "content": {
                 "application/json": {
@@ -300,7 +301,7 @@ def register_user(session: SessionDep, user_in: UserRegister) -> Any:
     response_model=UserPublic,
     responses={
         401: {
-            "model": "ErrorMessage",
+            "model": ErrorMessage,
             "description": "Authentication error",
             "content": {
                 "application/json": {
@@ -314,7 +315,7 @@ def register_user(session: SessionDep, user_in: UserRegister) -> Any:
             },
         },
         403: {
-            "model": "ErrorMessage",
+            "model": ErrorMessage,
             "description": "Permission error",
             "content": {
                 "application/json": {
@@ -328,7 +329,7 @@ def register_user(session: SessionDep, user_in: UserRegister) -> Any:
             },
         },
         404: {
-            "model": "ErrorMessage",
+            "model": ErrorMessage,
             "description": "User not found",
             "content": {
                 "application/json": {
@@ -502,7 +503,7 @@ def get_user_subscriptions_by_id(
     tags=["subscriptions"],
     responses={
         401: {
-            "model": "ErrorMessage",
+            "model": ErrorMessage,
             "description": "Authentication error",
             "content": {
                 "application/json": {
@@ -516,7 +517,7 @@ def get_user_subscriptions_by_id(
             },
         },
         404: {
-            "model": "ErrorMessage",
+            "model": ErrorMessage,
             "description": "Resource not found",
             "content": {
                 "application/json": {
@@ -530,7 +531,7 @@ def get_user_subscriptions_by_id(
             },
         },
         409: {
-            "model": "ErrorMessage",
+            "model": ErrorMessage,
             "description": "Conflict with current state",
             "content": {
                 "application/json": {

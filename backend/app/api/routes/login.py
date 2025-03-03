@@ -11,6 +11,7 @@ from app.core.config import settings
 from app.core.security import get_password_hash
 from app.models import crud
 from app.models.core import (
+    ErrorMessage,
     Message,
     NewPassword,
     Token,
@@ -30,7 +31,7 @@ router = APIRouter()
     "/login/access-token",
     responses={
         400: {
-            "model": "ErrorMessage",
+            "model": ErrorMessage,
             "description": "Authentication errors",
             "content": {
                 "application/json": {
@@ -87,7 +88,7 @@ def test_token(current_user: CurrentUser) -> Any:
     "/password-recovery/{email}",
     responses={
         404: {
-            "model": "ErrorMessage",
+            "model": ErrorMessage,
             "description": "User not found",
             "content": {
                 "application/json": {
@@ -131,7 +132,7 @@ def recover_password(email: str, session: SessionDep) -> Message:
     "/reset-password/",
     responses={
         400: {
-            "model": "ErrorMessage",
+            "model": ErrorMessage,
             "description": "Invalid token",
             "content": {
                 "application/json": {
@@ -145,7 +146,7 @@ def recover_password(email: str, session: SessionDep) -> Message:
             },
         },
         404: {
-            "model": "ErrorMessage",
+            "model": ErrorMessage,
             "description": "User not found",
             "content": {
                 "application/json": {
@@ -198,7 +199,7 @@ def reset_password(session: SessionDep, body: NewPassword) -> Message:
     response_class=HTMLResponse,
     responses={
         400: {
-            "model": "ErrorMessage",
+            "model": ErrorMessage,
             "description": "User not found",
             "content": {
                 "application/json": {
@@ -214,7 +215,7 @@ def reset_password(session: SessionDep, body: NewPassword) -> Message:
             },
         },
         401: {
-            "model": "ErrorMessage",
+            "model": ErrorMessage,
             "description": "Authentication error",
             "content": {
                 "application/json": {
@@ -228,7 +229,7 @@ def reset_password(session: SessionDep, body: NewPassword) -> Message:
             },
         },
         403: {
-            "model": "ErrorMessage",
+            "model": ErrorMessage,
             "description": "Permission error",
             "content": {
                 "application/json": {
