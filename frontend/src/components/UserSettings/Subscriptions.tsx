@@ -14,6 +14,7 @@ import {
   Spinner,
 } from "@chakra-ui/react"
 import { useQuery } from "@tanstack/react-query"
+import { is404Error } from "../../utils/errorUtils"
 
 import {
   UsersService,
@@ -21,7 +22,7 @@ import {
 
 const Subscriptions = () => {
   // Query to get user subscriptions
-  const { data: subscriptions, isLoading, isError } = useSubscriptions()
+  const { data: subscriptions, isLoading, isError, error } = useSubscriptions()
 
   // Format date for display
   const formatDate = (dateString: string) => {
@@ -45,11 +46,27 @@ const Subscriptions = () => {
     )
   }
 
+  // Verificar se é um erro 404 usando o utilitário da aplicação
+  const isNotFoundError = isError && is404Error(error);
+
   if (isError) {
+    // Se for o erro 404, mostra a mensagem amigável
+    if (isNotFoundError) {
+      return (
+        <Box>
+          <Heading size="md" my={4}>
+            My Subscriptions
+          </Heading>
+          <Text>No subscriptions found.</Text>
+        </Box>
+      );
+    }
+    
+    // Para outros erros, mostra a mensagem de erro genérica
     return (
       <Container maxW="full">
-        <Heading size="sm" py={4}>
-          Subscriptions
+        <Heading size="md" my={4}>
+          My Subscriptions
         </Heading>
         <Text color="red.500">Unable to load subscriptions. Please try again later.</Text>
       </Container>
@@ -103,7 +120,7 @@ const Subscriptions = () => {
           </Table>
         </Box>
       ) : (
-        <Text>You don't have any subscriptions yet.</Text>
+        <Text>No subscriptions found.</Text>
       )}
     </Box>
   )
@@ -113,7 +130,19 @@ const Subscriptions = () => {
 function useSubscriptions() {
   return useQuery({
     queryKey: ["subscriptions"],
-    queryFn: () => UsersService.getUserSubscriptions(),
+    queryFn: async () => {
+      try {
+        return await UsersService.getUserSubscriptions();
+      } catch (error) {
+        // Se for um erro 404, tratamos como um resultado válido (array vazio)
+        // em vez de lançar um erro que será logado no console
+        if (is404Error(error)) {
+          return [];
+        }
+        // Outros erros são propagados normalmente
+        throw error;
+      }
+    },
   })
 }
 
