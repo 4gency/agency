@@ -10,6 +10,7 @@ from sqlmodel import Session, select
 from app.core.config import settings
 from app.models.core import (
     CheckoutSession,
+    Subscription,
     SubscriptionMetric,
     SubscriptionPlan,
     User,  # Ensure you can import your User model here
@@ -158,14 +159,62 @@ def test_stripe_success(
         data = response.json()
         assert data["message"] == "Your premium subscription will begin shortly."
 
-    # TEST CASE 2: Subscription with end_date exists
+        # Verify callbacks were called with expected arguments
+        mock_success_callback.assert_called_once()
+        mock_invoice_callback.assert_called_once()
+
+    # TEST CASE 2: Subscription exists but has no end_date
+    stripe_subscription_id = "sub_123456"
+    subscription_without_end_date = Subscription(
+        id=uuid.uuid4(),
+        user_id=dummy_user.id,
+        subscription_plan_id=plan_id,
+        start_date=datetime.now(timezone.utc),
+        end_date=None,
+        is_active=True,
+        metric_type=SubscriptionMetric.DAY,
+        metric_status=30,
+        stripe_subscription_id=stripe_subscription_id,
+    )
+    db.add(subscription_without_end_date)
+    db.commit()
+    db.refresh(subscription_without_end_date)
+
+    with patch("stripe.checkout.Session.retrieve") as mock_retrieve, patch(
+        "app.integrations.stripe.handle_success_callback"
+    ) as mock_success_callback, patch(
+        "app.integrations.stripe.handle_invoice_payment_succeeded_in_checkout_callback"
+    ) as mock_invoice_callback:
+        # Configure mocks
+        mock_retrieve.return_value = {"subscription": stripe_subscription_id}
+        mock_success_callback.return_value = None
+        mock_invoice_callback.return_value = None
+
+        # Make the request
+        response = client.post(
+            f"{checkout_base_url}/success",
+            params={"session_id": dummy_session_id},
+            headers=superuser_token_headers,
+        )
+
+        # Verify response - should still show "will begin shortly" without end_date
+        assert response.status_code == 200, f"Response: {response.text}"
+        data = response.json()
+        assert data["message"] == "Your premium subscription will begin shortly."
+
+        # Verify callbacks were called with expected arguments
+        mock_success_callback.assert_called_once()
+        mock_invoice_callback.assert_called_once()
+
+    # Clean up the subscription without end date
+    db.delete(subscription_without_end_date)
+    db.commit()
+
+    # TEST CASE 3: Subscription with end_date exists
     test_date = datetime.now(timezone.utc) + timedelta(days=30)
     formatted_date = test_date.strftime("%B %d, %Y")
 
     # Create a subscription in the database
-    from app.models.core import Subscription
-
-    stripe_subscription_id = "sub_123456"
     subscription = Subscription(
         id=uuid.uuid4(),
         user_id=dummy_user.id,
@@ -207,6 +256,10 @@ def test_stripe_success(
         assert (
             formatted_date in data["message"]
         ), f"Expected date '{formatted_date}' not found in: {data['message']}"
+
+        # Verify callbacks were called with expected arguments
+        mock_success_callback.assert_called_once()
+        mock_invoice_callback.assert_called_once()
 
 
 def test_get_stripe_checkout_session_by_id(
@@ -375,3 +428,52 @@ def test_stripe_cancel(
         data: dict[str, Any] = response.json()
         assert data["message"] == "Cancel callback processed", "Cancel message mismatch"
         mock_handle_cancel.assert_called_once()
+
+
+def test_stripe_success_with_api_errors(
+    client: TestClient,
+    db: Session,
+    superuser_token_headers: dict[str, str],
+    checkout_base_url: str,
+) -> None:
+    """
+    Test the Stripe success callback endpoint when API errors occur.
+    This test verifies that the route properly handles Stripe API errors
+    by still returning the default message when subscription info can't be retrieved.
+    """
+    plan_id = uuid.uuid4()
+    _ = create_dummy_subscription_plan(db, plan_id)
+    dummy_session_id = "dummy-session-id"
+    # Create a checkout session with the dummy user.
+    _checkout = create_dummy_checkout_session(
+        db, dummy_session_id, plan_id, dummy_user.id
+    )
+
+    # TEST CASE: Error in stripe.checkout.Session.retrieve
+    # We need to patch handle_success_callback too since it directly calls the Stripe API
+    with patch(
+        "stripe.checkout.Session.retrieve", side_effect=Exception("Stripe API error")
+    ), patch(
+        "app.integrations.stripe.handle_success_callback"
+    ) as mock_success_callback, patch(
+        "app.integrations.stripe.handle_invoice_payment_succeeded_in_checkout_callback"
+    ) as mock_invoice_callback:
+        # Configure mocks
+        mock_success_callback.return_value = None
+        mock_invoice_callback.return_value = None
+
+        # Make the request
+        response = client.post(
+            f"{checkout_base_url}/success",
+            params={"session_id": dummy_session_id},
+            headers=superuser_token_headers,
+        )
+
+        # Even when Stripe API fails, the endpoint should still return 200 with a generic message
+        assert response.status_code == 200, f"Response: {response.text}"
+        data = response.json()
+        assert data["message"] == "Your premium subscription will begin shortly."
+
+        # Verify callbacks were called
+        mock_success_callback.assert_called_once()
+        mock_invoice_callback.assert_called_once()
