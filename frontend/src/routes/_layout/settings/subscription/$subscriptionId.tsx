@@ -57,23 +57,14 @@ export const Route = createFileRoute("/_layout/settings/subscription/$subscripti
 })
 
 function SubscriptionDetailPage() {
-  // Capturando o parâmetro da URL diretamente para debug
-  const urlParts = window.location.pathname.split("/")
-  const subscriptionIdFromUrl = urlParts[urlParts.length - 1]
-  
-  // Também tentando obter o param da rota normal
+  // Usando o Route.useParams() para obter o ID da assinatura de forma confiável
   const params = Route.useParams()
-  const subscriptionId = params.subscriptionId || subscriptionIdFromUrl
+  const subscriptionId = params.subscriptionId
   
   // Logging para debug
   useEffect(() => {
-    console.log("URL completa:", window.location.href)
-    console.log("Path da URL:", window.location.pathname)
-    console.log("Partes da URL:", urlParts)
-    console.log("ID da assinatura da URL:", subscriptionIdFromUrl)
-    console.log("Params da rota:", params)
-    console.log("ID da assinatura usado:", subscriptionId)
-  }, [])
+    console.log("ID da assinatura da rota:", subscriptionId);
+  }, [subscriptionId])
 
   // Resto do componente
   const color = useColorModeValue("inherit", "ui.light")
@@ -162,7 +153,7 @@ function SubscriptionDetailPage() {
     }).format(amount)
   }
   
-  // Handler para voltar
+  // Handler para voltar - mantendo window.location porque está funcionando bem
   const handleBackToSettings = () => {
     window.location.href = "/settings"
   }
@@ -265,15 +256,6 @@ function SubscriptionDetailPage() {
       <Heading size="lg" textAlign={{ base: "center", md: "left" }} py={12}>
         Subscription Details
       </Heading>
-      <Box position="absolute" top="2.5rem" right="1.5rem" display={{ base: "none", md: "block" }}>
-        <Button
-          variant="outline"
-          onClick={handleBackToSettings}
-          size="sm"
-        >
-          Back to Settings
-        </Button>
-      </Box>
 
       <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={6} maxW="container.lg" mx="auto">
         {/* Subscription Info Card */}

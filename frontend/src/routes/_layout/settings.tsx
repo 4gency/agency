@@ -17,7 +17,6 @@ import Payments from "../../components/UserSettings/Payments"
 import Subscriptions from "../../components/UserSettings/Subscriptions"
 import UserInformation from "../../components/UserSettings/UserInformation"
 import { isLoggedIn } from "../../hooks/useAuth"
-import { useEffect } from "react"
 
 const tabsConfig = [
   { title: "My profile", component: UserInformation },
@@ -49,24 +48,12 @@ function SettingsLayout() {
   // Usando a verificação baseada na URL atual (não o pathname do router)
   const currentUrl = window.location.pathname;
   
-  useEffect(() => {
-    console.log("SettingsLayout renderizado, URL atual:", currentUrl);
-    
-    // Se estiver exatamente em /settings ou /settings/ e a página estiver em branco
-    // Vamos forçar um refresh para garantir que o conteúdo seja carregado
-    if (currentUrl === "/settings" || currentUrl === "/settings/") {
-      console.log("Na rota principal de settings, verificando conteúdo");
-    }
-  }, [currentUrl]);
-  
   // Se estiver na subrota de subscription, renderiza o Outlet
   if (currentUrl.includes('/settings/subscription/')) {
-    console.log("Renderizando subrota de subscription:", currentUrl);
     return <Outlet />;
   }
   
   // Caso contrário, renderiza o componente UserSettings
-  console.log("Renderizando UserSettings para URL:", currentUrl);
   return <UserSettings />;
 }
 
@@ -77,11 +64,6 @@ export function UserSettings() {
   const finalTabs = currentUser?.is_superuser
     ? tabsConfig.filter(tab => tab.title !== "Danger zone")
     : tabsConfig
-
-  // Log para debug
-  useEffect(() => {
-    console.log("UserSettings renderizado");
-  }, []);
 
   return (
     <Container maxW="full">
