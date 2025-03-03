@@ -286,7 +286,8 @@ export class ConfigsService {
         subscription_id: data.subscriptionId,
       },
       errors: {
-        403: "Authorization error",
+        401: "Authentication error",
+        403: "Permission error",
         404: "Resource not found",
         422: "Validation Error",
       },
@@ -299,6 +300,7 @@ export class ConfigsService {
    * @param data The data for the request.
    * @param data.subscriptionId
    * @param data.requestBody
+   * @returns unknown Successful Response
    * @returns unknown Successful Response
    * @throws ApiError
    */
@@ -314,7 +316,8 @@ export class ConfigsService {
       body: data.requestBody,
       mediaType: "application/json",
       errors: {
-        403: "Authorization error",
+        401: "Authentication error",
+        403: "Permission error",
         404: "Resource not found",
         422: "Validation Error",
       },
@@ -338,7 +341,8 @@ export class ConfigsService {
         subscription_id: data.subscriptionId,
       },
       errors: {
-        403: "Authorization error",
+        401: "Authentication error",
+        403: "Permission error",
         404: "Resource not found",
         422: "Validation Error",
       },
@@ -366,9 +370,11 @@ export class ConfigsService {
       body: data.requestBody,
       mediaType: "application/json",
       errors: {
-        403: "Authorization error",
+        401: "Authentication error",
+        403: "Permission error",
         404: "Resource not found",
         422: "Validation Error",
+        500: "Successful Response",
       },
     })
   }
@@ -392,6 +398,7 @@ export class LoginService {
       formData: data.formData,
       mediaType: "application/x-www-form-urlencoded",
       errors: {
+        400: "Authentication errors",
         422: "Validation Error",
       },
     })
@@ -428,6 +435,7 @@ export class LoginService {
         email: data.email,
       },
       errors: {
+        404: "User not found",
         422: "Validation Error",
       },
     })
@@ -450,6 +458,8 @@ export class LoginService {
       body: data.requestBody,
       mediaType: "application/json",
       errors: {
+        400: "Invalid token",
+        404: "User not found",
         422: "Validation Error",
       },
     })
@@ -473,6 +483,9 @@ export class LoginService {
         email: data.email,
       },
       errors: {
+        400: "User not found",
+        401: "Authentication error",
+        403: "Permission error",
         422: "Validation Error",
       },
     })
@@ -601,6 +614,9 @@ export class SubscriptionPlansService {
       body: data.requestBody,
       mediaType: "application/json",
       errors: {
+        400: "Validation error",
+        401: "Authentication error",
+        403: "Permission error",
         422: "Validation Error",
       },
     })
@@ -624,6 +640,7 @@ export class SubscriptionPlansService {
         id: data.id,
       },
       errors: {
+        404: "Subscription plan not found",
         422: "Validation Error",
       },
     })
@@ -650,6 +667,9 @@ export class SubscriptionPlansService {
       body: data.requestBody,
       mediaType: "application/json",
       errors: {
+        401: "Authentication error",
+        403: "Permission error",
+        404: "Subscription plan not found",
         422: "Validation Error",
       },
     })
@@ -673,6 +693,9 @@ export class SubscriptionPlansService {
         id: data.id,
       },
       errors: {
+        401: "Authentication error",
+        403: "Permission error",
+        404: "Subscription plan not found",
         422: "Validation Error",
       },
     })
@@ -771,6 +794,9 @@ export class SubscriptionsService {
         subscription_id: data.subscriptionId,
       },
       errors: {
+        401: "Authentication error",
+        404: "Resource not found",
+        409: "Conflict with current state",
         422: "Validation Error",
       },
     })
@@ -893,6 +919,9 @@ export class UsersService {
       body: data.requestBody,
       mediaType: "application/json",
       errors: {
+        400: "User already exists",
+        401: "Authentication error",
+        403: "Permission error",
         422: "Validation Error",
       },
     })
@@ -928,6 +957,8 @@ export class UsersService {
       body: data.requestBody,
       mediaType: "application/json",
       errors: {
+        400: "Email already registered",
+        401: "Authentication error",
         422: "Validation Error",
       },
     })
@@ -950,6 +981,8 @@ export class UsersService {
       body: data.requestBody,
       mediaType: "application/json",
       errors: {
+        400: "Current password error",
+        401: "Authentication error",
         422: "Validation Error",
       },
     })
@@ -972,6 +1005,7 @@ export class UsersService {
       body: data.requestBody,
       mediaType: "application/json",
       errors: {
+        400: "User already exists",
         422: "Validation Error",
       },
     })
@@ -995,6 +1029,9 @@ export class UsersService {
         user_id: data.userId,
       },
       errors: {
+        401: "Authentication error",
+        403: "Permission error",
+        404: "User not found",
         422: "Validation Error",
       },
     })
@@ -1140,6 +1177,9 @@ export class UsersService {
         subscription_id: data.subscriptionId,
       },
       errors: {
+        401: "Authentication error",
+        404: "Resource not found",
+        409: "Conflict with current state",
         422: "Validation Error",
       },
     })
