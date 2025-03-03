@@ -9,7 +9,7 @@ import {
   Box,
 } from "@chakra-ui/react"
 import { useQueryClient } from "@tanstack/react-query"
-import { createFileRoute, Outlet, redirect, useNavigate } from "@tanstack/react-router"
+import { createFileRoute, Outlet, redirect } from "@tanstack/react-router"
 import type { UserPublic } from "../../client"
 import Appearance from "../../components/UserSettings/Appearance"
 import ChangePassword from "../../components/UserSettings/ChangePassword"
@@ -48,7 +48,6 @@ export const Route = createFileRoute("/_layout/settings")({
 function SettingsLayout() {
   // Usando a verificação baseada na URL atual (não o pathname do router)
   const currentUrl = window.location.pathname;
-  const navigate = useNavigate();
   
   useEffect(() => {
     console.log("SettingsLayout renderizado, URL atual:", currentUrl);

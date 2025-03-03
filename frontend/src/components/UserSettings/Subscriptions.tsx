@@ -10,24 +10,16 @@ import {
   Th,
   Td,
   Text,
-  Badge,
   useColorModeValue,
   Spinner,
-  Link,
-  Button,
 } from "@chakra-ui/react"
 import { useQuery } from "@tanstack/react-query"
-import { useNavigate } from "@tanstack/react-router"
 
 import {
-  type SubscriptionPublic,
   UsersService,
 } from "../../client"
 
 const Subscriptions = () => {
-  const color = useColorModeValue("inherit", "ui.light")
-  const navigate = useNavigate()
-
   // Query to get user subscriptions
   const { data: subscriptions, isLoading, isError } = useSubscriptions()
 

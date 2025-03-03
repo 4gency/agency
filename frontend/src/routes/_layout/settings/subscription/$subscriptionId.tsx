@@ -33,7 +33,6 @@ import {
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { UsersService } from "../../../../client"
 import { useRef, useEffect } from "react"
-import { useNavigate } from "@tanstack/react-router"
 import { isLoggedIn } from "../../../../hooks/useAuth"
 
 // Definindo cores personalizadas para botões - serão usadas diretamente
@@ -80,7 +79,6 @@ function SubscriptionDetailPage() {
   const color = useColorModeValue("inherit", "ui.light")
   const bgCard = useColorModeValue("white", "gray.700")
   const toast = useToast()
-  const navigate = useNavigate()
   const { isOpen, onOpen, onClose } = useDisclosure()
   const cancelRef = useRef<HTMLButtonElement>(null)
   const queryClient = useQueryClient()
