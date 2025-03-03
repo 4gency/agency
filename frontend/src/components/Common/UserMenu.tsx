@@ -6,7 +6,6 @@ import {
   MenuItem,
   MenuList,
 } from "@chakra-ui/react"
-import { Link } from "@tanstack/react-router"
 import { FaUserAstronaut } from "react-icons/fa"
 import { FiLogOut, FiUser } from "react-icons/fi"
 
@@ -17,6 +16,10 @@ const UserMenu = () => {
 
   const handleLogout = async () => {
     logout()
+  }
+  
+  const handleNavigateToSettings = () => {
+    window.location.href = "/settings";
   }
 
   return (
@@ -38,7 +41,10 @@ const UserMenu = () => {
             data-testid="user-menu"
           />
           <MenuList>
-            <MenuItem icon={<FiUser fontSize="18px" />} as={Link} to="settings">
+            <MenuItem 
+              icon={<FiUser fontSize="18px" />} 
+              onClick={handleNavigateToSettings}
+            >
               My profile
             </MenuItem>
             <MenuItem

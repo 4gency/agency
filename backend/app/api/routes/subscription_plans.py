@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from app.api.deps import OptionalCurrentUser, SessionDep, get_current_active_superuser
 from app.integrations import stripe
 from app.models.core import (
+    ErrorMessage,
     Message,
     SubscriptionPlanCreate,
     SubscriptionPlanPublic,
@@ -71,7 +72,26 @@ def read_subscription_plans(
     return SubscriptionPlansPublic(plans=public_plans)
 
 
-@router.get("/{id}", response_model=SubscriptionPlanPublic)
+@router.get(
+    "/{id}",
+    response_model=SubscriptionPlanPublic,
+    responses={
+        404: {
+            "model": ErrorMessage,
+            "description": "Subscription plan not found",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "plan_not_found": {
+                            "summary": "Subscription plan not found",
+                            "value": {"detail": "Subscription plan not found"},
+                        }
+                    }
+                }
+            },
+        },
+    },
+)
 def read_subscription_plan(
     *,
     session: SessionDep,
@@ -90,8 +110,54 @@ def read_subscription_plan(
 
 @router.post(
     "/",
-    response_model=SubscriptionPlanPublic,
     dependencies=[Depends(get_current_active_superuser)],
+    response_model=SubscriptionPlanPublic,
+    responses={
+        400: {
+            "model": ErrorMessage,
+            "description": "Validation error",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "validation_error": {
+                            "summary": "Validation error",
+                            "value": {"detail": "Validation error message"},
+                        }
+                    }
+                }
+            },
+        },
+        401: {
+            "model": ErrorMessage,
+            "description": "Authentication error",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "not_authenticated": {
+                            "summary": "Not authenticated",
+                            "value": {"detail": "Not authenticated"},
+                        }
+                    }
+                }
+            },
+        },
+        403: {
+            "model": ErrorMessage,
+            "description": "Permission error",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "not_superuser": {
+                            "summary": "The user doesn't have enough privileges",
+                            "value": {
+                                "detail": "The user doesn't have enough privileges"
+                            },
+                        }
+                    }
+                }
+            },
+        },
+    },
 )
 def create_subscription_plan(
     *,
@@ -114,8 +180,54 @@ def create_subscription_plan(
 
 @router.put(
     "/{id}",
-    response_model=Message,
     dependencies=[Depends(get_current_active_superuser)],
+    response_model=Message,
+    responses={
+        401: {
+            "model": ErrorMessage,
+            "description": "Authentication error",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "not_authenticated": {
+                            "summary": "Not authenticated",
+                            "value": {"detail": "Not authenticated"},
+                        }
+                    }
+                }
+            },
+        },
+        403: {
+            "model": ErrorMessage,
+            "description": "Permission error",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "not_superuser": {
+                            "summary": "The user doesn't have enough privileges",
+                            "value": {
+                                "detail": "The user doesn't have enough privileges"
+                            },
+                        }
+                    }
+                }
+            },
+        },
+        404: {
+            "model": ErrorMessage,
+            "description": "Subscription plan not found",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "plan_not_found": {
+                            "summary": "Subscription plan not found",
+                            "value": {"detail": "Subscription plan not found"},
+                        }
+                    }
+                }
+            },
+        },
+    },
 )
 def update_subscription_plan(
     *,
@@ -148,6 +260,52 @@ def update_subscription_plan(
     "/{id}",
     dependencies=[Depends(get_current_active_superuser)],
     response_model=Message,
+    responses={
+        401: {
+            "model": ErrorMessage,
+            "description": "Authentication error",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "not_authenticated": {
+                            "summary": "Not authenticated",
+                            "value": {"detail": "Not authenticated"},
+                        }
+                    }
+                }
+            },
+        },
+        403: {
+            "model": ErrorMessage,
+            "description": "Permission error",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "not_superuser": {
+                            "summary": "The user doesn't have enough privileges",
+                            "value": {
+                                "detail": "The user doesn't have enough privileges"
+                            },
+                        }
+                    }
+                }
+            },
+        },
+        404: {
+            "model": ErrorMessage,
+            "description": "Subscription plan not found",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "plan_not_found": {
+                            "summary": "Subscription plan not found",
+                            "value": {"detail": "Subscription plan not found"},
+                        }
+                    }
+                }
+            },
+        },
+    },
 )
 def delete_subscription_plan(
     *,

@@ -10,6 +10,7 @@ from app.core.config import settings
 from app.models.core import (
     CheckoutSession,
     Payment,
+    PaymentRecurrenceStatus,
     Subscription,
     SubscriptionPlan,
     User,
@@ -461,13 +462,15 @@ def cancel_subscription_recurring_payment(
     # Se cancelar imediatamente (False), Stripe define status='canceled'
     if not cancel_at_period_end:
         subscription.is_active = False
+        subscription.payment_recurrence_status = PaymentRecurrenceStatus.CANCELED
         subscription.end_date = datetime.fromtimestamp(
             updated_sub.ended_at or datetime.now(timezone.utc).timestamp()
         )
     else:
-        # Caso contrário, a sub fica "ativa" até o fim do período
-        # Se quiser marcar algo local para saber que ela será cancelada, pode fazer.
-        pass
+        # A assinatura fica "ativa" até o fim do período, mas com status pendente de cancelamento
+        subscription.payment_recurrence_status = (
+            PaymentRecurrenceStatus.PENDING_CANCELLATION
+        )
 
     session.add(subscription)
     session.commit()
@@ -498,6 +501,7 @@ def reactivate_subscription(session: Session, subscription: Subscription) -> Non
     )
 
     subscription.is_active = True
+    subscription.payment_recurrence_status = PaymentRecurrenceStatus.ACTIVE
     session.add(subscription)
     session.commit()
     session.refresh(subscription)

@@ -158,6 +158,11 @@ export type PaymentPublic = {
   transaction_id: string
 }
 
+export type PaymentRecurrenceStatus =
+  | "active"
+  | "canceled"
+  | "pending_cancellation"
+
 export type PaymentsPublic = {
   data: Array<PaymentPublic>
   count: number
@@ -213,6 +218,25 @@ export type SelfIdentification = {
 }
 
 export type SubscriptionMetric = "day" | "week" | "month" | "year" | "applies"
+
+export type SubscriptionPlan = {
+  id?: string
+  name: string
+  price: number
+  has_badge?: boolean
+  badge_text?: string
+  button_text?: string
+  button_enabled?: boolean
+  has_discount?: boolean
+  price_without_discount?: number
+  currency?: string
+  description?: string
+  is_active?: boolean
+  metric_type?: SubscriptionMetric
+  metric_value?: number
+  stripe_product_id?: string | null
+  stripe_price_id?: string | null
+}
 
 export type SubscriptionPlanBenefitPublic = {
   name: string
@@ -283,6 +307,22 @@ export type SubscriptionPublic = {
   is_active: boolean
   metric_type: SubscriptionMetric
   metric_status: number
+  payment_recurrence_status: PaymentRecurrenceStatus
+  subscription_plan?: SubscriptionPlan | null
+}
+
+export type SubscriptionPublicExtended = {
+  id: string
+  user_id: string
+  subscription_plan_id: string
+  start_date: string
+  end_date: string
+  is_active: boolean
+  metric_type: SubscriptionMetric
+  metric_status: number
+  payment_recurrence_status: PaymentRecurrenceStatus
+  subscription_plan?: SubscriptionPlan | null
+  payments?: Array<PaymentPublic>
 }
 
 export type Token = {
@@ -508,6 +548,12 @@ export type GetUserSubscriptionsData = {
 
 export type GetUserSubscriptionsResponse = Array<SubscriptionPublic>
 
+export type GetUserSubscriptionData = {
+  subscriptionId: string
+}
+
+export type GetUserSubscriptionResponse = SubscriptionPublicExtended
+
 export type GetUserSubscriptionsByIdData = {
   onlyActive?: boolean | null
   userId: string
@@ -555,8 +601,6 @@ export type CreateUserData = {
 export type CreateUserResponse = UserPublic
 
 export type ReadUserMeResponse = UserPublic
-
-export type DeleteUserMeResponse = Message
 
 export type UpdateUserMeData = {
   requestBody: UserUpdateMe

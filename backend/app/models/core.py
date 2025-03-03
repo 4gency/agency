@@ -16,6 +16,12 @@ class SubscriptionMetric(Enum):
     APPLIES = "applies"
 
 
+class PaymentRecurrenceStatus(Enum):
+    ACTIVE = "active"
+    CANCELED = "canceled"
+    PENDING_CANCELLATION = "pending_cancellation"
+
+
 # Shared properties
 class UserBase(SQLModel):
     email: EmailStr = Field(unique=True, index=True, max_length=255)
@@ -178,6 +184,9 @@ class SubscriptionBase(SQLModel):
     is_active: bool = Field(default=True)
     metric_type: SubscriptionMetric
     metric_status: int
+    payment_recurrence_status: PaymentRecurrenceStatus = Field(
+        default=PaymentRecurrenceStatus.ACTIVE
+    )
 
 
 class SubscriptionPublic(SQLModel):
@@ -189,6 +198,13 @@ class SubscriptionPublic(SQLModel):
     is_active: bool
     metric_type: SubscriptionMetric
     metric_status: int
+    payment_recurrence_status: PaymentRecurrenceStatus
+
+    subscription_plan: SubscriptionPlan | None = None
+
+
+class SubscriptionPublicExtended(SubscriptionPublic):
+    payments: list["PaymentPublic"] = []
 
 
 class SubscriptionCreate(SubscriptionBase):
@@ -203,6 +219,7 @@ class SubscriptionUpdate(SQLModel):
     is_active: bool | None = None
     metric_type: SubscriptionMetric | None = None
     metric_status: int | None = None
+    payment_recurrence_status: PaymentRecurrenceStatus | None = None
 
 
 class Subscription(SQLModel, table=True):
@@ -228,6 +245,9 @@ class Subscription(SQLModel, table=True):
     is_active: bool = Field(default=True)
     metric_type: SubscriptionMetric
     metric_status: int
+    payment_recurrence_status: PaymentRecurrenceStatus = Field(
+        default=PaymentRecurrenceStatus.ACTIVE
+    )
 
     stripe_subscription_id: str | None = Field(default=None, index=True)
 
@@ -265,7 +285,7 @@ class Subscription(SQLModel, table=True):
         """
         plan = self.subscription_plan
 
-        # Se a métrica do plano for diferente da métrica atual, “resetamos” tudo
+        # Se a métrica do plano for diferente da métrica atual, "resetamos" tudo
         if plan.metric_type != self.metric_type:
             self.metric_type = plan.metric_type
             self.metric_status = max(0, plan.metric_value)
@@ -353,6 +373,7 @@ class PaymentUpdate(SQLModel):
     payment_status: str | None = None
     payment_gateway: str | None = None
     transaction_id: str | None = None
+    payment_recurrence_status: PaymentRecurrenceStatus | None = None
 
 
 class Payment(SQLModel, table=True):

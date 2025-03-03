@@ -9,11 +9,10 @@ import {
   Box,
 } from "@chakra-ui/react"
 import { useQueryClient } from "@tanstack/react-query"
-import { createFileRoute, redirect } from "@tanstack/react-router"
+import { createFileRoute, Outlet, redirect } from "@tanstack/react-router"
 import type { UserPublic } from "../../client"
 import Appearance from "../../components/UserSettings/Appearance"
 import ChangePassword from "../../components/UserSettings/ChangePassword"
-import DeleteAccount from "../../components/UserSettings/DeleteAccount"
 import Payments from "../../components/UserSettings/Payments"
 import Subscriptions from "../../components/UserSettings/Subscriptions"
 import UserInformation from "../../components/UserSettings/UserInformation"
@@ -25,21 +24,41 @@ const tabsConfig = [
   { title: "Appearance", component: Appearance },
   { title: "Subscriptions", component: Subscriptions },
   { title: "Payments", component: Payments },
-  { title: "Danger zone", component: DeleteAccount },
 ]
 
 export const Route = createFileRoute("/_layout/settings")({
-  component: UserSettings,
-  beforeLoad: async () => {
+  component: SettingsLayout,
+  beforeLoad: async ({ location }) => {
     if (!isLoggedIn()) {
       throw redirect({
         to: "/",
       })
     }
+
+    // Permitir que o redirecionamento não aconteça para subrotas
+    if (location.pathname !== "/settings" && 
+        location.pathname !== "/settings/") {
+      return;
+    }
   },
 })
 
-function UserSettings() {
+// Layout que renderiza o UserSettings ou um Outlet para subrotas
+function SettingsLayout() {
+  // Usando a verificação baseada na URL atual (não o pathname do router)
+  const currentUrl = window.location.pathname;
+  
+  // Se estiver na subrota de subscription, renderiza o Outlet
+  if (currentUrl.includes('/settings/subscription/')) {
+    return <Outlet />;
+  }
+  
+  // Caso contrário, renderiza o componente UserSettings
+  return <UserSettings />;
+}
+
+// Componente UserSettings deve ser acessado diretamente via link do menu
+export function UserSettings() {
   const queryClient = useQueryClient()
   const currentUser = queryClient.getQueryData<UserPublic>(["currentUser"])
   const finalTabs = currentUser?.is_superuser

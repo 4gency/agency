@@ -18,12 +18,14 @@ from app.integrations.stripe import (
 from app.models import crud
 from app.models.core import (
     # Item,
+    ErrorMessage,
     Message,
     Payment,
     PaymentPublic,
     PaymentsPublic,
     Subscription,
     SubscriptionPublic,
+    SubscriptionPublicExtended,
     UpdatePassword,
     User,
     UserCreate,
@@ -61,7 +63,57 @@ def read_users(session: SessionDep, skip: int = 0, limit: int = 100) -> Any:
 
 
 @router.post(
-    "/", dependencies=[Depends(get_current_active_superuser)], response_model=UserPublic
+    "/",
+    dependencies=[Depends(get_current_active_superuser)],
+    response_model=UserPublic,
+    responses={
+        400: {
+            "model": ErrorMessage,
+            "description": "User already exists",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "user_exists": {
+                            "summary": "User already exists",
+                            "value": {
+                                "detail": "The user with this email already exists in the system."
+                            },
+                        }
+                    }
+                }
+            },
+        },
+        401: {
+            "model": ErrorMessage,
+            "description": "Authentication error",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "not_authenticated": {
+                            "summary": "Not authenticated",
+                            "value": {"detail": "Not authenticated"},
+                        }
+                    }
+                }
+            },
+        },
+        403: {
+            "model": ErrorMessage,
+            "description": "Permission error",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "not_superuser": {
+                            "summary": "The user doesn't have enough privileges",
+                            "value": {
+                                "detail": "The user doesn't have enough privileges"
+                            },
+                        }
+                    }
+                }
+            },
+        },
+    },
 )
 def create_user(*, session: SessionDep, user_in: UserCreate) -> Any:
     """
@@ -87,7 +139,40 @@ def create_user(*, session: SessionDep, user_in: UserCreate) -> Any:
     return user
 
 
-@router.patch("/me", response_model=UserPublic)
+@router.patch(
+    "/me",
+    response_model=UserPublic,
+    responses={
+        400: {
+            "model": ErrorMessage,
+            "description": "Email already registered",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "email_exists": {
+                            "summary": "Email already registered",
+                            "value": {"detail": "Email already registered"},
+                        }
+                    }
+                }
+            },
+        },
+        401: {
+            "model": ErrorMessage,
+            "description": "Authentication error",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "not_authenticated": {
+                            "summary": "Not authenticated",
+                            "value": {"detail": "Not authenticated"},
+                        }
+                    }
+                }
+            },
+        },
+    },
+)
 def update_user_me(
     *, session: SessionDep, user_in: UserUpdateMe, current_user: CurrentUser
 ) -> Any:
@@ -110,7 +195,40 @@ def update_user_me(
     return current_user
 
 
-@router.patch("/me/password", response_model=Message)
+@router.patch(
+    "/me/password",
+    response_model=Message,
+    responses={
+        400: {
+            "model": ErrorMessage,
+            "description": "Current password error",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "invalid_password": {
+                            "summary": "Current password incorrect",
+                            "value": {"detail": "Current password incorrect"},
+                        }
+                    }
+                }
+            },
+        },
+        401: {
+            "model": ErrorMessage,
+            "description": "Authentication error",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "not_authenticated": {
+                            "summary": "Not authenticated",
+                            "value": {"detail": "Not authenticated"},
+                        }
+                    }
+                }
+            },
+        },
+    },
+)
 def update_password_me(
     *, session: SessionDep, body: UpdatePassword, current_user: CurrentUser
 ) -> Any:
@@ -141,24 +259,28 @@ def read_user_me(current_user: CurrentUser) -> Any:
     return current_user
 
 
-@router.delete("/me", response_model=Message)
-def delete_user_me(session: SessionDep, current_user: CurrentUser) -> Any:
-    """
-    Delete own user.
-    """
-    if current_user.is_superuser:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Super users are not allowed to delete themselves",
-        )
-    # statement = delete(Item).where(col(Item.owner_id) == current_user.id)
-    # session.exec(statement)  # type: ignore
-    session.delete(current_user)
-    session.commit()
-    return Message(message="User deleted successfully")
-
-
-@router.post("/signup", response_model=UserPublic)
+@router.post(
+    "/signup",
+    response_model=UserPublic,
+    responses={
+        400: {
+            "model": ErrorMessage,
+            "description": "User already exists",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "user_exists": {
+                            "summary": "User already exists",
+                            "value": {
+                                "detail": "The user with this email already exists in the system."
+                            },
+                        }
+                    }
+                }
+            },
+        },
+    },
+)
 def register_user(session: SessionDep, user_in: UserRegister) -> Any:
     """
     Create new user without the need to be logged in.
@@ -174,7 +296,54 @@ def register_user(session: SessionDep, user_in: UserRegister) -> Any:
     return user
 
 
-@router.get("/{user_id}", response_model=UserPublic)
+@router.get(
+    "/{user_id}",
+    response_model=UserPublic,
+    responses={
+        401: {
+            "model": ErrorMessage,
+            "description": "Authentication error",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "not_authenticated": {
+                            "summary": "Not authenticated",
+                            "value": {"detail": "Not authenticated"},
+                        }
+                    }
+                }
+            },
+        },
+        403: {
+            "model": ErrorMessage,
+            "description": "Permission error",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "not_enough_permissions": {
+                            "summary": "Not enough permissions",
+                            "value": {"detail": "Not enough permissions"},
+                        }
+                    }
+                }
+            },
+        },
+        404: {
+            "model": ErrorMessage,
+            "description": "User not found",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "user_not_found": {
+                            "summary": "User not found",
+                            "value": {"detail": "User not found"},
+                        }
+                    }
+                }
+            },
+        },
+    },
+)
 def read_user_by_id(
     user_id: uuid.UUID, session: SessionDep, current_user: CurrentUser
 ) -> Any:
@@ -274,6 +443,32 @@ def get_user_subscriptions(
 
 
 @router.get(
+    "/me/subscriptions/{subscription_id}",
+    response_model=SubscriptionPublicExtended,
+    tags=["subscriptions"],
+)
+def get_user_subscription(
+    user: CurrentUser,
+    subscription_id: uuid.UUID,
+    session: SessionDep,
+) -> Any:
+    """
+    Get user subscription.
+    """
+    subscription = session.get(Subscription, subscription_id)
+    if not subscription:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found"
+        )
+    if subscription.user_id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Subscription not found"
+        )
+
+    return subscription
+
+
+@router.get(
     "/{user_id}/subscriptions",
     dependencies=[Depends(get_current_active_superuser)],
     response_model=list[SubscriptionPublic],
@@ -306,6 +501,50 @@ def get_user_subscriptions_by_id(
     "/me/subscriptions/{subscription_id}/cancel",
     response_model=Message,
     tags=["subscriptions"],
+    responses={
+        401: {
+            "model": ErrorMessage,
+            "description": "Authentication error",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "not_authenticated": {
+                            "summary": "Not authenticated",
+                            "value": {"detail": "Not authenticated"},
+                        }
+                    }
+                }
+            },
+        },
+        404: {
+            "model": ErrorMessage,
+            "description": "Resource not found",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "subscription_not_found": {
+                            "summary": "Subscription not found",
+                            "value": {"detail": "Subscription not found"},
+                        }
+                    }
+                }
+            },
+        },
+        409: {
+            "model": ErrorMessage,
+            "description": "Conflict with current state",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "already_canceled": {
+                            "summary": "Subscription already canceled",
+                            "value": {"detail": "Subscription already canceled"},
+                        }
+                    }
+                }
+            },
+        },
+    },
 )
 def cancel_user_subscription(
     user: CurrentUser,

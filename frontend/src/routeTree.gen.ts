@@ -24,6 +24,9 @@ import { Route as LayoutResumeImport } from './routes/_layout/resume'
 import { Route as LayoutPricingImport } from './routes/_layout/pricing'
 import { Route as LayoutJobPreferencesImport } from './routes/_layout/job-preferences'
 import { Route as LayoutAdminImport } from './routes/_layout/admin'
+import { Route as LayoutSettingsIndexImport } from './routes/_layout/settings/index'
+import { Route as LayoutSettingsSubscriptionIndexImport } from './routes/_layout/settings/subscription/index'
+import { Route as LayoutSettingsSubscriptionSubscriptionIdImport } from './routes/_layout/settings/subscription/$subscriptionId'
 
 // Create/Update Routes
 
@@ -92,6 +95,23 @@ const LayoutAdminRoute = LayoutAdminImport.update({
   getParentRoute: () => LayoutRoute,
 } as any)
 
+const LayoutSettingsIndexRoute = LayoutSettingsIndexImport.update({
+  path: '/',
+  getParentRoute: () => LayoutSettingsRoute,
+} as any)
+
+const LayoutSettingsSubscriptionIndexRoute =
+  LayoutSettingsSubscriptionIndexImport.update({
+    path: '/subscription/',
+    getParentRoute: () => LayoutSettingsRoute,
+  } as any)
+
+const LayoutSettingsSubscriptionSubscriptionIdRoute =
+  LayoutSettingsSubscriptionSubscriptionIdImport.update({
+    path: '/subscription/$subscriptionId',
+    getParentRoute: () => LayoutSettingsRoute,
+  } as any)
+
 // Populate the FileRoutesByPath interface
 
 declare module '@tanstack/react-router' {
@@ -148,6 +168,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutIndexImport
       parentRoute: typeof LayoutImport
     }
+    '/_layout/settings/': {
+      preLoaderRoute: typeof LayoutSettingsIndexImport
+      parentRoute: typeof LayoutSettingsImport
+    }
+    '/_layout/settings/subscription/$subscriptionId': {
+      preLoaderRoute: typeof LayoutSettingsSubscriptionSubscriptionIdImport
+      parentRoute: typeof LayoutSettingsImport
+    }
+    '/_layout/settings/subscription/': {
+      preLoaderRoute: typeof LayoutSettingsSubscriptionIndexImport
+      parentRoute: typeof LayoutSettingsImport
+    }
   }
 }
 
@@ -159,7 +191,11 @@ export const routeTree = rootRoute.addChildren([
     LayoutJobPreferencesRoute,
     LayoutPricingRoute,
     LayoutResumeRoute,
-    LayoutSettingsRoute,
+    LayoutSettingsRoute.addChildren([
+      LayoutSettingsIndexRoute,
+      LayoutSettingsSubscriptionSubscriptionIdRoute,
+      LayoutSettingsSubscriptionIndexRoute,
+    ]),
     LayoutIndexRoute,
   ]),
   CheckoutFailedRoute,

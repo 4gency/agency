@@ -10,26 +10,31 @@ import {
   Th,
   Td,
   Text,
-  Badge,
   useColorModeValue,
   Spinner,
 } from "@chakra-ui/react"
 import { useQuery } from "@tanstack/react-query"
 
 import {
-  type SubscriptionPublic,
   UsersService,
 } from "../../client"
 
 const Subscriptions = () => {
-  const color = useColorModeValue("inherit", "ui.light")
-
   // Query to get user subscriptions
   const { data: subscriptions, isLoading, isError } = useSubscriptions()
 
   // Format date for display
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString()
+  }
+
+  // Função para navegar para a página de detalhes da assinatura
+  const handleGoToDetails = (subscriptionId: string) => {
+    console.log("Navegando para detalhes da assinatura:", subscriptionId);
+    
+    // Devido aos problemas de navegação, continuamos usando window.location.href
+    // O TanStack Router requer parâmetros tipados específicos que podem causar problemas
+    window.location.href = `/settings/subscription/${subscriptionId}`;
   }
 
   if (isLoading) {
@@ -46,43 +51,51 @@ const Subscriptions = () => {
         <Heading size="sm" py={4}>
           Subscriptions
         </Heading>
-        <Text color="red.500">Error loading subscriptions</Text>
+        <Text color="red.500">Unable to load subscriptions. Please try again later.</Text>
       </Container>
     )
   }
 
   return (
-    <Container maxW="full">
-      <Heading size="sm" py={4}>
-        Your Subscriptions
+    <Box>
+      <Heading size="md" my={4}>
+        My Subscriptions
       </Heading>
+
       {subscriptions && subscriptions.length > 0 ? (
         <Box overflowX="auto">
-          <Table variant="simple" size="md">
+          <Table variant="simple">
             <Thead>
               <Tr>
-                <Th color={color}>Plan</Th>
-                <Th color={color}>Start Date</Th>
-                <Th color={color}>End Date</Th>
-                <Th color={color}>Status</Th>
-                <Th color={color}>Usage</Th>
+                <Th>Plan</Th>
+                <Th>End Date</Th>
+                <Th>Price</Th>
               </Tr>
             </Thead>
             <Tbody>
-              {subscriptions.map((subscription: SubscriptionPublic) => (
-                <Tr key={subscription.id}>
-                  <Td>{subscription.subscription_plan_id}</Td>
-                  <Td>{formatDate(subscription.start_date)}</Td>
+              {subscriptions.map((subscription) => (
+                <Tr 
+                  key={subscription.id} 
+                  onClick={() => handleGoToDetails(subscription.id)}
+                  cursor="pointer"
+                  _hover={{ bg: useColorModeValue("gray.100", "gray.700") }}
+                  transition="background-color 0.2s"
+                >
+                  <Td>
+                    <Text fontWeight="medium">
+                      {subscription.subscription_plan?.name || "Unknown Plan"}
+                    </Text>
+                    <Text fontSize="sm" color="gray.500">
+                      {subscription.subscription_plan?.description || "No description available"}
+                    </Text>
+                  </Td>
                   <Td>{formatDate(subscription.end_date)}</Td>
                   <Td>
-                    <Badge
-                      colorScheme={subscription.is_active ? "green" : "red"}
-                    >
-                      {subscription.is_active ? "Active" : "Inactive"}
-                    </Badge>
-                  </Td>
-                  <Td>
-                    {subscription.metric_type}: {subscription.metric_status}
+                    {subscription.subscription_plan?.price
+                      ? `${subscription.subscription_plan.price} ${
+                          subscription.subscription_plan.currency || "USD"
+                        }`
+                      : "N/A"}
                   </Td>
                 </Tr>
               ))}
@@ -92,7 +105,7 @@ const Subscriptions = () => {
       ) : (
         <Text>You don't have any subscriptions yet.</Text>
       )}
-    </Container>
+    </Box>
   )
 }
 
