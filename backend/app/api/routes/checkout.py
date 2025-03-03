@@ -15,6 +15,7 @@ from app.models.core import (
     CheckoutSessionUpdate,
     ErrorMessage,
     Message,
+    Subscription,
 )
 from app.models.crud import subscription as crud_subs
 from app.utils import timestamp_to_datetime
@@ -113,7 +114,31 @@ def stripe_success(
             f"Error handling invoice payment succeeded in checkout callback: {e}"
         )
 
-    return {"message": "Success callback processed"}
+    # Check if a subscription was created for this checkout session
+    subscription = None
+    try:
+        # Retrieve the stripe subscription ID from the checkout session
+        stripe_sess = stripe.checkout.Session.retrieve(checkout.session_id)
+        if stripe_sess and stripe_sess.get("subscription"):
+            stripe_subscription_id = stripe_sess.get("subscription")
+            # Find the subscription in our database
+            subscription = session.exec(
+                select(Subscription).where(
+                    Subscription.stripe_subscription_id == stripe_subscription_id
+                )
+            ).first()
+    except Exception as e:
+        logger.error(f"Error retrieving subscription info: {e}")
+
+    # If subscription exists and has an end_date, include it in the response
+    if subscription and subscription.end_date:
+        # Format the date to a human-readable format like "June 2, 2025"
+        formatted_date = subscription.end_date.strftime("%B %d, %Y")
+        return {
+            "message": f"Your premium subscription will expire on {formatted_date}."
+        }
+
+    return {"message": "Your premium subscription will begin shortly."}
 
 
 @router.get(
