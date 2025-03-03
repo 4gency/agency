@@ -169,12 +169,16 @@ function SubscriptionDetailPage() {
 
   if (!subscriptionId) {
     return (
-      <Container maxW="container.md" py={8}>
-        <Heading size="lg" mb={4}>Invalid Subscription ID</Heading>
-        <Text mb={4}>The subscription ID is missing.</Text>
-        <Button onClick={handleBackToSettings}>
-          Go Back to Settings
-        </Button>
+      <Container maxW="full">
+        <Heading size="lg" textAlign={{ base: "center", md: "left" }} py={12}>
+          Invalid Subscription ID
+        </Heading>
+        <Box maxW="container.lg" mx="auto">
+          <Text mb={4}>The subscription ID is missing.</Text>
+          <Button onClick={handleBackToSettings}>
+            Go Back to Settings
+          </Button>
+        </Box>
       </Container>
     )
   }
@@ -193,47 +197,63 @@ function SubscriptionDetailPage() {
     
     if (statusCode === 404) {
       return (
-        <Container maxW="container.md" py={8}>
-          <Heading size="lg" mb={4}>Subscription Not Found</Heading>
-          <Text mb={4}>The subscription you're looking for doesn't exist or you don't have access to it.</Text>
-          <Button onClick={handleBackToSettings}>
-            Go Back to Settings
-          </Button>
+        <Container maxW="full">
+          <Heading size="lg" textAlign={{ base: "center", md: "left" }} py={12}>
+            Subscription Not Found
+          </Heading>
+          <Box maxW="container.lg" mx="auto">
+            <Text mb={4}>The subscription you're looking for doesn't exist or you don't have access to it.</Text>
+            <Button onClick={handleBackToSettings}>
+              Go Back to Settings
+            </Button>
+          </Box>
         </Container>
       )
     }
     
     if (statusCode === 422) {
       return (
-        <Container maxW="container.md" py={8}>
-          <Heading size="lg" mb={4}>Invalid Subscription ID</Heading>
-          <Text mb={4}>The subscription ID format is invalid.</Text>
-          <Button onClick={handleBackToSettings}>
-            Go Back to Settings
-          </Button>
+        <Container maxW="full">
+          <Heading size="lg" textAlign={{ base: "center", md: "left" }} py={12}>
+            Invalid Subscription ID
+          </Heading>
+          <Box maxW="container.lg" mx="auto">
+            <Text mb={4}>The subscription ID format is invalid.</Text>
+            <Button onClick={handleBackToSettings}>
+              Go Back to Settings
+            </Button>
+          </Box>
         </Container>
       )
     }
 
     return (
-      <Container maxW="container.md" py={8}>
-        <Heading size="lg" mb={4}>Error</Heading>
-        <Text mb={4}>An error occurred while loading the subscription details. Please try again later.</Text>
-        <Button onClick={handleBackToSettings}>
-          Go Back to Settings
-        </Button>
+      <Container maxW="full">
+        <Heading size="lg" textAlign={{ base: "center", md: "left" }} py={12}>
+          Error
+        </Heading>
+        <Box maxW="container.lg" mx="auto">
+          <Text mb={4}>An error occurred while loading the subscription details. Please try again later.</Text>
+          <Button onClick={handleBackToSettings}>
+            Go Back to Settings
+          </Button>
+        </Box>
       </Container>
     )
   }
 
   if (!subscription) {
     return (
-      <Container maxW="container.md" py={8}>
-        <Heading size="lg" mb={4}>No Data Available</Heading>
-        <Text mb={4}>Unable to load subscription details.</Text>
-        <Button onClick={handleBackToSettings}>
-          Go Back to Settings
-        </Button>
+      <Container maxW="full">
+        <Heading size="lg" textAlign={{ base: "center", md: "left" }} py={12}>
+          No Data Available
+        </Heading>
+        <Box maxW="container.lg" mx="auto">
+          <Text mb={4}>Unable to load subscription details.</Text>
+          <Button onClick={handleBackToSettings}>
+            Go Back to Settings
+          </Button>
+        </Box>
       </Container>
     )
   }
@@ -241,18 +261,21 @@ function SubscriptionDetailPage() {
   console.log("Dados da assinatura carregados:", subscription)
 
   return (
-    <Container maxW="container.lg" py={8}>
-      <Flex justify="space-between" align="center" mb={6}>
-        <Heading size="lg">Subscription Details</Heading>
+    <Container maxW="full">
+      <Heading size="lg" textAlign={{ base: "center", md: "left" }} py={12}>
+        Subscription Details
+      </Heading>
+      <Box position="absolute" top="2.5rem" right="1.5rem" display={{ base: "none", md: "block" }}>
         <Button
           variant="outline"
           onClick={handleBackToSettings}
+          size="sm"
         >
           Back to Settings
         </Button>
-      </Flex>
+      </Box>
 
-      <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={6}>
+      <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={6} maxW="container.lg" mx="auto">
         {/* Subscription Info Card */}
         <GridItem colSpan={1}>
           <Card bg={bgCard} shadow="md" borderRadius="md">
