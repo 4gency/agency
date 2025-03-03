@@ -34,7 +34,7 @@ function CheckoutSuccess() {
   const navigate = useNavigate()
   
   // Use our custom hook for checkout processing
-  const { shouldShowCard } = useProcessSuccessCheckout({
+  const { shouldShowCard, successMessage } = useProcessSuccessCheckout({
     authUser,
     isLoading,
     sessionId
@@ -96,7 +96,7 @@ function CheckoutSuccess() {
               </Text>
               
               <Text color={textColor}>
-                Your premium subscription will expire on June 2, 2025.
+                {successMessage}
               </Text>
             </Box>
             

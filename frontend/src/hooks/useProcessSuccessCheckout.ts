@@ -17,6 +17,7 @@ export function useProcessSuccessCheckout({
   sessionId 
 }: UseSuccessCheckoutParams) {
   const [shouldShowCard, setShouldShowCard] = useState(false)
+  const [successMessage, setSuccessMessage] = useState("")
   const navigate = useNavigate()
   const showToast = useCustomToast()
 
@@ -72,7 +73,10 @@ export function useProcessSuccessCheckout({
     const processCheckout = async () => {
       try {
         // Call the API with sessionId
-        await CheckoutService.stripeSuccess({ sessionId: validSessionId })
+        const response = await CheckoutService.stripeSuccess({ sessionId: validSessionId })
+        
+        // Store the message from the API
+        setSuccessMessage(response.message)
         
         // Trigger confetti and show card
         triggerConfetti()
@@ -101,5 +105,5 @@ export function useProcessSuccessCheckout({
     }
   }, [authUser, isLoading, sessionId, navigate, showToast])
 
-  return { shouldShowCard }
+  return { shouldShowCard, successMessage }
 } 
