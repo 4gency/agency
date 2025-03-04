@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ config_map_name }}
+  namespace: {{ namespace }}
+  labels:
+    app: linkedin-bot
+    session-id: {{ session_id }}
+    user-id: {{ user_id }}
+  annotations:
+    description: "LinkedIn bot configuration files"
+    created-by: "Admin Bot System"
+data:
+  config.yaml: |
+{{ config_yaml | indent(4, true) }}
+  resume.yaml: |
+{{ resume_yaml | indent(4, true) }}
+  bot_settings.json: |
+    {
+      "session_id": "{{ session_id }}",
+      "config_version": {{ config_version }},
+      "resume_version": {{ resume_version }},
+      "api_url": "{{ api_url }}",
+      "created_at": "{{ created_at }}",
+      "max_applies": {{ max_applies | default(50) }},
+      "max_time_seconds": {{ max_time_seconds | default(3600) }},
+      "auto_restart": {{ auto_restart | default(true) | lower }},
+      "dynamic_updates": {{ dynamic_updates | default(false) | lower }}
+    }
+  {% if additional_files %}
+  {% for filename, content in additional_files.items() %}
+  {{ filename }}: |
+{{ content | indent(4, true) }}
+  {% endfor %}
+  {% endif %} 

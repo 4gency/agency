@@ -1,0 +1,181 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ pod_name }}
+  namespace: {{ namespace }}
+  labels:
+    app: linkedin-bot
+    session-id: {{ session_id }}
+    user-id: {{ user_id }}
+  annotations:
+    description: "LinkedIn job application bot"
+    created-by: "Admin Bot System"
+spec:
+  restartPolicy: {{ restart_policy | default("Never") }}
+  serviceAccountName: {{ service_account | default("bot-sa") }}
+  automountServiceAccountToken: {{ auto_mount_token | default("true") }}
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    fsGroup: 1000
+  containers:
+  - name: bot
+    image: {{ image }}
+    imagePullPolicy: {{ image_pull_policy | default("IfNotPresent") }}
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL
+      readOnlyRootFilesystem: false
+    resources:
+      requests:
+        cpu: {{ resources_requests_cpu | default("500m") }}
+        memory: {{ resources_requests_memory | default("1Gi") }}
+      limits:
+        cpu: {{ resources_limits_cpu | default("1000m") }}
+        memory: {{ resources_limits_memory | default("2Gi") }}
+    env:
+    - name: API_PORT
+      value: "8080"
+    - name: BOT_SESSION_ID
+      value: "{{ session_id }}"
+    - name: BOT_CONFIG_VERSION
+      value: "{{ config_version }}"
+    - name: BOT_RESUME_VERSION
+      value: "{{ resume_version }}"
+    - name: BOT_API_URL
+      value: "{{ api_url }}"
+    - name: BOT_ID
+      value: "{{ bot_id }}"
+    - name: BOT_API_KEY
+      valueFrom:
+        secretKeyRef:
+          name: {{ bot_api_secret_name }}
+          key: api-key
+    - name: LINKEDIN_EMAIL
+      valueFrom:
+        secretKeyRef:
+          name: {{ bot_api_secret_name }}
+          key: linkedin-email
+    - name: LINKEDIN_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: {{ bot_api_secret_name }}
+          key: linkedin-password
+    - name: STYLE_CHOICE
+      value: "{{ style_choice | default('Modern Blue') }}"
+    - name: USER_AGENT
+      value: "{{ user_agent | default('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36') }}"
+    - name: SEC_CH_UA
+      value: "{{ sec_ch_ua | default('\"Chromium\";v=\"130\", \"Google Chrome\";v=\"130\", \"Not?A_Brand\";v=\"99\"') }}"
+    - name: SEC_CH_UA_PLATFORM
+      value: "{{ sec_ch_ua_platform | default('Windows') }}"
+    - name: WEBHOOK_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: {{ bot_api_secret_name }}
+          key: webhook-token
+    - name: WEBHOOK_URI
+      value: "{{ webhook_uri | default('http://api-service:8000/api/v1/webhooks/bot') }}"
+    - name: GOTENBERG_URL
+      value: "{{ gotenberg_url | default('http://gotenberg:3000') }}"
+    {% if env_vars %}
+    {% for env in env_vars %}
+    - name: {{ env.name }}
+      {% if env.value_from %}
+      valueFrom:
+        {% if env.value_from.secret_key_ref %}
+        secretKeyRef:
+          name: {{ env.value_from.secret_key_ref.name }}
+          key: {{ env.value_from.secret_key_ref.key }}
+        {% elif env.value_from.config_map_key_ref %}
+        configMapKeyRef:
+          name: {{ env.value_from.config_map_key_ref.name }}
+          key: {{ env.value_from.config_map_key_ref.key }}
+        {% endif %}
+      {% else %}
+      value: "{{ env.value }}"
+      {% endif %}
+    {% endfor %}
+    {% endif %}
+    volumeMounts:
+    - name: config-volume
+      mountPath: /app/config
+      readOnly: true
+    - name: shared-data
+      mountPath: /app/data
+    - name: browser-cache
+      mountPath: /app/cache
+    - name: temp-storage
+      mountPath: /tmp
+    {% if volume_mounts %}
+    {% for volume_mount in volume_mounts %}
+    - name: {{ volume_mount.name }}
+      mountPath: {{ volume_mount.mount_path }}
+      {% if volume_mount.sub_path %}
+      subPath: {{ volume_mount.sub_path }}
+      {% endif %}
+      {% if volume_mount.read_only %}
+      readOnly: {{ volume_mount.read_only }}
+      {% endif %}
+    {% endfor %}
+    {% endif %}
+    command: ["uv", "run", "main.py"]
+    {% if args %}
+    args:
+    {% for arg in args %}
+    - "{{ arg }}"
+    {% endfor %}
+    {% endif %}
+    lifecycle:
+      preStop:
+        exec:
+          command: ["python", "-m", "bot.shutdown"]
+  volumes:
+  - name: config-volume
+    configMap:
+      name: {{ config_map_name }}
+  - name: shared-data
+    emptyDir: {}
+  - name: browser-cache
+    emptyDir: {}
+  - name: temp-storage
+    emptyDir: {}
+  {% if volumes %}
+  {% for volume in volumes %}
+  - name: {{ volume.name }}
+    {% if volume.config_map %}
+    configMap:
+      name: {{ volume.config_map.name }}
+      {% if volume.config_map.items %}
+      items:
+      {% for item in volume.config_map.items %}
+      - key: {{ item.key }}
+        path: {{ item.path }}
+      {% endfor %}
+      {% endif %}
+    {% elif volume.secret %}
+    secret:
+      secretName: {{ volume.secret.name }}
+      {% if volume.secret.items %}
+      items:
+      {% for item in volume.secret.items %}
+      - key: {{ item.key }}
+        path: {{ item.path }}
+      {% endfor %}
+      {% endif %}
+    {% elif volume.empty_dir %}
+    emptyDir: {}
+    {% elif volume.persistent_volume_claim %}
+    persistentVolumeClaim:
+      claimName: {{ volume.persistent_volume_claim.claim_name }}
+    {% endif %}
+  {% endfor %}
+  {% endif %}
+  {% if image_pull_secrets %}
+  imagePullSecrets:
+  {% for secret in image_pull_secrets %}
+  - name: {{ secret.name }}
+  {% endfor %}
+  {% endif %} 
