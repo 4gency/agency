@@ -1,18 +1,21 @@
+import json
 import logging
+import uuid
 from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
 import yaml
 from fastapi import BackgroundTasks, Depends, HTTPException, status
-from odmantic.session import SyncSession
+from odmantic.session import AIOSession, SyncSession
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session
 
 from app.api.deps import get_db, get_nosql_db
-from app.integrations.kubernetes import get_kubernetes_service
+from app.core.security import decrypt_password, encrypt_password
+from app.integrations.kubernetes import get_kubernetes_manager, get_kubernetes_service
 from app.models.bot import (
     BotApply,
     BotApplyStatus,
@@ -53,7 +56,7 @@ class BotService:
     - Currículos (MongoDB)
     """
 
-    def __init__(self, db: AsyncSession, nosql_db: SyncSession):
+    def __init__(self, db: AsyncSession, nosql_db: AIOSession | SyncSession):
         """
         Inicializa o serviço com sessões para ambos os bancos de dados.
 
@@ -85,7 +88,17 @@ class BotService:
                 LinkedInCredentials.subscription_id == subscription_id
             )
         )
-        return result.scalars().first()
+        credentials = result.scalars().first()
+
+        # Descriptografa a senha, se necessário
+        if credentials and credentials.password:
+            try:
+                credentials.password = decrypt_password(credentials.password)
+            except Exception as e:
+                # Log the error, but return credentials with encrypted password
+                logger.error(f"Error decrypting password: {str(e)}")
+
+        return credentials
 
     async def create_or_update_linkedin_credentials(
         self,
@@ -120,16 +133,22 @@ class BotService:
                 detail="You do not have permission to modify this subscription",
             )
 
+        # Criptografar a senha
+        encrypted_password = encrypt_password(credentials.password)
+
         # Verificar se já existem credenciais
         existing = await self.get_linkedin_credentials(subscription_id)
 
         if existing:
             # Atualizar credenciais existentes
             existing.email = credentials.email
-            existing.password = credentials.password  # Em produção, usar criptografia
+            existing.password = encrypted_password
             self.db.add(existing)
             await self.db.commit()
             await self.db.refresh(existing)
+
+            # Retornar com senha descriptografada para uso imediato
+            existing.password = credentials.password
             return existing
 
         # Criar novas credenciais
@@ -137,13 +156,15 @@ class BotService:
             subscription_id=subscription_id,
             user_id=user_id,
             email=credentials.email,
-            password=credentials.password,  # Em produção, usar criptografia
+            password=encrypted_password,
         )
 
         self.db.add(new_credentials)
         await self.db.commit()
         await self.db.refresh(new_credentials)
 
+        # Retornar com senha descriptografada para uso imediato
+        new_credentials.password = credentials.password
         return new_credentials
 
     # ======================================================
@@ -170,7 +191,10 @@ class BotService:
         return result.scalars().first()
 
     async def create_or_update_bot_configuration(
-        self, user_id: UUID, subscription_id: UUID, config: BotConfigurationCreate
+        self,
+        user_id: UUID,
+        subscription_id: UUID,
+        config: BotConfigurationCreate,
     ) -> BotConfiguration:
         """
         Cria ou atualiza a configuração do bot para uma assinatura.
@@ -218,16 +242,20 @@ class BotService:
             return existing
 
         # Criar nova configuração
+        field_info = (
+            BotConfiguration.__annotations__
+            if hasattr(BotConfiguration, "__annotations__")
+            else BotConfiguration.__fields__
+        )
+
         new_config = BotConfiguration(
             subscription_id=subscription_id,
             user_id=user_id,
             style_choice=config.style_choice,
-            user_agent=config.user_agent
-            or BotConfiguration.__annotations__["user_agent"].default,
-            sec_ch_ua=config.sec_ch_ua
-            or BotConfiguration.__annotations__["sec_ch_ua"].default,
+            user_agent=config.user_agent or field_info["user_agent"].default,
+            sec_ch_ua=config.sec_ch_ua or field_info["sec_ch_ua"].default,
             sec_ch_ua_platform=config.sec_ch_ua_platform
-            or BotConfiguration.__annotations__["sec_ch_ua_platform"].default,
+            or field_info["sec_ch_ua_platform"].default,
         )
 
         self.db.add(new_config)
@@ -236,8 +264,120 @@ class BotService:
 
         return new_config
 
+    async def convert_config_to_yaml(self, subscription_id: UUID) -> tuple[str, str]:
+        """
+        Recupera a configuração e currículo existentes e converte para YAML.
+
+        Args:
+            subscription_id: ID da assinatura
+
+        Returns:
+            Tuple[config_yaml, resume_yaml]
+
+        Raises:
+            HTTPException: Se não encontrar configuração ou currículo
+        """
+        # Busca config
+        config = config_crud.get_config(
+            session=self.nosql_db,
+            subscription_id=str(subscription_id),
+        )
+
+        if not config:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Config not found for subscription {subscription_id}",
+            )
+
+        # Busca currículo
+        resume = await config_crud.get_resume_async(
+            session=self.nosql_db,
+            subscription_id=str(subscription_id),
+        )
+
+        if not resume:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Resume not found for subscription {subscription_id}",
+            )
+
+        # Converter para YAML
+        config_dict = config.model_dump(exclude={"id", "subscription_id", "user_id"})
+        resume_dict = resume.model_dump(exclude={"id", "subscription_id", "user_id"})
+
+        # Ajuste para tornar os dados mais compatíveis com o bot
+        config_dict = self._sanitize_dict_for_yaml(config_dict)
+        resume_dict = self._sanitize_dict_for_yaml(resume_dict)
+
+        config_yaml = yaml.dump(config_dict, default_flow_style=False, sort_keys=False)
+        resume_yaml = yaml.dump(resume_dict, default_flow_style=False, sort_keys=False)
+
+        return config_yaml, resume_yaml
+
+    def _sanitize_dict_for_yaml(self, data: dict[str, Any]) -> dict[str, Any]:
+        """
+        Sanitiza um dicionário para ser convertido para YAML.
+        Remove valores None e sanitiza listas e dicionários aninhados.
+
+        Args:
+            data: Dicionário a ser sanitizado
+
+        Returns:
+            Dicionário sanitizado
+        """
+        result = {}
+
+        for key, value in data.items():
+            # Pular valores None
+            if value is None:
+                continue
+
+            # Processar dicionários aninhados
+            if isinstance(value, dict):
+                sanitized = self._sanitize_dict_for_yaml(value)
+                if sanitized:  # Só adiciona se não estiver vazio
+                    result[key] = sanitized
+
+            # Processar listas
+            elif isinstance(value, list):
+                if value:  # Só adiciona se a lista não estiver vazia
+                    sanitized_list = []
+                    for item in value:
+                        if isinstance(item, dict):
+                            sanitized_item = self._sanitize_dict_for_yaml(item)
+                            if sanitized_item:  # Só adiciona se não estiver vazio
+                                sanitized_list.append(sanitized_item)
+                        else:
+                            sanitized_list.append(item)
+
+                    if sanitized_list:  # Só adiciona se a lista não estiver vazia
+                        result[key] = sanitized_list
+            else:
+                result[key] = value
+
+        return result
+
+    async def generate_config_yamls(self, subscription_id: UUID) -> tuple[str, str]:
+        """
+        Gera os YAMLs de configuração e currículo a partir dos modelos MongoDB.
+
+        Args:
+            subscription_id: ID da assinatura
+
+        Returns:
+            Tuple[config_yaml, resume_yaml]
+
+        Raises:
+            ValueError: Se não encontrar configuração ou currículo
+        """
+        try:
+            return await self.convert_config_to_yaml(subscription_id)
+        except HTTPException as e:
+            # Converter HTTPException para ValueError para manter a consistência da assinatura
+            raise ValueError(e.detail)
+
     async def create_bot_config(
-        self, user_id: UUID, config_data: BotConfigCreate
+        self, user_id: UUID, config_data: BotConfigCreate, subscription_id: UUID
     ) -> BotConfig:
         """
         Cria uma nova configuração de bot.
@@ -245,6 +385,7 @@ class BotService:
         Args:
             user_id: ID do usuário
             config_data: Dados da configuração
+            subscription_id: ID da assinatura
 
         Returns:
             Configuração criada
@@ -252,6 +393,7 @@ class BotService:
         # Criar nova configuração
         new_config = BotConfig(
             user_id=user_id,
+            subscription_id=subscription_id,
             name=config_data.name,
             description=config_data.description,
             max_applies_per_session=config_data.max_applies_per_session,
@@ -411,51 +553,6 @@ class BotService:
             )
 
         return config
-
-    # ======================================================
-    # CONVERSÃO DE CONFIGURAÇÕES PARA YAML
-    # ======================================================
-
-    async def generate_config_yamls(self, subscription_id: UUID) -> tuple[str, str]:
-        """
-        Gera os YAMLs de configuração e currículo a partir dos modelos MongoDB.
-
-        Args:
-            subscription_id: ID da assinatura
-
-        Returns:
-            Tuple[config_yaml, resume_yaml]
-
-        Raises:
-            ValueError: Se não encontrar configuração ou currículo
-        """
-        # Obter configuração do MongoDB
-        job_config = config_crud.get_config(
-            session=self.nosql_db, subscription_id=str(subscription_id)
-        )
-
-        if not job_config:
-            raise ValueError(
-                f"Job configuration not found for subscription {subscription_id}"
-            )
-
-        # Obter currículo do MongoDB
-        resume = config_crud.get_resume(
-            session=self.nosql_db, subscription_id=str(subscription_id)
-        )
-
-        if not resume:
-            raise ValueError(f"Resume not found for subscription {subscription_id}")
-
-        # Converter para dicionários, excluindo campos que não devem ir para o YAML
-        job_config_dict = job_config.model_dump(exclude={"subscription_id", "user_id"})
-        resume_dict = resume.model_dump(exclude={"subscription_id", "user_id"})
-
-        # Converter para YAML
-        config_yaml = yaml.dump(job_config_dict, default_flow_style=False)
-        resume_yaml = yaml.dump(resume_dict, default_flow_style=False)
-
-        return config_yaml, resume_yaml
 
     # ======================================================
     # GERENCIAMENTO DE SESSÕES
@@ -909,6 +1006,157 @@ class BotService:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Error pausing bot session: {str(e)}",
             )
+
+    async def update_pod_status(self, _background_tasks: BackgroundTasks) -> int:
+        """
+        Atualiza o status de todos os pods de bots ativos no Kubernetes.
+
+        Args:
+            _background_tasks: Tarefas em background (FastAPI), não utilizado atualmente
+        """
+        # Retrieve active sessions
+        active_sessions = self.db.exec(
+            select(BotSession).where(
+                BotSession.status.in_(
+                    [
+                        BotSessionStatus.STARTING.value,
+                        BotSessionStatus.RUNNING.value,
+                        BotSessionStatus.PAUSED.value,
+                    ]
+                )
+            )
+        ).all()
+
+        # Get Kubernetes manager
+        kubernetes_manager = get_kubernetes_manager()
+
+        updated_count = 0
+        for session in active_sessions:
+            try:
+                # Check if session has Kubernetes info
+                if not session.kubernetes_pod_name or not session.kubernetes_namespace:
+                    continue
+
+                # Get pod status
+                pod_status = kubernetes_manager.get_pod_status(
+                    namespace=session.kubernetes_namespace,
+                    pod_name=session.kubernetes_pod_name,
+                )
+
+                # Update session status based on pod status
+                old_status = session.status
+
+                if pod_status == KubernetesPodStatus.RUNNING:
+                    if session.status == BotSessionStatus.STARTING:
+                        session.status = BotSessionStatus.RUNNING
+
+                        # Create event
+                        self._create_bot_event(
+                            session=self.db,
+                            session_id=session.id,
+                            event_type="system",
+                            data={"message": "Bot is now running", "status": "running"},
+                        )
+                elif pod_status == KubernetesPodStatus.SUCCEEDED:
+                    if session.status != BotSessionStatus.COMPLETED:
+                        session.status = BotSessionStatus.COMPLETED
+                        session.completed_at = datetime.now(timezone.utc)
+
+                        # Create event
+                        self._create_bot_event(
+                            session=self.db,
+                            session_id=session.id,
+                            event_type="system",
+                            data={
+                                "message": "Bot completed successfully",
+                                "status": "completed",
+                            },
+                        )
+                elif pod_status == KubernetesPodStatus.FAILED:
+                    if session.status not in [
+                        BotSessionStatus.ERROR,
+                        BotSessionStatus.STOPPED,
+                    ]:
+                        session.status = BotSessionStatus.ERROR
+                        session.error_message = "Pod failed"
+
+                        # Create event
+                        self._create_bot_event(
+                            session=self.db,
+                            session_id=session.id,
+                            event_type="system",
+                            data={
+                                "message": "Bot failed",
+                                "status": "error",
+                                "error": "Kubernetes pod failed",
+                            },
+                        )
+                elif pod_status == KubernetesPodStatus.UNKNOWN:
+                    # Pod not found, likely deleted or completed
+                    if session.status not in [
+                        BotSessionStatus.STOPPED,
+                        BotSessionStatus.COMPLETED,
+                        BotSessionStatus.ERROR,
+                    ]:
+                        session.status = BotSessionStatus.ERROR
+                        session.error_message = "Pod not found"
+
+                        # Create event
+                        self._create_bot_event(
+                            session=self.db,
+                            session_id=session.id,
+                            event_type="system",
+                            data={
+                                "message": "Bot disappeared",
+                                "status": "error",
+                                "error": "Kubernetes pod not found",
+                            },
+                        )
+
+                # If status changed, update session
+                if old_status != session.status:
+                    self.db.add(session)
+                    updated_count += 1
+
+            except Exception as e:
+                logger.exception(
+                    f"Error updating pod status for session {session.id}: {str(e)}"
+                )
+
+        # Commit all changes at once
+        if updated_count > 0:
+            self.db.commit()
+
+        return updated_count
+
+    def _create_bot_event(
+        session: Session, session_id: UUID, event_type: str, data: dict[str, Any]
+    ) -> BotEvent:
+        """
+        Create a bot event and save it to the database.
+
+        Args:
+            session: Database session
+            session_id: Bot session ID
+            event_type: Event type
+            data: Event data
+
+        Returns:
+            Created event
+        """
+        # Create event
+        event = BotEvent(
+            id=uuid.uuid4(),
+            session_id=session_id,
+            event_type=event_type,
+            data=json.dumps(data),
+            created_at=datetime.now(timezone.utc),
+        )
+
+        session.add(event)
+        session.commit()
+
+        return event
 
     async def resume_bot_session(
         self,
@@ -2146,6 +2394,55 @@ class BotService:
     # COMANDOS DO BOT
     # ======================================================
 
+    async def _execute_command_async(self, command_id: UUID) -> None:
+        """
+        Executa um comando assincronamente.
+
+        Args:
+            command_id: ID do comando
+        """
+        try:
+            # Obter o comando
+            result = await self.db.execute(
+                select(BotCommand).where(BotCommand.id == command_id)
+            )
+            command = result.scalars().first()
+
+            if not command:
+                logger.error(f"Command {command_id} not found")
+                return
+
+            # Executar o comando
+            k8s_service = await get_kubernetes_service(self.db)
+            success, message = await k8s_service.execute_bot_command(command)
+
+            # Atualizar o resultado
+            await self.update_command_result(
+                command_id=command.id,
+                session_id=command.bot_session_id,
+                success=success,
+                error_message=None if success else message,
+            )
+
+        except Exception as e:
+            logger.exception(f"Error executing command {command_id}: {str(e)}")
+            try:
+                # Tentar marcar o comando como falho
+                result = await self.db.execute(
+                    select(BotCommand).where(BotCommand.id == command_id)
+                )
+                command = result.scalars().first()
+
+                if command:
+                    await self.update_command_result(
+                        command_id=command.id,
+                        session_id=command.bot_session_id,
+                        success=False,
+                        error_message=f"Error during execution: {str(e)}",
+                    )
+            except Exception as inner_e:
+                logger.exception(f"Error updating command result: {str(inner_e)}")
+
     async def create_bot_event(self, event: BotEvent) -> bool:
         """
         Cria um evento para uma sessão de bot.
@@ -2669,6 +2966,177 @@ class BotService:
             await self.db.rollback()
             logger.error(f"Error creating notification for apply completion: {str(e)}")
             return None
+
+    # Método auxiliar para processar webhooks recebidos do bot
+    async def process_bot_webhook(
+        self, session_id: UUID, webhook_data: dict[str, Any]
+    ) -> dict[str, Any]:
+        """
+        Processa dados recebidos via webhook do bot.
+
+        Args:
+            session_id: ID da sessão
+            webhook_data: Dados do webhook
+
+        Returns:
+            Resposta para o webhook
+        """
+        try:
+            # Verificar se a sessão existe
+            bot_session = await self._get_bot_session(session_id)
+            if not bot_session:
+                return {"success": False, "error": "Session not found"}
+
+            # Extrair tipo de webhook
+            webhook_type = webhook_data.get("type")
+            if not webhook_type:
+                return {"success": False, "error": "Missing webhook type"}
+
+            # Processar diferentes tipos de webhook
+            if webhook_type == "heartbeat":
+                # Atualizar heartbeat da sessão
+                metrics = webhook_data.get("metrics", {})
+                await self.update_bot_heartbeat(session_id, metrics)
+                return {"success": True}
+
+            elif webhook_type == "status_update":
+                # Atualizar status da sessão
+                status_str = webhook_data.get("status")
+                message = webhook_data.get("message")
+                details = webhook_data.get("details")
+
+                # Converter string para enum, se possível
+                status_enum = None
+                if status_str:
+                    try:
+                        status_enum = BotSessionStatus[status_str.upper()]
+                    except (KeyError, ValueError):
+                        pass
+
+                # Atualizar status
+                await self.update_bot_status(
+                    session_id=session_id,
+                    status=status_enum,
+                    message=message,
+                    details=details,
+                )
+                return {"success": True}
+
+            elif webhook_type == "event":
+                # Criar evento
+                event_type = webhook_data.get("event_type", "bot")
+                message = webhook_data.get("message", "Event from bot")
+                severity = webhook_data.get("severity", "info")
+                details = webhook_data.get("details")
+                source = webhook_data.get("source", "bot")
+
+                # Criar evento
+                event = BotEvent(
+                    bot_session_id=session_id,
+                    type=event_type,
+                    message=message,
+                    severity=severity,
+                    details=details,
+                    source=source,
+                    created_at=datetime.now(timezone.utc),
+                )
+
+                success = await self.create_bot_event(event)
+                return {"success": success}
+
+            elif webhook_type == "user_action":
+                # Criar ação do usuário
+                action = await self.create_user_action_from_webhook(
+                    session_id, webhook_data
+                )
+                return {
+                    "success": action is not None,
+                    "action_id": str(action.id) if action else None,
+                }
+
+            elif webhook_type == "session_completed":
+                # Sessão concluída com sucesso
+                bot_session.status = BotSessionStatus.COMPLETED
+                bot_session.finished_at = datetime.now(timezone.utc)
+                bot_session.add_event(
+                    event_type="system",
+                    message="Bot session completed successfully",
+                    severity="info",
+                    source="bot",
+                )
+
+                # Atualizar métricas
+                bot_session.update_metrics()
+
+                # Salvar alterações
+                self.db.add(bot_session)
+                await self.db.commit()
+
+                # Enviar notificação
+                notification = await self.notify_session_completion(session_id)
+
+                return {
+                    "success": True,
+                    "notification_id": str(notification.id) if notification else None,
+                }
+
+            elif webhook_type == "session_failed":
+                # Sessão falhou
+                reason = webhook_data.get("reason", "Unknown error")
+
+                bot_session.status = BotSessionStatus.FAILED
+                bot_session.error_message = reason
+                bot_session.finished_at = datetime.now(timezone.utc)
+                bot_session.add_event(
+                    event_type="system",
+                    message=f"Bot session failed: {reason}",
+                    severity="error",
+                    source="bot",
+                )
+
+                # Atualizar métricas
+                bot_session.update_metrics()
+
+                # Salvar alterações
+                self.db.add(bot_session)
+                await self.db.commit()
+
+                # Enviar notificação
+                notification = await self.notify_session_failure(session_id, reason)
+
+                return {
+                    "success": True,
+                    "notification_id": str(notification.id) if notification else None,
+                }
+
+            elif webhook_type == "apply_completed":
+                # Aplicação concluída
+                apply_id = webhook_data.get("apply_id")
+                success = webhook_data.get("success", False)
+
+                if not apply_id:
+                    return {"success": False, "error": "Missing apply_id"}
+
+                # Enviar notificação
+                notification = await self.notify_apply_completion(apply_id, success)
+
+                return {
+                    "success": True,
+                    "notification_id": str(notification.id) if notification else None,
+                }
+
+            else:
+                # Tipo de webhook desconhecido
+                return {
+                    "success": False,
+                    "error": f"Unknown webhook type: {webhook_type}",
+                }
+
+        except Exception as e:
+            logger.exception(
+                f"Error processing webhook for session {session_id}: {str(e)}"
+            )
+            return {"success": False, "error": str(e)}
 
 
 async def get_bot_service(

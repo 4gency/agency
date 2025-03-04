@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session
 
 from app.api.routes.webhooks import router
-from app.models.bot import BotSession, BotSessionStatus
+from app.tests.utils.bot import create_test_bot_session
 
 
 @pytest.fixture
@@ -39,24 +39,7 @@ def client(test_app):
 @pytest.fixture
 def sample_bot_session(db: Session):
     """Create a sample bot session for testing."""
-    session = BotSession(
-        id=uuid.uuid4(),
-        user_id=uuid.uuid4(),
-        subscription_id=uuid.uuid4(),
-        bot_config_id=uuid.uuid4(),
-        status=BotSessionStatus.RUNNING,
-        pod_name="test-pod",
-        pod_ip="10.0.0.1",
-        applies_limit=10,
-        applies_count=0,
-        created_at=datetime.now(timezone.utc),
-        updated_at=datetime.now(timezone.utc),
-    )
-
-    db.add(session)
-    db.commit()
-    db.refresh(session)
-    return session
+    return create_test_bot_session(db)
 
 
 class TestWebhooks:

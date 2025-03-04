@@ -5,15 +5,15 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from sqlmodel import Session
 
 from app.api.routes.bot import router
 from app.models.bot import (
     BotConfig,
-    BotSession,
-    BotSessionStatus,
 )
-from app.models.core import User
 from app.services.bot import BotService
+from app.tests.utils.bot import create_test_bot_config, create_test_bot_session
+from app.tests.utils.user import create_random_user
 
 
 @pytest.fixture
@@ -59,55 +59,32 @@ def client(test_app):
 
 
 @pytest.fixture
-def user_token_headers(_client: TestClient):
+def user_token_headers(client: TestClient):
     """Get token headers for a normal user."""
     # This would normally come from the conftest.py
     return {"Authorization": "Bearer test-token"}
 
 
 @pytest.fixture
-def sample_user():
+def sample_user(db: Session):
     """Create a sample user for testing."""
-    return User(
-        id=uuid.uuid4(),
-        email="test@example.com",
-        hashed_password="hashed_password",
-        is_active=True,
-        is_superuser=False,
-    )
+    return create_random_user(db)
 
 
 @pytest.fixture
-def sample_bot_config():
+def sample_bot_config(db: Session):
     """Create a sample bot configuration for testing."""
-    return BotConfig(
-        id=uuid.uuid4(),
-        user_id=uuid.uuid4(),
-        subscription_id=uuid.uuid4(),
-        name="Test Config",
-        job_search_query="Software Engineer",
-        location="Remote",
-        default_applies_limit=10,
-        created_at=datetime.now(timezone.utc),
-        updated_at=datetime.now(timezone.utc),
-    )
+    return create_test_bot_config(db)
 
 
 @pytest.fixture
-def sample_bot_session(sample_bot_config):
+def sample_bot_session(db: Session, sample_bot_config):
     """Create a sample bot session for testing."""
-    return BotSession(
-        id=uuid.uuid4(),
-        user_id=sample_bot_config.user_id,
-        subscription_id=sample_bot_config.subscription_id,
+    return create_test_bot_session(
+        db,
         bot_config_id=sample_bot_config.id,
-        status=BotSessionStatus.RUNNING,
-        pod_name="test-pod",
-        pod_ip="10.0.0.1",
-        applies_limit=10,
-        applies_count=0,
-        created_at=datetime.now(timezone.utc),
-        updated_at=datetime.now(timezone.utc),
+        subscription_id=sample_bot_config.subscription_id,
+        user_id=sample_bot_config.user_id,
     )
 
 
@@ -248,8 +225,6 @@ class TestBotRoutes:
         """Test starting a bot session."""
         # Arrange
         session_data = {"bot_config_id": str(sample_bot_config.id), "applies_limit": 10}
-
-        # Mock the service response
         mock_bot_service.start_bot_session.return_value = sample_bot_session
 
         # Act
@@ -259,8 +234,8 @@ class TestBotRoutes:
 
         # Assert
         assert response.status_code == 201
-        assert "id" in response.json()
-        assert response.json()["status"] == "running"
+        assert response.json()["id"] == str(sample_bot_session.id)
+        assert response.json()["status"] == sample_bot_session.status.value
         mock_bot_service.start_bot_session.assert_called_once()
 
     def test_stop_bot_session(

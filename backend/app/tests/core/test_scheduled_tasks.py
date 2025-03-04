@@ -23,7 +23,7 @@ def mock_httpx_client():
 
 
 @pytest.fixture
-def task_manager(_mock_httpx_client):
+def task_manager(mock_httpx_client):
     """Create a task manager with mocked dependencies."""
     manager = ScheduledTaskManager()
     # Set a short update interval for testing

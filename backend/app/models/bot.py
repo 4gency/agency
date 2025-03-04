@@ -163,6 +163,7 @@ class BotConfig(SQLModel, table=True):
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     user_id: UUID = Field(foreign_key="user.id")
+    subscription_id: UUID = Field(foreign_key="subscription.id")
     name: str = Field(max_length=100)
     description: str | None = Field(default=None, max_length=1000)
 
@@ -230,6 +231,7 @@ class BotConfig(SQLModel, table=True):
 
     # Relacionamentos
     user: User = Relationship(back_populates="bot_configs")
+    subscription: Subscription = Relationship(back_populates="bot_configs")
     bot_sessions: list["BotSession"] = Relationship(back_populates="bot_config")
 
     def update_config(self, new_yaml_key: str) -> None:
@@ -678,12 +680,17 @@ class BotUserAction(SQLModel, table=True):
 
     # Relacionamentos
     bot_session: BotSession = Relationship(back_populates="bot_user_actions")
-    bot_apply: Optional["BotApply"] = Relationship()
+    bot_apply: Optional["BotApply"] = Relationship(back_populates="user_actions")
     bot_events: list["BotEvent"] = Relationship(
-        sa_relationship_kwargs={"foreign_keys": "[BotEvent.user_action_id]"}
+        back_populates="user_action",
+        sa_relationship_kwargs={
+            "foreign_keys": "[BotEvent.user_action_id]",
+            "overlaps": "bot_events"
+        },
     )
     bot_notifications: list["BotNotification"] = Relationship(
-        sa_relationship_kwargs={"foreign_keys": "[BotNotification.user_action_id]"}
+        back_populates="user_action",
+        sa_relationship_kwargs={"foreign_keys": "[BotNotification.user_action_id]"},
     )
 
     def complete(self, user_input: str) -> None:
@@ -769,10 +776,18 @@ class BotEvent(SQLModel, table=True):
     # Relacionamentos
     bot_session: BotSession = Relationship(back_populates="bot_events")
     bot_apply: Optional["BotApply"] = Relationship(
-        sa_relationship_kwargs={"foreign_keys": "[BotEvent.bot_apply_id]"}
+        back_populates="events",
+        sa_relationship_kwargs={
+            "foreign_keys": "[BotEvent.bot_apply_id]",
+            "overlaps": "bot_apply"
+        },
     )
     user_action: BotUserAction | None = Relationship(
-        sa_relationship_kwargs={"foreign_keys": "[BotEvent.user_action_id]"}
+        back_populates="bot_events",
+        sa_relationship_kwargs={
+            "foreign_keys": "[BotEvent.user_action_id]",
+            "overlaps": "bot_events"
+        },
     )
 
     @classmethod
@@ -881,10 +896,15 @@ class BotApply(SQLModel, table=True):
     )
     user_actions: list[BotUserAction] = Relationship(back_populates="bot_apply")
     events: list[BotEvent] = Relationship(
-        sa_relationship_kwargs={"foreign_keys": "[BotEvent.bot_apply_id]"}
+        back_populates="bot_apply",
+        sa_relationship_kwargs={
+            "foreign_keys": "[BotEvent.bot_apply_id]",
+            "overlaps": "bot_apply"
+        },
     )
     notifications: list["BotNotification"] = Relationship(
-        sa_relationship_kwargs={"foreign_keys": "[BotNotification.bot_apply_id]"}
+        back_populates="bot_apply",
+        sa_relationship_kwargs={"foreign_keys": "[BotNotification.bot_apply_id]"},
     )
 
     def complete(self, success: bool, reason: str = None) -> None:
@@ -1052,10 +1072,18 @@ class BotNotification(SQLModel, table=True):
     # Relacionamentos
     bot_session: BotSession = Relationship(back_populates="bot_notifications")
     bot_apply: BotApply | None = Relationship(
-        sa_relationship_kwargs={"foreign_keys": "[BotNotification.bot_apply_id]"}
+        back_populates="notifications",
+        sa_relationship_kwargs={
+            "foreign_keys": "[BotNotification.bot_apply_id]",
+            "overlaps": "notifications"
+        },
     )
     user_action: BotUserAction | None = Relationship(
-        sa_relationship_kwargs={"foreign_keys": "[BotNotification.user_action_id]"}
+        back_populates="bot_notifications",
+        sa_relationship_kwargs={
+            "foreign_keys": "[BotNotification.user_action_id]",
+            "overlaps": "bot_notifications"
+        },
     )
     user: User = Relationship(back_populates="bot_notifications")
     notification_channels: list["BotNotificationChannel"] = Relationship(

@@ -61,7 +61,7 @@ def mock_jinja_env():
 
 
 @pytest.fixture
-def kubernetes_manager(_mock_kubernetes_client, _mock_jinja_env):
+def kubernetes_manager(mock_kubernetes_client, mock_jinja_env):
     """Create a Kubernetes manager with mocked dependencies."""
     with patch("app.integrations.kubernetes.config"):
         manager = KubernetesManager(in_cluster=False)

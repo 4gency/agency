@@ -353,6 +353,7 @@ class Subscription(SQLModel, table=True):
     bot_configuration: Optional["BotConfiguration"] = Relationship(
         back_populates="subscription", sa_relationship_kwargs={"uselist": False}
     )
+    bot_configs: list["BotConfig"] = Relationship(back_populates="subscription")
 
     def extend_subscription(self, plan: SubscriptionPlan | None = None) -> None:
         """

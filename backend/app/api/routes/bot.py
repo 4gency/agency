@@ -16,6 +16,8 @@ from app.api.deps import CurrentSubscriber, NosqlSessionDep, SessionDep
 from app.models.bot import (
     BotApplyDetailPublic,
     BotApplyPublic,
+    BotConfig,
+    BotConfigCreate,
     BotConfigurationCreate,
     BotConfigurationPublic,
     BotEventPublic,
@@ -1182,6 +1184,47 @@ async def get_bot_configuration_v2_duplicate(
         return bot_configuration
     except HTTPException:
         raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+
+
+@router.post(
+    "/configs/",
+    response_model=BotConfig,
+    status_code=status.HTTP_201_CREATED,
+    responses={
+        401: {"model": ErrorMessage, "description": "Não autenticado"},
+        403: {"model": ErrorMessage, "description": "Não é assinante"},
+        400: {"model": ErrorMessage, "description": "Erro de validação"},
+    },
+)
+async def create_bot_config(
+    *,
+    session: SessionDep,
+    nosql_session: NosqlSessionDep,
+    current_user: CurrentSubscriber,
+    config_data: BotConfigCreate,
+    subscription_id: UUID,
+) -> Any:
+    """
+    Cria uma nova configuração de bot.
+
+    * Requer que o usuário seja assinante
+    * A configuração será associada ao usuário e assinatura
+    * Retorna a configuração criada
+    """
+    bot_service = await get_bot_service(session, nosql_session)
+
+    try:
+        bot_config = await bot_service.create_bot_config(
+            user_id=current_user.id,
+            config_data=config_data,
+            subscription_id=subscription_id,
+        )
+        return bot_config
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
