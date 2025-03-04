@@ -115,7 +115,7 @@ async def update_bot_statuses(
     """
     try:
         bot_service = await get_bot_service(db, nosql_db)
-        updated_count = bot_service.update_pod_status(background_tasks)
+        updated_count = await bot_service.update_pod_status(background_tasks)
 
         return {"updated_count": updated_count, "status": "success"}
 

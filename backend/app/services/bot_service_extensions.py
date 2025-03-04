@@ -362,7 +362,7 @@ async def create_bot_session_with_yaml(
         user_id=user_id,
         name=session_name or "Bot Session",
         description=description or "",
-        status=BotSessionStatus.STARTING.value,
+        status=BotSessionStatus.STARTING,
     )
 
     # Salvar a sessão no banco de dados

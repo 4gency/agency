@@ -1019,9 +1019,9 @@ class BotService:
             select(BotSession).where(
                 BotSession.status.in_(
                     [
-                        BotSessionStatus.STARTING.value,
-                        BotSessionStatus.RUNNING.value,
-                        BotSessionStatus.PAUSED.value,
+                        BotSessionStatus.STARTING,
+                        BotSessionStatus.RUNNING,
+                        BotSessionStatus.PAUSED,
                     ]
                 )
             )
