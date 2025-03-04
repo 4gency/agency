@@ -8,6 +8,7 @@ from odmantic.session import AIOSession
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.security import decrypt_password, encrypt_password
 from app.models.bot import (
     BotConfiguration,
     BotConfigurationCreate,
@@ -15,7 +16,6 @@ from app.models.bot import (
     LinkedInCredentialsCreate,
 )
 from app.models.crud import config as config_crud
-from app.core.security import decrypt_password, encrypt_password
 
 logger = logging.getLogger(__name__)
 

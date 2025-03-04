@@ -78,10 +78,10 @@ async def start_bot_session(
         )
 
     # Buscar configuração e currículo (como YAML)
-    config_yaml = await self._get_config_yaml(
+    _config_yaml = await self._get_config_yaml(
         bot_config_id
     )  # Retrieved but used indirectly later in the process
-    resume_yaml = await self._get_resume_yaml(
+    _resume_yaml = await self._get_resume_yaml(
         bot_config_id
     )  # Retrieved but used indirectly later in the process
 

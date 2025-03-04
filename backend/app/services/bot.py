@@ -2097,7 +2097,7 @@ class BotService:
         """
         try:
             # Obter sessão
-            bot_session = await self.get_bot_session(bot_session_id, user_id)
+            _bot_session = await self.get_bot_session(bot_session_id, user_id)
 
             # Construir query base
             query = select(BotEvent).where(BotEvent.bot_session_id == bot_session_id)
@@ -2671,5 +2671,8 @@ class BotService:
             return None
 
 
-async def get_bot_service(db: AsyncSession | Session = Depends(get_db), nosql_db: SyncSession = Depends(get_nosql_db)) -> BotService:
+async def get_bot_service(
+    db: AsyncSession | Session = Depends(get_db),
+    nosql_db: SyncSession = Depends(get_nosql_db),
+) -> BotService:
     return BotService(db=db, nosql_db=nosql_db)

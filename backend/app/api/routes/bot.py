@@ -905,7 +905,7 @@ async def save_linkedin_credentials(
     *,
     subscription_id: UUID,
     session: SessionDep,
-    nosql_session: NosqlSessionDep,
+    _nosql_session: NosqlSessionDep,
     current_user: CurrentSubscriber,
     credentials: LinkedInCredentialsCreate,
 ) -> Any:
@@ -941,42 +941,45 @@ async def save_linkedin_credentials(
 @router.get(
     "/subscriptions/{subscription_id}/linkedin-credentials",
     response_model=LinkedInCredentialsPublic,
+    responses={
+        401: {"model": ErrorMessage, "description": "Não autenticado"},
+        403: {"model": ErrorMessage, "description": "Não é assinante"},
+        404: {"model": ErrorMessage, "description": "Credenciais não encontradas"},
+    },
 )
-async def get_linkedin_credentials(
+async def get_linkedin_credentials_v2(
     *,
-    subscription_id: uuid.UUID,
+    subscription_id: UUID,
     session: SessionDep,
-    nosql_session: NosqlSessionDep,
-    current_user: CurrentSubscriber,
+    _nosql_session: NosqlSessionDep,
+    _current_user: CurrentSubscriber,
 ) -> Any:
     """
-    Recupera as credenciais do LinkedIn configuradas.
+    Recupera as credenciais do LinkedIn para uma assinatura.
 
-    * Por segurança, a senha não é retornada
+    * Requer que o usuário seja assinante
+    * Retorna as credenciais do LinkedIn ou 404 se não existirem
     """
-    # Verificar se a assinatura pertence ao usuário
-    subscription = subscription_crud.get_subscription_by_id(
-        session=session, id=subscription_id
-    )
+    bot_service = await get_bot_service(session, _nosql_session)
 
-    if not subscription or subscription.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found"
+    try:
+        # Obter credenciais
+        linkedin_credentials = await bot_service.get_linkedin_credentials(
+            subscription_id=subscription_id
         )
-
-    # Obter credenciais
-    bot_config_service = BotConfigurationService(session)
-    creds = await bot_config_service.get_linkedin_credentials(subscription_id)
-
-    if not creds:
+        if not linkedin_credentials:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="LinkedIn credentials not found",
+            )
+        return linkedin_credentials
+    except HTTPException:
+        raise
+    except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="LinkedIn credentials not found",
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
         )
-
-    return LinkedInCredentialsPublic(
-        email=creds.email, subscription_id=creds.subscription_id
-    )
 
 
 @router.post(
@@ -987,7 +990,7 @@ async def save_bot_configuration(
     *,
     subscription_id: uuid.UUID,
     session: SessionDep,
-    nosql_session: NosqlSessionDep,
+    _nosql_session: NosqlSessionDep,
     current_user: CurrentSubscriber,
     configuration: BotConfigurationCreate,
 ) -> Any:
@@ -1024,45 +1027,45 @@ async def save_bot_configuration(
 @router.get(
     "/subscriptions/{subscription_id}/bot-configuration",
     response_model=BotConfigurationPublic,
+    responses={
+        401: {"model": ErrorMessage, "description": "Não autenticado"},
+        403: {"model": ErrorMessage, "description": "Não é assinante"},
+        404: {"model": ErrorMessage, "description": "Configuração não encontrada"},
+    },
 )
-async def get_bot_configuration(
+async def get_bot_configuration_v2(
     *,
-    subscription_id: uuid.UUID,
+    subscription_id: UUID,
     session: SessionDep,
-    nosql_session: NosqlSessionDep,
-    current_user: CurrentSubscriber,
+    _nosql_session: NosqlSessionDep,
+    _current_user: CurrentSubscriber,
 ) -> Any:
     """
-    Recupera as configurações do bot.
+    Recupera a configuração do bot para uma assinatura.
+
+    * Requer que o usuário seja assinante
+    * Retorna a configuração do bot ou 404 se não existir
     """
-    # Verificar se a assinatura pertence ao usuário
-    subscription = subscription_crud.get_subscription_by_id(
-        session=session, id=subscription_id
-    )
+    bot_service = await get_bot_service(session, _nosql_session)
 
-    if not subscription or subscription.user_id != current_user.id:
+    try:
+        # Obter configuração
+        bot_configuration = await bot_service.get_bot_configuration(
+            subscription_id=subscription_id
+        )
+        if not bot_configuration:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Bot configuration not found",
+            )
+        return bot_configuration
+    except HTTPException:
+        raise
+    except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
         )
-
-    # Obter configuração
-    bot_config_service = BotConfigurationService(session)
-    config = await bot_config_service.get_bot_configuration(subscription_id)
-
-    if not config:
-        # Criar configuração padrão
-        config = await bot_config_service.create_bot_configuration(
-            subscription_id=subscription_id,
-            user_id=current_user.id,
-            config=BotConfigurationCreate(),
-        )
-
-    return BotConfigurationPublic(
-        id=config.id,
-        subscription_id=config.subscription_id,
-        style_choice=config.style_choice,
-        user_agent=config.user_agent,
-    )
 
 
 @router.post(
@@ -1094,50 +1097,6 @@ async def create_or_update_linkedin_credentials(
             credentials=credentials,
         )
         return linkedin_credentials
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
-        )
-
-
-@router.get(
-    "/subscriptions/{subscription_id}/linkedin-credentials",
-    response_model=LinkedInCredentialsPublic,
-    responses={
-        401: {"model": ErrorMessage, "description": "Não autenticado"},
-        403: {"model": ErrorMessage, "description": "Não é assinante"},
-        404: {"model": ErrorMessage, "description": "Credenciais não encontradas"},
-    },
-)
-async def get_linkedin_credentials(
-    *,
-    subscription_id: UUID,
-    session: SessionDep,
-    nosql_session: NosqlSessionDep,
-    current_user: CurrentSubscriber,
-) -> Any:
-    """
-    Recupera as credenciais do LinkedIn para uma assinatura.
-
-    * Requer que o usuário seja assinante
-    * Retorna as credenciais do LinkedIn ou 404 se não existirem
-    """
-    bot_service = await get_bot_service(session, nosql_session)
-
-    try:
-        # Obter credenciais
-        linkedin_credentials = await bot_service.get_linkedin_credentials(
-            subscription_id=subscription_id
-        )
-        if not linkedin_credentials:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="LinkedIn credentials not found",
-            )
-        return linkedin_credentials
-    except HTTPException:
-        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -1195,12 +1154,12 @@ async def create_or_update_bot_configuration(
         404: {"model": ErrorMessage, "description": "Configuração não encontrada"},
     },
 )
-async def get_bot_configuration(
+async def get_bot_configuration_v2_duplicate(
     *,
     subscription_id: UUID,
     session: SessionDep,
-    nosql_session: NosqlSessionDep,
-    current_user: CurrentSubscriber,
+    _nosql_session: NosqlSessionDep,
+    _current_user: CurrentSubscriber,
 ) -> Any:
     """
     Recupera a configuração do bot para uma assinatura.
@@ -1208,7 +1167,7 @@ async def get_bot_configuration(
     * Requer que o usuário seja assinante
     * Retorna a configuração do bot ou 404 se não existir
     """
-    bot_service = await get_bot_service(session, nosql_session)
+    bot_service = await get_bot_service(session, _nosql_session)
 
     try:
         # Obter configuração

@@ -1,12 +1,11 @@
+import base64
+import hashlib
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import jwt
-from passlib.context import CryptContext
-
-import base64
-import hashlib
 from cryptography.fernet import Fernet
+from passlib.context import CryptContext
 
 from app.core.config import settings
 
@@ -31,7 +30,6 @@ def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
 
 
-
 def _get_fernet():
     """
     Gera uma instância de Fernet baseada na SECRET_KEY.
@@ -42,6 +40,7 @@ def _get_fernet():
     key = base64.urlsafe_b64encode(key)
     return Fernet(key)
 
+
 def encrypt_password(password: str) -> str:
     """
     Criptografa a senha em texto plano.
@@ -50,6 +49,7 @@ def encrypt_password(password: str) -> str:
     f = _get_fernet()
     token = f.encrypt(password.encode("utf-8"))
     return token.decode("utf-8")
+
 
 def decrypt_password(encrypted_password: str) -> str:
     """
