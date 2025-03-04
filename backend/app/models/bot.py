@@ -685,7 +685,7 @@ class BotUserAction(SQLModel, table=True):
         back_populates="user_action",
         sa_relationship_kwargs={
             "foreign_keys": "[BotEvent.user_action_id]",
-            "overlaps": "bot_events"
+            "overlaps": "bot_events",
         },
     )
     bot_notifications: list["BotNotification"] = Relationship(
@@ -779,14 +779,14 @@ class BotEvent(SQLModel, table=True):
         back_populates="events",
         sa_relationship_kwargs={
             "foreign_keys": "[BotEvent.bot_apply_id]",
-            "overlaps": "bot_apply"
+            "overlaps": "bot_apply",
         },
     )
     user_action: BotUserAction | None = Relationship(
         back_populates="bot_events",
         sa_relationship_kwargs={
             "foreign_keys": "[BotEvent.user_action_id]",
-            "overlaps": "bot_events"
+            "overlaps": "bot_events",
         },
     )
 
@@ -899,7 +899,7 @@ class BotApply(SQLModel, table=True):
         back_populates="bot_apply",
         sa_relationship_kwargs={
             "foreign_keys": "[BotEvent.bot_apply_id]",
-            "overlaps": "bot_apply"
+            "overlaps": "bot_apply",
         },
     )
     notifications: list["BotNotification"] = Relationship(
@@ -1075,14 +1075,14 @@ class BotNotification(SQLModel, table=True):
         back_populates="notifications",
         sa_relationship_kwargs={
             "foreign_keys": "[BotNotification.bot_apply_id]",
-            "overlaps": "notifications"
+            "overlaps": "notifications",
         },
     )
     user_action: BotUserAction | None = Relationship(
         back_populates="bot_notifications",
         sa_relationship_kwargs={
             "foreign_keys": "[BotNotification.user_action_id]",
-            "overlaps": "bot_notifications"
+            "overlaps": "bot_notifications",
         },
     )
     user: User = Relationship(back_populates="bot_notifications")
