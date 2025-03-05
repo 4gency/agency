@@ -18,6 +18,8 @@ from app.models.bot import (
     BotApplyPublic,
     BotConfig,
     BotConfigCreate,
+    BotConfigPublic,
+    BotConfigUpdate,
     BotConfigurationCreate,
     BotConfigurationPublic,
     BotEventPublic,
@@ -1207,7 +1209,7 @@ async def create_bot_config(
     nosql_session: NosqlSessionDep,
     current_user: CurrentSubscriber,
     config_data: BotConfigCreate,
-    subscription_id: UUID,
+    subscription_id: UUID = Query(..., description="ID da assinatura"),
 ) -> Any:
     """
     Cria uma nova configuração de bot.
@@ -1225,6 +1227,184 @@ async def create_bot_config(
             subscription_id=subscription_id,
         )
         return bot_config
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+
+
+@router.get(
+    "/configs/",
+    response_model=list[BotConfig],
+    responses={
+        401: {"model": ErrorMessage, "description": "Não autenticado"},
+        403: {"model": ErrorMessage, "description": "Não é assinante"},
+    },
+)
+async def list_bot_configs(
+    *,
+    session: SessionDep,
+    nosql_session: NosqlSessionDep,
+    current_user: CurrentSubscriber,
+    subscription_id: UUID = Query(None, description="ID da assinatura (opcional)"),
+    skip: int = 0,
+    limit: int = 100,
+) -> Any:
+    """
+    Lista todas as configurações de bot do usuário.
+
+    * Requer que o usuário seja assinante
+    * Pode ser filtrado por assinatura específica
+    * Retorna uma lista de configurações de bot
+    """
+    bot_service = await get_bot_service(session, nosql_session)
+
+    try:
+        configs = await bot_service.list_bot_configs(
+            user_id=current_user.id,
+            subscription_id=subscription_id,
+            skip=skip,
+            limit=limit,
+        )
+        return configs
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+
+
+@router.get(
+    "/configs/{config_id}",
+    response_model=BotConfig,
+    responses={
+        401: {"model": ErrorMessage, "description": "Não autenticado"},
+        403: {"model": ErrorMessage, "description": "Não é assinante"},
+        404: {"model": ErrorMessage, "description": "Configuração não encontrada"},
+    },
+)
+async def read_bot_config(
+    *,
+    session: SessionDep,
+    nosql_session: NosqlSessionDep,
+    current_user: CurrentSubscriber,
+    config_id: UUID = Path(..., description="ID da configuração do bot"),
+) -> Any:
+    """
+    Recupera uma configuração de bot específica.
+
+    * Requer que o usuário seja assinante
+    * Retorna os detalhes da configuração do bot
+    """
+    bot_service = await get_bot_service(session, nosql_session)
+
+    try:
+        config = await bot_service.get_bot_config(
+            user_id=current_user.id,
+            config_id=config_id,
+        )
+        if not config:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Configuração não encontrada",
+            )
+        return config
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+
+
+@router.patch(
+    "/configs/{config_id}",
+    response_model=BotConfig,
+    responses={
+        401: {"model": ErrorMessage, "description": "Não autenticado"},
+        403: {"model": ErrorMessage, "description": "Não é assinante"},
+        404: {"model": ErrorMessage, "description": "Configuração não encontrada"},
+        400: {"model": ErrorMessage, "description": "Erro de validação"},
+    },
+)
+async def update_bot_config(
+    *,
+    session: SessionDep,
+    nosql_session: NosqlSessionDep,
+    current_user: CurrentSubscriber,
+    config_id: UUID = Path(..., description="ID da configuração do bot"),
+    config_data: BotConfigUpdate,
+) -> Any:
+    """
+    Atualiza uma configuração de bot específica.
+
+    * Requer que o usuário seja assinante
+    * Atualiza apenas os campos fornecidos
+    * Retorna a configuração atualizada
+    """
+    bot_service = await get_bot_service(session, nosql_session)
+
+    try:
+        config = await bot_service.update_bot_config(
+            user_id=current_user.id,
+            config_id=config_id,
+            config_data=config_data,
+        )
+        if not config:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Configuração não encontrada",
+            )
+        return config
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+
+
+@router.delete(
+    "/configs/{config_id}",
+    response_model=dict,
+    responses={
+        401: {"model": ErrorMessage, "description": "Não autenticado"},
+        403: {"model": ErrorMessage, "description": "Não é assinante"},
+        404: {"model": ErrorMessage, "description": "Configuração não encontrada"},
+    },
+)
+async def delete_bot_config(
+    *,
+    session: SessionDep,
+    nosql_session: NosqlSessionDep,
+    current_user: CurrentSubscriber,
+    config_id: UUID = Path(..., description="ID da configuração do bot"),
+) -> Any:
+    """
+    Remove uma configuração de bot específica.
+
+    * Requer que o usuário seja assinante
+    * Remove permanentemente a configuração
+    * Retorna status de sucesso
+    """
+    bot_service = await get_bot_service(session, nosql_session)
+
+    try:
+        success = await bot_service.delete_bot_config(
+            user_id=current_user.id,
+            config_id=config_id,
+        )
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Configuração não encontrada",
+            )
+        return {"success": True}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

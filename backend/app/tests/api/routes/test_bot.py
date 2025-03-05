@@ -77,24 +77,44 @@ class TestBotRoutes:
         # Arrange
         config_data = {
             "name": "Test Config",
-            "job_search_query": "Software Engineer",
-            "location": "Remote",
+            "description": "Test bot configuration",
             "default_applies_limit": 10,
         }
+        
+        # Criar um subscription_id para o teste
+        subscription_id = uuid.uuid4()
 
         # Mock the service response
         mock_bot_service.create_bot_config.return_value = BotConfig(
             id=uuid.uuid4(),
             user_id=sample_user.id,
-            subscription_id=uuid.uuid4(),
-            **config_data,
+            subscription_id=subscription_id,
+            name=config_data["name"],
+            description=config_data.get("description"),
             created_at=datetime.now(timezone.utc),
             updated_at=datetime.now(timezone.utc),
+            # Campos obrigatórios
+            config_yaml_key="test-config.yaml",
+            resume_yaml_key="test-resume.yaml",
+            cloud_provider="https://br-se1.magaluobjects.com",
+            kubernetes_namespace="bot-jobs",
+            kubernetes_resources_cpu="500m",
+            kubernetes_resources_memory="1Gi",
+            kubernetes_limits_cpu="1000m",
+            kubernetes_limits_memory="2Gi",
+            config_bucket="configs",
+            resume_bucket="resumes",
+            config_version=1,
+            resume_version=1,
+            config_yaml_created_at=datetime.now(timezone.utc),
+            resume_yaml_created_at=datetime.now(timezone.utc),
         )
 
         # Act
         response = client.post(
-            "/api/v1/bot/configs/", json=config_data, headers=normal_subscriber_token_headers
+            f"/api/v1/bot/configs/?subscription_id={subscription_id}", 
+            json=config_data, 
+            headers=normal_subscriber_token_headers
         )
 
         # Assert
@@ -132,16 +152,34 @@ class TestBotRoutes:
         config_id = sample_bot_config.id
         update_data = {
             "name": "Updated Config",
-            "job_search_query": "Python Developer",
-            "location": "New York",
+            "description": "Updated description"
         }
 
-        # Mock the service response
-        updated_config = sample_bot_config.copy(deep=True)
-        updated_config.name = update_data["name"]
-        updated_config.job_search_query = update_data["job_search_query"]
-        updated_config.location = update_data["location"]
-        mock_bot_service.update_bot_config.return_value = updated_config
+        # Mock the service response - criando um novo objeto em vez de modificar o existente
+        mock_bot_service.update_bot_config.return_value = BotConfig(
+            id=config_id,
+            user_id=sample_bot_config.user_id,
+            subscription_id=sample_bot_config.subscription_id,
+            name=update_data["name"],
+            description=update_data["description"],
+            created_at=sample_bot_config.created_at,
+            updated_at=datetime.now(timezone.utc),
+            # Incluindo outros campos obrigatórios
+            config_yaml_key="test-config.yaml",
+            resume_yaml_key="test-resume.yaml",
+            cloud_provider=sample_bot_config.cloud_provider,
+            kubernetes_namespace=sample_bot_config.kubernetes_namespace,
+            kubernetes_resources_cpu=sample_bot_config.kubernetes_resources_cpu,
+            kubernetes_resources_memory=sample_bot_config.kubernetes_resources_memory,
+            kubernetes_limits_cpu=sample_bot_config.kubernetes_limits_cpu,
+            kubernetes_limits_memory=sample_bot_config.kubernetes_limits_memory,
+            config_bucket=sample_bot_config.config_bucket,
+            resume_bucket=sample_bot_config.resume_bucket,
+            config_version=sample_bot_config.config_version,
+            resume_version=sample_bot_config.resume_version,
+            config_yaml_created_at=sample_bot_config.config_yaml_created_at,
+            resume_yaml_created_at=sample_bot_config.resume_yaml_created_at,
+        )
 
         # Act
         response = client.patch(
@@ -154,7 +192,7 @@ class TestBotRoutes:
         assert "name" in response.json()
         assert response.status_code == 200, f"Response: {response.text}"
         assert response.json()["name"] == update_data["name"]
-        assert response.json()["job_search_query"] == update_data["job_search_query"]
+        assert response.json()["description"] == update_data["description"]
         mock_bot_service.update_bot_config.assert_called_once()
 
     def test_delete_bot_config(
