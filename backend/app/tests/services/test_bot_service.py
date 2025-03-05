@@ -22,7 +22,7 @@ from app.tests.utils.bot import (
 @pytest.fixture
 def mock_kubernetes_manager():
     """Mock for the Kubernetes manager."""
-    with patch("app.services.bot_service_extensions.get_kubernetes_manager") as mock:
+    with patch("app.services.bot.get_kubernetes_manager") as mock:
         kubernetes_manager = MagicMock()
         kubernetes_manager.deploy_bot_pod = AsyncMock(
             return_value=("pod-name", "pod-ip")
