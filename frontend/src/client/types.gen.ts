@@ -18,11 +18,378 @@ export type Body_login_login_access_token = {
   client_secret?: string | null
 }
 
+/**
+ * Modelo público detalhado para aplicação do bot.
+ */
+export type BotApplyDetailPublic = {
+  id: number
+  session_id: string
+  status: string
+  progress: number
+  started_at: string
+  completed_at: string | null
+  total_time: number | null
+  job_id: string | null
+  job_title: string | null
+  job_url: string | null
+  company_name: string | null
+  linkedin_url: string | null
+  failed: boolean
+  failed_reason: string | null
+  match_score: number | null
+  job_description: string | null
+  job_location: string | null
+  job_salary: string | null
+  job_type: string | null
+  company_website: string | null
+  resume_bucket: string
+  resume_pdf: string | null
+  resume_version: number
+  required_skills_matched: number | null
+  total_required_skills: number | null
+  failed_at_stage: string | null
+  screenshot_url: string | null
+  created_at: string
+  application_reference: string | null
+  steps?: Array<BotApplyStepPublic>
+}
+
+/**
+ * Modelo público básico para aplicação do bot.
+ */
+export type BotApplyPublic = {
+  id: number
+  session_id: string
+  status: string
+  progress: number
+  started_at: string
+  completed_at: string | null
+  total_time: number | null
+  job_id: string | null
+  job_title: string | null
+  job_url: string | null
+  company_name: string | null
+  linkedin_url: string | null
+  failed: boolean
+  failed_reason: string | null
+  match_score: number | null
+}
+
+/**
+ * Modelo público para etapa de aplicação do bot.
+ */
+export type BotApplyStepPublic = {
+  id: string
+  bot_apply_id: number
+  step_number: number
+  step_name: string
+  status: string
+  started_at: string | null
+  completed_at: string | null
+  duration: number | null
+  details: string | null
+  error: string | null
+  screenshot_url: string | null
+}
+
+/**
+ * Configuração do bot. Armazena referências para os arquivos YAML de configuração e currículo.
+ */
+export type BotConfig = {
+  id?: string
+  user_id: string
+  subscription_id: string
+  name: string
+  description?: string | null
+  cloud_provider?: string
+  kubernetes_namespace?: string
+  kubernetes_resources_cpu?: string
+  kubernetes_resources_memory?: string
+  kubernetes_limits_cpu?: string
+  kubernetes_limits_memory?: string
+  config_bucket?: string
+  config_yaml_key: string
+  config_yaml_created_at?: string
+  config_version?: number
+  config_yaml_previous_key?: string | null
+  config_yaml_previous_created_at?: string | null
+  resume_bucket?: string
+  resume_yaml_key: string
+  resume_yaml_created_at?: string
+  resume_version?: number
+  resume_yaml_previous_key?: string | null
+  resume_yaml_previous_created_at?: string | null
+  max_applies_per_session?: number
+  max_applies_per_day?: number
+  allow_dynamic_updates?: boolean
+  auto_restart_on_failure?: boolean
+  max_auto_restarts?: number
+  notify_on_success?: boolean
+  notify_on_failure?: boolean
+  notify_on_action_required?: boolean
+  created_at?: string
+  updated_at?: string
+}
+
+/**
+ * Modelo para criação de configuração do bot.
+ */
+export type BotConfigCreate = {
+  name: string
+  description?: string | null
+  max_applies_per_session?: number
+  max_applies_per_day?: number
+  allow_dynamic_updates?: boolean
+  auto_restart_on_failure?: boolean
+  max_auto_restarts?: number
+  notify_on_success?: boolean
+  notify_on_failure?: boolean
+  notify_on_action_required?: boolean
+}
+
+/**
+ * Modelo público para configuração do bot.
+ */
+export type BotConfigPublic = {
+  id: string
+  name: string
+  description: string | null
+  max_applies_per_session: number
+  max_applies_per_day: number
+  allow_dynamic_updates: boolean
+  auto_restart_on_failure: boolean
+  max_auto_restarts: number
+  config_version: number
+  resume_version: number
+  created_at: string
+  updated_at: string
+}
+
+/**
+ * Modelo para atualização de configuração do bot.
+ */
+export type BotConfigUpdate = {
+  name?: string | null
+  description?: string | null
+  max_applies_per_session?: number | null
+  max_applies_per_day?: number | null
+  allow_dynamic_updates?: boolean | null
+  auto_restart_on_failure?: boolean | null
+  max_auto_restarts?: number | null
+  notify_on_success?: boolean | null
+  notify_on_failure?: boolean | null
+  notify_on_action_required?: boolean | null
+}
+
+/**
+ * Modelo para criação de configurações específicas do bot.
+ */
+export type BotConfigurationCreate = {
+  style_choice?: BotStyleChoice
+  user_agent?: string | null
+  sec_ch_ua?: string | null
+  sec_ch_ua_platform?: string | null
+}
+
+/**
+ * Modelo público para configurações específicas do bot.
+ */
+export type BotConfigurationPublic = {
+  id: string
+  subscription_id: string
+  style_choice: BotStyleChoice
+  user_agent: string
+  sec_ch_ua: string
+  sec_ch_ua_platform: string
+}
+
+/**
+ * Evento ocorrido durante a execução do bot. Utilizado para logging e auditoria.
+ */
+export type BotEvent = {
+  id?: string
+  bot_session_id: string
+  type: string
+  severity?: string
+  message: string
+  details?: string | null
+  created_at?: string
+  source?: string | null
+  bot_apply_id?: number | null
+  user_action_id?: string | null
+}
+
+/**
+ * Modelo público para evento do bot.
+ */
+export type BotEventPublic = {
+  id: string
+  bot_session_id: string
+  type: string
+  severity: string
+  message: string
+  details: string | null
+  created_at: string
+  source: string | null
+  bot_apply_id: number | null
+  user_action_id: string | null
+}
+
+/**
+ * Modelo de dados para eventos enviados pelo bot.
+ */
+export type BotEventRequest = {
+  event_type: string
+  data: {
+    [key: string]: unknown
+  }
+}
+
+/**
+ * Modelo público para notificação do bot.
+ */
+export type BotNotificationPublic = {
+  id: string
+  bot_session_id: string
+  title: string
+  message: string
+  priority: string
+  status: string
+  content_html: string | null
+  icon: string | null
+  requires_action: boolean
+  action_url: string | null
+  action_text: string | null
+  created_at: string
+  sent_at: string | null
+  read_at: string | null
+  expires_at: string | null
+  user_id: string
+  source: string
+  bot_apply_id: number | null
+  user_action_id: string | null
+  is_active: boolean
+}
+
+/**
+ * Modelo para criação de sessão do bot.
+ */
+export type BotSessionCreate = {
+  subscription_id: string
+  bot_config_id: string
+  applies_limit?: number | null
+  time_limit?: number | null
+}
+
+/**
+ * Modelo público detalhado para sessão do bot.
+ */
+export type BotSessionDetailPublic = {
+  id: string
+  subscription_id: string
+  bot_config_id: string
+  status: string
+  kubernetes_pod_status: string | null
+  total_applied: number
+  total_success: number
+  total_failed: number
+  success_rate: number
+  created_at: string
+  started_at: string | null
+  finished_at: string | null
+  last_heartbeat_at: string | null
+  is_healthy: boolean
+  last_status_message: string | null
+  error_message: string | null
+  total_time: number
+  average_time_per_apply: number
+  average_time_per_success: number
+  average_time_per_failed: number
+  crashes_count: number
+  kubernetes_pod_name: string | null
+  kubernetes_namespace: string | null
+  kubernetes_node: string | null
+  kubernetes_pod_ip: string | null
+  kubernetes_log_url: string | null
+  applies_limit: number
+  time_limit: number | null
+  config_version: number
+  resume_version: number
+  paused_at: string | null
+  resumed_at: string | null
+}
+
+/**
+ * Modelo público básico para sessão do bot.
+ */
+export type BotSessionPublic = {
+  id: string
+  subscription_id: string
+  bot_config_id: string
+  status: string
+  kubernetes_pod_status: string | null
+  total_applied: number
+  total_success: number
+  total_failed: number
+  success_rate: number
+  created_at: string
+  started_at: string | null
+  finished_at: string | null
+  last_heartbeat_at: string | null
+  is_healthy: boolean
+  last_status_message: string | null
+  error_message: string | null
+}
+
+/**
+ * Estilos visuais disponíveis para o bot.
+ */
+export type BotStyleChoice =
+  | "Cloyola Grey"
+  | "Modern Blue"
+  | "Modern Grey"
+  | "Default"
+  | "Clean Blue"
+
+/**
+ * Modelo público para ação do usuário.
+ */
+export type BotUserActionPublic = {
+  id: string
+  bot_session_id: string
+  action_type: string
+  description: string
+  input_field: string | null
+  extra_data: string | null
+  requested_at: string
+  completed_at: string | null
+  expired_at: string | null
+  is_completed: boolean
+  user_input: string | null
+  max_attempts: number
+  current_attempts: number
+  timeout_seconds: number
+  is_expired: boolean
+  bot_apply_id: number | null
+  context: string | null
+}
+
+/**
+ * Modelo para atualização de ação do usuário.
+ */
+export type BotUserActionUpdate = {
+  user_input: string
+  current_attempts?: number | null
+}
+
 export type Certification = {
   name?: string
   description?: string
 }
 
+/**
+ * Modelo de sessão de checkout para retorno via API.
+ */
 export type CheckoutSessionPublic = {
   id: string
   session_id: string
@@ -30,6 +397,9 @@ export type CheckoutSessionPublic = {
   expires_at: string
 }
 
+/**
+ * Modelo para atualização de sessões de checkout via API.
+ */
 export type CheckoutSessionUpdate = {
   payment_gateway?: string | null
   session_id?: string | null
@@ -76,6 +446,9 @@ export type EducationDetails = {
   exam?: Array<string>
 }
 
+/**
+ * Modelo para mensagens de erro.
+ */
 export type ErrorMessage = {
   detail: string
 }
@@ -137,15 +510,40 @@ export type LegalAuthorization = {
   requires_uk_sponsorship?: boolean
 }
 
+/**
+ * Modelo para criação de credenciais do LinkedIn.
+ */
+export type LinkedInCredentialsCreate = {
+  email: string
+  password: string
+}
+
+/**
+ * Modelo público para credenciais do LinkedIn (sem expor a senha).
+ */
+export type LinkedInCredentialsPublic = {
+  email: string
+  subscription_id: string
+}
+
+/**
+ * Modelo genérico para mensagens de resposta.
+ */
 export type Message = {
   message: string
 }
 
+/**
+ * Modelo para redefinição de senha.
+ */
 export type NewPassword = {
   token: string
   new_password: string
 }
 
+/**
+ * Modelo de pagamento para retorno via API.
+ */
 export type PaymentPublic = {
   id: string
   subscription_id: string
@@ -158,11 +556,17 @@ export type PaymentPublic = {
   transaction_id: string
 }
 
+/**
+ * Define os status de recorrência de pagamento.
+ */
 export type PaymentRecurrenceStatus =
   | "active"
   | "canceled"
   | "pending_cancellation"
 
+/**
+ * Modelo para retornar uma lista de pagamentos via API.
+ */
 export type PaymentsPublic = {
   data: Array<PaymentPublic>
   count: number
@@ -217,8 +621,14 @@ export type SelfIdentification = {
   ethnicity?: string
 }
 
+/**
+ * Define os tipos de métricas para assinaturas.
+ */
 export type SubscriptionMetric = "day" | "week" | "month" | "year" | "applies"
 
+/**
+ * Modelo completo de plano de assinatura para armazenamento no banco de dados.
+ */
 export type SubscriptionPlan = {
   id?: string
   name: string
@@ -238,10 +648,16 @@ export type SubscriptionPlan = {
   stripe_price_id?: string | null
 }
 
+/**
+ * Modelo público para benefícios de plano de assinatura.
+ */
 export type SubscriptionPlanBenefitPublic = {
   name: string
 }
 
+/**
+ * Modelo para criação de planos de assinatura via API.
+ */
 export type SubscriptionPlanCreate = {
   name: string
   price: number
@@ -259,6 +675,9 @@ export type SubscriptionPlanCreate = {
   benefits?: Array<SubscriptionPlanBenefitPublic>
 }
 
+/**
+ * Modelo público completo para planos de assinatura.
+ */
 export type SubscriptionPlanPublic = {
   id: string
   name: string
@@ -277,10 +696,16 @@ export type SubscriptionPlanPublic = {
   benefits?: Array<SubscriptionPlanBenefitPublic>
 }
 
+/**
+ * Modelo para retornar uma lista de planos de assinatura via API.
+ */
 export type SubscriptionPlansPublic = {
   plans?: Array<SubscriptionPlanPublic>
 }
 
+/**
+ * Modelo para atualização de planos de assinatura via API.
+ */
 export type SubscriptionPlanUpdate = {
   name?: string | null
   price?: number | null
@@ -298,6 +723,9 @@ export type SubscriptionPlanUpdate = {
   benefits?: Array<SubscriptionPlanBenefitPublic> | null
 }
 
+/**
+ * Modelo de assinatura para retorno via API.
+ */
 export type SubscriptionPublic = {
   id: string
   user_id: string
@@ -311,6 +739,9 @@ export type SubscriptionPublic = {
   subscription_plan?: SubscriptionPlan | null
 }
 
+/**
+ * Modelo estendido de assinatura para retorno via API com pagamentos.
+ */
 export type SubscriptionPublicExtended = {
   id: string
   user_id: string
@@ -325,16 +756,25 @@ export type SubscriptionPublicExtended = {
   payments?: Array<PaymentPublic>
 }
 
+/**
+ * Modelo para representar tokens JWT de autenticação.
+ */
 export type Token = {
   access_token: string
   token_type?: string
 }
 
+/**
+ * Modelo usado para atualização de senha.
+ */
 export type UpdatePassword = {
   current_password: string
   new_password: string
 }
 
+/**
+ * Modelo usado na criação de usuários via API.
+ */
 export type UserCreate = {
   email: string
   is_active?: boolean
@@ -344,6 +784,9 @@ export type UserCreate = {
   password: string
 }
 
+/**
+ * Modelo de usuário para retorno via API.
+ */
 export type UserPublic = {
   email: string
   is_active?: boolean
@@ -353,17 +796,26 @@ export type UserPublic = {
   id: string
 }
 
+/**
+ * Modelo usado para registro de novos usuários.
+ */
 export type UserRegister = {
   email: string
   password: string
   full_name?: string | null
 }
 
+/**
+ * Modelo para retornar uma lista de usuários via API.
+ */
 export type UsersPublic = {
   data: Array<UserPublic>
   count: number
 }
 
+/**
+ * Modelo usado para atualização de usuários via API.
+ */
 export type UserUpdate = {
   email?: string | null
   is_active?: boolean
@@ -373,6 +825,9 @@ export type UserUpdate = {
   password?: string | null
 }
 
+/**
+ * Modelo usado por usuários para atualizar seu próprio perfil.
+ */
 export type UserUpdateMe = {
   full_name?: string | null
   email?: string | null
@@ -391,6 +846,333 @@ export type WorkPreferences = {
   willing_to_complete_assessments?: boolean
   willing_to_undergo_drug_tests?: boolean
   willing_to_undergo_background_checks?: boolean
+}
+
+export type CreateBotSessionData = {
+  requestBody: BotSessionCreate
+}
+
+export type CreateBotSessionResponse = BotSessionPublic
+
+export type ReadBotSessionsData = {
+  limit?: number
+  /**
+   * Campo para ordenação
+   */
+  orderBy?: string
+  /**
+   * Direção da ordenação (asc, desc)
+   */
+  orderDir?: string
+  skip?: number
+  /**
+   * Filtrar por status (STARTING, RUNNING, PAUSED, etc.)
+   */
+  status?: Array<string> | null
+}
+
+export type ReadBotSessionsResponse = Array<BotSessionPublic>
+
+export type ReadBotSessionData = {
+  /**
+   * ID da sessão
+   */
+  sessionId: string
+}
+
+export type ReadBotSessionResponse = BotSessionDetailPublic
+
+export type GetBotSessionStatusData = {
+  /**
+   * ID da sessão do bot
+   */
+  sessionId: string
+}
+
+export type GetBotSessionStatusResponse = {
+  [key: string]: unknown
+}
+
+export type GetBotSessionLogsData = {
+  /**
+   * ID da sessão do bot
+   */
+  sessionId: string
+  /**
+   * Número de linhas a retornar do final do log
+   */
+  tailLines?: number
+}
+
+export type GetBotSessionLogsResponse = string
+
+export type StartBotSessionData = {
+  /**
+   * ID da sessão do bot
+   */
+  sessionId: string
+}
+
+export type StartBotSessionResponse = BotSessionPublic
+
+export type StopBotSessionData = {
+  /**
+   * ID da sessão do bot
+   */
+  sessionId: string
+}
+
+export type StopBotSessionResponse = BotSessionPublic
+
+export type PauseBotSessionData = {
+  /**
+   * ID da sessão do bot
+   */
+  sessionId: string
+}
+
+export type PauseBotSessionResponse = BotSessionPublic
+
+export type ResumeBotSessionData = {
+  /**
+   * ID da sessão do bot
+   */
+  sessionId: string
+}
+
+export type ResumeBotSessionResponse = BotSessionPublic
+
+export type RestartBotSessionData = {
+  /**
+   * ID da sessão do bot
+   */
+  sessionId: string
+}
+
+export type RestartBotSessionResponse = BotSessionPublic
+
+export type ReadBotSessionAppliesData = {
+  limit?: number
+  /**
+   * Campo para ordenação
+   */
+  orderBy?: string
+  /**
+   * Direção da ordenação (asc, desc)
+   */
+  orderDir?: string
+  /**
+   * ID da sessão do bot
+   */
+  sessionId: string
+  skip?: number
+  /**
+   * Filtrar por status (SUCCESS, FAILED, etc.)
+   */
+  status?: Array<string> | null
+}
+
+export type ReadBotSessionAppliesResponse = Array<BotApplyPublic>
+
+export type ReadBotApplyData = {
+  /**
+   * ID da aplicação
+   */
+  applyId: number
+}
+
+export type ReadBotApplyResponse = BotApplyDetailPublic
+
+export type ReadBotSessionEventsData = {
+  /**
+   * Filtrar por tipo de evento
+   */
+  eventType?: Array<string> | null
+  limit?: number
+  /**
+   * Campo para ordenação
+   */
+  orderBy?: string
+  /**
+   * Direção da ordenação (asc, desc)
+   */
+  orderDir?: string
+  /**
+   * ID da sessão do bot
+   */
+  sessionId: string
+  /**
+   * Filtrar por severidade
+   */
+  severity?: Array<string> | null
+  /**
+   * Filtrar eventos a partir desta data
+   */
+  since?: string | null
+  skip?: number
+}
+
+export type ReadBotSessionEventsResponse = Array<BotEventPublic>
+
+export type ReadUserActionsData = {
+  /**
+   * Filtrar por tipo de ação
+   */
+  actionType?: Array<string> | null
+  /**
+   * Filtrar por status de conclusão
+   */
+  completed?: boolean | null
+  limit?: number
+  /**
+   * Campo para ordenação
+   */
+  orderBy?: string
+  /**
+   * Direção da ordenação (asc, desc)
+   */
+  orderDir?: string
+  skip?: number
+}
+
+export type ReadUserActionsResponse = Array<BotUserActionPublic>
+
+export type ReadUserActionData = {
+  /**
+   * ID da ação do usuário
+   */
+  actionId: string
+}
+
+export type ReadUserActionResponse = BotUserActionPublic
+
+export type CompleteUserActionData = {
+  /**
+   * ID da ação do usuário
+   */
+  actionId: string
+  requestBody: BotUserActionUpdate
+}
+
+export type CompleteUserActionResponse = BotUserActionPublic
+
+export type ReadNotificationsData = {
+  limit?: number
+  /**
+   * Campo para ordenação
+   */
+  orderBy?: string
+  /**
+   * Direção da ordenação (asc, desc)
+   */
+  orderDir?: string
+  /**
+   * Filtrar por prioridade
+   */
+  priority?: Array<string> | null
+  /**
+   * Filtrar por status de leitura
+   */
+  read?: boolean | null
+  /**
+   * Filtrar por necessidade de ação
+   */
+  requiresAction?: boolean | null
+  skip?: number
+}
+
+export type ReadNotificationsResponse = Array<BotNotificationPublic>
+
+export type ReadNotificationData = {
+  /**
+   * ID da notificação
+   */
+  notificationId: string
+}
+
+export type ReadNotificationResponse = BotNotificationPublic
+
+export type MarkNotificationAsReadData = {
+  /**
+   * ID da notificação
+   */
+  notificationId: string
+}
+
+export type MarkNotificationAsReadResponse = BotNotificationPublic
+
+export type CreateOrUpdateLinkedinCredentialsData = {
+  requestBody: LinkedInCredentialsCreate
+  subscriptionId: string
+}
+
+export type CreateOrUpdateLinkedinCredentialsResponse =
+  LinkedInCredentialsPublic
+
+export type GetLinkedinCredentialsV2Data = {
+  subscriptionId: string
+}
+
+export type GetLinkedinCredentialsV2Response = LinkedInCredentialsPublic
+
+export type CreateOrUpdateBotConfigurationData = {
+  requestBody: BotConfigurationCreate
+  subscriptionId: string
+}
+
+export type CreateOrUpdateBotConfigurationResponse = BotConfigurationPublic
+
+export type GetBotConfigurationV2DuplicateData = {
+  subscriptionId: string
+}
+
+export type GetBotConfigurationV2DuplicateResponse = BotConfigurationPublic
+
+export type CreateBotConfigData = {
+  requestBody: BotConfigCreate
+  /**
+   * ID da assinatura
+   */
+  subscriptionId: string
+}
+
+export type CreateBotConfigResponse = BotConfig
+
+export type ListBotConfigsData = {
+  limit?: number
+  skip?: number
+}
+
+export type ListBotConfigsResponse = Array<BotConfigPublic>
+
+export type ReadBotConfigData = {
+  /**
+   * ID da configuração do bot
+   */
+  configId: string
+}
+
+export type ReadBotConfigResponse = BotConfig
+
+export type UpdateBotConfigData = {
+  /**
+   * ID da configuração do bot
+   */
+  configId: string
+  requestBody: BotConfigUpdate
+}
+
+export type UpdateBotConfigResponse = BotConfig
+
+export type DeleteBotConfigData = {
+  /**
+   * ID da configuração do bot
+   */
+  configId: string
+}
+
+export type DeleteBotConfigResponse = {
+  [key: string]: unknown
 }
 
 export type StripeSuccessData = {
@@ -646,3 +1428,21 @@ export type TestEmailData = {
 export type TestEmailResponse = Message
 
 export type HealthCheckResponse = boolean
+
+export type HandleBotEventData = {
+  nosqlDb?: unknown
+  requestBody: BotEventRequest
+  sessionId: string
+  xApiKey?: string | null
+}
+
+export type HandleBotEventResponse = BotEvent
+
+export type UpdateBotStatusesData = {
+  nosqlDb?: unknown
+  xApiKey?: string | null
+}
+
+export type UpdateBotStatusesResponse = {
+  [key: string]: unknown
+}

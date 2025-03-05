@@ -4,6 +4,62 @@ import type { CancelablePromise } from "./core/CancelablePromise"
 import { OpenAPI } from "./core/OpenAPI"
 import { request as __request } from "./core/request"
 import type {
+  CreateBotSessionData,
+  CreateBotSessionResponse,
+  ReadBotSessionsData,
+  ReadBotSessionsResponse,
+  ReadBotSessionData,
+  ReadBotSessionResponse,
+  GetBotSessionStatusData,
+  GetBotSessionStatusResponse,
+  GetBotSessionLogsData,
+  GetBotSessionLogsResponse,
+  StartBotSessionData,
+  StartBotSessionResponse,
+  StopBotSessionData,
+  StopBotSessionResponse,
+  PauseBotSessionData,
+  PauseBotSessionResponse,
+  ResumeBotSessionData,
+  ResumeBotSessionResponse,
+  RestartBotSessionData,
+  RestartBotSessionResponse,
+  ReadBotSessionAppliesData,
+  ReadBotSessionAppliesResponse,
+  ReadBotApplyData,
+  ReadBotApplyResponse,
+  ReadBotSessionEventsData,
+  ReadBotSessionEventsResponse,
+  ReadUserActionsData,
+  ReadUserActionsResponse,
+  ReadUserActionData,
+  ReadUserActionResponse,
+  CompleteUserActionData,
+  CompleteUserActionResponse,
+  ReadNotificationsData,
+  ReadNotificationsResponse,
+  ReadNotificationData,
+  ReadNotificationResponse,
+  MarkNotificationAsReadData,
+  MarkNotificationAsReadResponse,
+  CreateOrUpdateLinkedinCredentialsData,
+  CreateOrUpdateLinkedinCredentialsResponse,
+  GetLinkedinCredentialsV2Data,
+  GetLinkedinCredentialsV2Response,
+  CreateOrUpdateBotConfigurationData,
+  CreateOrUpdateBotConfigurationResponse,
+  GetBotConfigurationV2DuplicateData,
+  GetBotConfigurationV2DuplicateResponse,
+  CreateBotConfigData,
+  CreateBotConfigResponse,
+  ListBotConfigsData,
+  ListBotConfigsResponse,
+  ReadBotConfigData,
+  ReadBotConfigResponse,
+  UpdateBotConfigData,
+  UpdateBotConfigResponse,
+  DeleteBotConfigData,
+  DeleteBotConfigResponse,
   StripeSuccessData,
   StripeSuccessResponse,
   GetStripeCheckoutSessionByIdData,
@@ -85,7 +141,922 @@ import type {
   TestEmailData,
   TestEmailResponse,
   HealthCheckResponse,
+  HandleBotEventData,
+  HandleBotEventResponse,
+  UpdateBotStatusesData,
+  UpdateBotStatusesResponse,
 } from "./types.gen"
+
+export class BotService {
+  /**
+   * Create Bot Session
+   * Cria uma nova sessão de bot com base nas configurações existentes.
+   * @param data The data for the request.
+   * @param data.requestBody
+   * @returns BotSessionPublic Successful Response
+   * @throws ApiError
+   */
+  public static createBotSession(
+    data: CreateBotSessionData,
+  ): CancelablePromise<CreateBotSessionResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/bot/sessions",
+      body: data.requestBody,
+      mediaType: "application/json",
+      errors: {
+        400: "Erro de validação",
+        401: "Não autenticado",
+        403: "Não é assinante",
+        404: "Configuração não encontrada",
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Read Bot Sessions
+   * Recupera todas as sessões de bot do usuário.
+   *
+   * * Requer que o usuário seja assinante
+   * * Retorna uma lista de sessões de bot
+   * * Pode ser filtrada por status
+   * @param data The data for the request.
+   * @param data.skip
+   * @param data.limit
+   * @param data.status Filtrar por status (STARTING, RUNNING, PAUSED, etc.)
+   * @param data.orderBy Campo para ordenação
+   * @param data.orderDir Direção da ordenação (asc, desc)
+   * @returns BotSessionPublic Successful Response
+   * @throws ApiError
+   */
+  public static readBotSessions(
+    data: ReadBotSessionsData = {},
+  ): CancelablePromise<ReadBotSessionsResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/bot/sessions",
+      query: {
+        skip: data.skip,
+        limit: data.limit,
+        status: data.status,
+        order_by: data.orderBy,
+        order_dir: data.orderDir,
+      },
+      errors: {
+        401: "Não autenticado",
+        403: "Não é assinante",
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Read Bot Session
+   * Recupera uma sessão de bot específica.
+   *
+   * * Requer que o usuário seja assinante
+   * * Retorna detalhes da sessão de bot
+   * @param data The data for the request.
+   * @param data.sessionId ID da sessão
+   * @returns BotSessionDetailPublic Successful Response
+   * @throws ApiError
+   */
+  public static readBotSession(
+    data: ReadBotSessionData,
+  ): CancelablePromise<ReadBotSessionResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/bot/sessions/{session_id}",
+      path: {
+        session_id: data.sessionId,
+      },
+      errors: {
+        401: "Não autenticado",
+        403: "Não é assinante",
+        404: "Sessão não encontrada",
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Get Bot Session Status
+   * Recupera o status atual de uma sessão de bot.
+   *
+   * * Requer que o usuário seja assinante
+   * * Retorna informações detalhadas sobre o status atual do bot e do pod Kubernetes
+   * * Inclui métricas de execução atualizadas
+   * @param data The data for the request.
+   * @param data.sessionId ID da sessão do bot
+   * @returns unknown Successful Response
+   * @throws ApiError
+   */
+  public static getBotSessionStatus(
+    data: GetBotSessionStatusData,
+  ): CancelablePromise<GetBotSessionStatusResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/bot/sessions/{session_id}/status",
+      path: {
+        session_id: data.sessionId,
+      },
+      errors: {
+        401: "Não autenticado",
+        403: "Não é assinante",
+        404: "Sessão não encontrada",
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Get Bot Session Logs
+   * Recupera os logs de uma sessão de bot.
+   *
+   * * Requer que o usuário seja assinante
+   * * Retorna os logs do pod Kubernetes
+   * * Permite especificar o número de linhas a serem retornadas do final do log
+   * @param data The data for the request.
+   * @param data.sessionId ID da sessão do bot
+   * @param data.tailLines Número de linhas a retornar do final do log
+   * @returns string Successful Response
+   * @throws ApiError
+   */
+  public static getBotSessionLogs(
+    data: GetBotSessionLogsData,
+  ): CancelablePromise<GetBotSessionLogsResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/bot/sessions/{session_id}/logs",
+      path: {
+        session_id: data.sessionId,
+      },
+      query: {
+        tail_lines: data.tailLines,
+      },
+      errors: {
+        401: "Não autenticado",
+        403: "Não é assinante",
+        404: "Sessão não encontrada",
+        422: "Validation Error",
+        500: "Erro ao obter logs",
+      },
+    })
+  }
+
+  /**
+   * Start Bot Session
+   * Inicia uma sessão de bot.
+   *
+   * * Requer que o usuário seja assinante
+   * * Cria o pod Kubernetes para a sessão
+   * * Inicia a execução do bot
+   * @param data The data for the request.
+   * @param data.sessionId ID da sessão do bot
+   * @returns BotSessionPublic Successful Response
+   * @throws ApiError
+   */
+  public static startBotSession(
+    data: StartBotSessionData,
+  ): CancelablePromise<StartBotSessionResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/bot/sessions/{session_id}/start",
+      path: {
+        session_id: data.sessionId,
+      },
+      errors: {
+        400: "Sessão já em execução",
+        401: "Não autenticado",
+        403: "Não é assinante",
+        404: "Sessão não encontrada",
+        422: "Validation Error",
+        500: "Erro ao iniciar a sessão",
+      },
+    })
+  }
+
+  /**
+   * Stop Bot Session
+   * Para uma sessão de bot em execução.
+   *
+   * * Requer que o usuário seja assinante
+   * * Retorna a sessão com status atualizado
+   * * Inicia o processo de desligamento do pod Kubernetes em background
+   * @param data The data for the request.
+   * @param data.sessionId ID da sessão do bot
+   * @returns BotSessionPublic Successful Response
+   * @throws ApiError
+   */
+  public static stopBotSession(
+    data: StopBotSessionData,
+  ): CancelablePromise<StopBotSessionResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/bot/sessions/{session_id}/stop",
+      path: {
+        session_id: data.sessionId,
+      },
+      errors: {
+        400: "Sessão já parada",
+        401: "Não autenticado",
+        403: "Não é assinante",
+        404: "Sessão não encontrada",
+        422: "Validation Error",
+        500: "Erro ao parar a sessão",
+      },
+    })
+  }
+
+  /**
+   * Pause Bot Session
+   * Pausa uma sessão de bot em execução.
+   *
+   * * Requer que o usuário seja assinante
+   * * Retorna a sessão com status atualizado
+   * * Inicia o processo de pausa em background
+   * @param data The data for the request.
+   * @param data.sessionId ID da sessão do bot
+   * @returns BotSessionPublic Successful Response
+   * @throws ApiError
+   */
+  public static pauseBotSession(
+    data: PauseBotSessionData,
+  ): CancelablePromise<PauseBotSessionResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/bot/sessions/{session_id}/pause",
+      path: {
+        session_id: data.sessionId,
+      },
+      errors: {
+        400: "Sessão não está em execução",
+        401: "Não autenticado",
+        403: "Não é assinante",
+        404: "Sessão não encontrada",
+        422: "Validation Error",
+        500: "Erro ao pausar a sessão",
+      },
+    })
+  }
+
+  /**
+   * Resume Bot Session
+   * Retoma uma sessão de bot pausada.
+   *
+   * * Requer que o usuário seja assinante
+   * * Retorna a sessão com status atualizado
+   * * Inicia o processo de retomada em background
+   * @param data The data for the request.
+   * @param data.sessionId ID da sessão do bot
+   * @returns BotSessionPublic Successful Response
+   * @throws ApiError
+   */
+  public static resumeBotSession(
+    data: ResumeBotSessionData,
+  ): CancelablePromise<ResumeBotSessionResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/bot/sessions/{session_id}/resume",
+      path: {
+        session_id: data.sessionId,
+      },
+      errors: {
+        400: "Sessão não está pausada",
+        401: "Não autenticado",
+        403: "Não é assinante",
+        404: "Sessão não encontrada",
+        422: "Validation Error",
+        500: "Erro ao retomar a sessão",
+      },
+    })
+  }
+
+  /**
+   * Restart Bot Session
+   * Reinicia uma sessão de bot.
+   *
+   * * Requer que o usuário seja assinante
+   * * Para e reinicia a execução do bot
+   * * Retorna a sessão atualizada
+   * @param data The data for the request.
+   * @param data.sessionId ID da sessão do bot
+   * @returns BotSessionPublic Successful Response
+   * @throws ApiError
+   */
+  public static restartBotSession(
+    data: RestartBotSessionData,
+  ): CancelablePromise<RestartBotSessionResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/bot/sessions/{session_id}/restart",
+      path: {
+        session_id: data.sessionId,
+      },
+      errors: {
+        401: "Não autenticado",
+        403: "Não é assinante",
+        404: "Sessão não encontrada",
+        422: "Validation Error",
+        500: "Erro ao reiniciar a sessão",
+      },
+    })
+  }
+
+  /**
+   * Read Bot Session Applies
+   * Recupera todas as aplicações de uma sessão de bot.
+   *
+   * * Requer que o usuário seja assinante
+   * * Retorna uma lista de aplicações para vagas
+   * * Pode ser filtrada por status
+   * @param data The data for the request.
+   * @param data.sessionId ID da sessão do bot
+   * @param data.skip
+   * @param data.limit
+   * @param data.status Filtrar por status (SUCCESS, FAILED, etc.)
+   * @param data.orderBy Campo para ordenação
+   * @param data.orderDir Direção da ordenação (asc, desc)
+   * @returns BotApplyPublic Successful Response
+   * @throws ApiError
+   */
+  public static readBotSessionApplies(
+    data: ReadBotSessionAppliesData,
+  ): CancelablePromise<ReadBotSessionAppliesResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/bot/sessions/{session_id}/applies",
+      path: {
+        session_id: data.sessionId,
+      },
+      query: {
+        skip: data.skip,
+        limit: data.limit,
+        status: data.status,
+        order_by: data.orderBy,
+        order_dir: data.orderDir,
+      },
+      errors: {
+        401: "Não autenticado",
+        403: "Não é assinante",
+        404: "Sessão não encontrada",
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Read Bot Apply
+   * Recupera os detalhes de uma aplicação específica.
+   *
+   * * Requer que o usuário seja assinante
+   * * Retorna os detalhes completos da aplicação, incluindo etapas
+   * @param data The data for the request.
+   * @param data.applyId ID da aplicação
+   * @returns BotApplyDetailPublic Successful Response
+   * @throws ApiError
+   */
+  public static readBotApply(
+    data: ReadBotApplyData,
+  ): CancelablePromise<ReadBotApplyResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/bot/applies/{apply_id}",
+      path: {
+        apply_id: data.applyId,
+      },
+      errors: {
+        401: "Não autenticado",
+        403: "Não é assinante",
+        404: "Aplicação não encontrada",
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Read Bot Session Events
+   * Recupera todos os eventos de uma sessão de bot.
+   *
+   * * Requer que o usuário seja assinante
+   * * Retorna uma lista de eventos
+   * * Pode ser filtrada por tipo, severidade e data
+   * @param data The data for the request.
+   * @param data.sessionId ID da sessão do bot
+   * @param data.skip
+   * @param data.limit
+   * @param data.eventType Filtrar por tipo de evento
+   * @param data.severity Filtrar por severidade
+   * @param data.since Filtrar eventos a partir desta data
+   * @param data.orderBy Campo para ordenação
+   * @param data.orderDir Direção da ordenação (asc, desc)
+   * @returns BotEventPublic Successful Response
+   * @throws ApiError
+   */
+  public static readBotSessionEvents(
+    data: ReadBotSessionEventsData,
+  ): CancelablePromise<ReadBotSessionEventsResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/bot/sessions/{session_id}/events",
+      path: {
+        session_id: data.sessionId,
+      },
+      query: {
+        skip: data.skip,
+        limit: data.limit,
+        event_type: data.eventType,
+        severity: data.severity,
+        since: data.since,
+        order_by: data.orderBy,
+        order_dir: data.orderDir,
+      },
+      errors: {
+        401: "Não autenticado",
+        403: "Não é assinante",
+        404: "Sessão não encontrada",
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Read User Actions
+   * Recupera todas as ações pendentes do usuário.
+   *
+   * * Requer que o usuário seja assinante
+   * * Retorna uma lista de ações que requerem intervenção do usuário
+   * * Pode ser filtrada por status e tipo
+   * @param data The data for the request.
+   * @param data.skip
+   * @param data.limit
+   * @param data.completed Filtrar por status de conclusão
+   * @param data.actionType Filtrar por tipo de ação
+   * @param data.orderBy Campo para ordenação
+   * @param data.orderDir Direção da ordenação (asc, desc)
+   * @returns BotUserActionPublic Successful Response
+   * @throws ApiError
+   */
+  public static readUserActions(
+    data: ReadUserActionsData = {},
+  ): CancelablePromise<ReadUserActionsResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/bot/user-actions",
+      query: {
+        skip: data.skip,
+        limit: data.limit,
+        completed: data.completed,
+        action_type: data.actionType,
+        order_by: data.orderBy,
+        order_dir: data.orderDir,
+      },
+      errors: {
+        401: "Não autenticado",
+        403: "Não é assinante",
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Read User Action
+   * Recupera os detalhes de uma ação específica.
+   *
+   * * Requer que o usuário seja assinante
+   * * Retorna os detalhes completos da ação
+   * @param data The data for the request.
+   * @param data.actionId ID da ação do usuário
+   * @returns BotUserActionPublic Successful Response
+   * @throws ApiError
+   */
+  public static readUserAction(
+    data: ReadUserActionData,
+  ): CancelablePromise<ReadUserActionResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/bot/user-actions/{action_id}",
+      path: {
+        action_id: data.actionId,
+      },
+      errors: {
+        401: "Não autenticado",
+        403: "Não é assinante",
+        404: "Ação não encontrada",
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Complete User Action
+   * Completa uma ação do usuário.
+   *
+   * * Requer que o usuário seja assinante
+   * * Envia a entrada do usuário para completar a ação (2FA, CAPTCHA, etc.)
+   * * A sessão do bot será retomada após a conclusão
+   * @param data The data for the request.
+   * @param data.actionId ID da ação do usuário
+   * @param data.requestBody
+   * @returns BotUserActionPublic Successful Response
+   * @throws ApiError
+   */
+  public static completeUserAction(
+    data: CompleteUserActionData,
+  ): CancelablePromise<CompleteUserActionResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/bot/user-actions/{action_id}/complete",
+      path: {
+        action_id: data.actionId,
+      },
+      body: data.requestBody,
+      mediaType: "application/json",
+      errors: {
+        400: "Ação já concluída ou expirada",
+        401: "Não autenticado",
+        403: "Não é assinante",
+        404: "Ação não encontrada",
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Read Notifications
+   * Recupera todas as notificações do usuário.
+   *
+   * * Requer que o usuário seja assinante
+   * * Retorna uma lista de notificações
+   * * Pode ser filtrada por status, prioridade e necessidade de ação
+   * @param data The data for the request.
+   * @param data.skip
+   * @param data.limit
+   * @param data.read Filtrar por status de leitura
+   * @param data.priority Filtrar por prioridade
+   * @param data.requiresAction Filtrar por necessidade de ação
+   * @param data.orderBy Campo para ordenação
+   * @param data.orderDir Direção da ordenação (asc, desc)
+   * @returns BotNotificationPublic Successful Response
+   * @throws ApiError
+   */
+  public static readNotifications(
+    data: ReadNotificationsData = {},
+  ): CancelablePromise<ReadNotificationsResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/bot/notifications",
+      query: {
+        skip: data.skip,
+        limit: data.limit,
+        read: data.read,
+        priority: data.priority,
+        requires_action: data.requiresAction,
+        order_by: data.orderBy,
+        order_dir: data.orderDir,
+      },
+      errors: {
+        401: "Não autenticado",
+        403: "Não é assinante",
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Read Notification
+   * Recupera os detalhes de uma notificação específica.
+   *
+   * * Requer que o usuário seja assinante
+   * * Retorna os detalhes completos da notificação
+   * @param data The data for the request.
+   * @param data.notificationId ID da notificação
+   * @returns BotNotificationPublic Successful Response
+   * @throws ApiError
+   */
+  public static readNotification(
+    data: ReadNotificationData,
+  ): CancelablePromise<ReadNotificationResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/bot/notifications/{notification_id}",
+      path: {
+        notification_id: data.notificationId,
+      },
+      errors: {
+        401: "Não autenticado",
+        403: "Não é assinante",
+        404: "Notificação não encontrada",
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Mark Notification As Read
+   * Marca uma notificação como lida.
+   *
+   * * Requer que o usuário seja assinante
+   * * Atualiza o status da notificação para "lida"
+   * @param data The data for the request.
+   * @param data.notificationId ID da notificação
+   * @returns BotNotificationPublic Successful Response
+   * @throws ApiError
+   */
+  public static markNotificationAsRead(
+    data: MarkNotificationAsReadData,
+  ): CancelablePromise<MarkNotificationAsReadResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/bot/notifications/{notification_id}/mark-as-read",
+      path: {
+        notification_id: data.notificationId,
+      },
+      errors: {
+        401: "Não autenticado",
+        403: "Não é assinante",
+        404: "Notificação não encontrada",
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Create Or Update Linkedin Credentials
+   * Cria ou atualiza as credenciais do LinkedIn para uma assinatura.
+   *
+   * * Requer que o usuário seja assinante
+   * * Retorna as credenciais criadas ou atualizadas
+   * @param data The data for the request.
+   * @param data.subscriptionId
+   * @param data.requestBody
+   * @returns LinkedInCredentialsPublic Successful Response
+   * @throws ApiError
+   */
+  public static createOrUpdateLinkedinCredentials(
+    data: CreateOrUpdateLinkedinCredentialsData,
+  ): CancelablePromise<CreateOrUpdateLinkedinCredentialsResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/bot/subscriptions/{subscription_id}/linkedin-credentials",
+      path: {
+        subscription_id: data.subscriptionId,
+      },
+      body: data.requestBody,
+      mediaType: "application/json",
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Get Linkedin Credentials V2
+   * Recupera as credenciais do LinkedIn para uma assinatura.
+   *
+   * * Requer que o usuário seja assinante
+   * * Retorna as credenciais do LinkedIn ou 404 se não existirem
+   * @param data The data for the request.
+   * @param data.subscriptionId
+   * @returns LinkedInCredentialsPublic Successful Response
+   * @throws ApiError
+   */
+  public static getLinkedinCredentialsV2(
+    data: GetLinkedinCredentialsV2Data,
+  ): CancelablePromise<GetLinkedinCredentialsV2Response> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/bot/subscriptions/{subscription_id}/linkedin-credentials",
+      path: {
+        subscription_id: data.subscriptionId,
+      },
+      errors: {
+        401: "Não autenticado",
+        403: "Não é assinante",
+        404: "Credenciais não encontradas",
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Create Or Update Bot Configuration
+   * Cria ou atualiza a configuração do bot para uma assinatura.
+   *
+   * * Requer que o usuário seja assinante
+   * * Retorna a configuração criada ou atualizada
+   * @param data The data for the request.
+   * @param data.subscriptionId
+   * @param data.requestBody
+   * @returns BotConfigurationPublic Successful Response
+   * @throws ApiError
+   */
+  public static createOrUpdateBotConfiguration(
+    data: CreateOrUpdateBotConfigurationData,
+  ): CancelablePromise<CreateOrUpdateBotConfigurationResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/bot/subscriptions/{subscription_id}/bot-configuration",
+      path: {
+        subscription_id: data.subscriptionId,
+      },
+      body: data.requestBody,
+      mediaType: "application/json",
+      errors: {
+        400: "Erro de validação",
+        401: "Não autenticado",
+        403: "Não é assinante",
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Get Bot Configuration V2 Duplicate
+   * Recupera a configuração do bot para uma assinatura.
+   *
+   * * Requer que o usuário seja assinante
+   * * Retorna a configuração do bot ou 404 se não existir
+   * @param data The data for the request.
+   * @param data.subscriptionId
+   * @returns BotConfigurationPublic Successful Response
+   * @throws ApiError
+   */
+  public static getBotConfigurationV2Duplicate(
+    data: GetBotConfigurationV2DuplicateData,
+  ): CancelablePromise<GetBotConfigurationV2DuplicateResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/bot/subscriptions/{subscription_id}/bot-configuration",
+      path: {
+        subscription_id: data.subscriptionId,
+      },
+      errors: {
+        401: "Não autenticado",
+        403: "Não é assinante",
+        404: "Configuração não encontrada",
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Create Bot Config
+   * Cria uma nova configuração de bot.
+   *
+   * * Requer que o usuário seja assinante
+   * * A configuração será associada ao usuário e assinatura
+   * * Retorna a configuração criada
+   * @param data The data for the request.
+   * @param data.subscriptionId ID da assinatura
+   * @param data.requestBody
+   * @returns BotConfig Successful Response
+   * @throws ApiError
+   */
+  public static createBotConfig(
+    data: CreateBotConfigData,
+  ): CancelablePromise<CreateBotConfigResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/bot/configs",
+      query: {
+        subscription_id: data.subscriptionId,
+      },
+      body: data.requestBody,
+      mediaType: "application/json",
+      errors: {
+        400: "Erro de validação",
+        401: "Não autenticado",
+        403: "Não é assinante",
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * List Bot Configs
+   * Lista todas as configurações de bot do usuário.
+   *
+   * * Requer que o usuário seja assinante
+   * * Retorna uma lista paginada de configurações
+   * @param data The data for the request.
+   * @param data.skip
+   * @param data.limit
+   * @returns BotConfigPublic Successful Response
+   * @throws ApiError
+   */
+  public static listBotConfigs(
+    data: ListBotConfigsData = {},
+  ): CancelablePromise<ListBotConfigsResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/bot/configs",
+      query: {
+        skip: data.skip,
+        limit: data.limit,
+      },
+      errors: {
+        401: "Não autenticado",
+        403: "Não é assinante",
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Read Bot Config
+   * Recupera uma configuração de bot específica.
+   *
+   * * Requer que o usuário seja assinante
+   * * Retorna os detalhes da configuração do bot
+   * @param data The data for the request.
+   * @param data.configId ID da configuração do bot
+   * @returns BotConfig Successful Response
+   * @throws ApiError
+   */
+  public static readBotConfig(
+    data: ReadBotConfigData,
+  ): CancelablePromise<ReadBotConfigResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/bot/configs/{config_id}",
+      path: {
+        config_id: data.configId,
+      },
+      errors: {
+        401: "Não autenticado",
+        403: "Não é assinante",
+        404: "Configuração não encontrada",
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Update Bot Config
+   * Atualiza uma configuração de bot específica.
+   *
+   * * Requer que o usuário seja assinante
+   * * Atualiza apenas os campos fornecidos
+   * * Retorna a configuração atualizada
+   * @param data The data for the request.
+   * @param data.configId ID da configuração do bot
+   * @param data.requestBody
+   * @returns BotConfig Successful Response
+   * @throws ApiError
+   */
+  public static updateBotConfig(
+    data: UpdateBotConfigData,
+  ): CancelablePromise<UpdateBotConfigResponse> {
+    return __request(OpenAPI, {
+      method: "PATCH",
+      url: "/api/v1/bot/configs/{config_id}",
+      path: {
+        config_id: data.configId,
+      },
+      body: data.requestBody,
+      mediaType: "application/json",
+      errors: {
+        400: "Erro de validação",
+        401: "Não autenticado",
+        403: "Não é assinante",
+        404: "Configuração não encontrada",
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Delete Bot Config
+   * Remove uma configuração de bot específica.
+   *
+   * * Requer que o usuário seja assinante
+   * * Remove permanentemente a configuração
+   * * Retorna status de sucesso
+   * @param data The data for the request.
+   * @param data.configId ID da configuração do bot
+   * @returns unknown Successful Response
+   * @throws ApiError
+   */
+  public static deleteBotConfig(
+    data: DeleteBotConfigData,
+  ): CancelablePromise<DeleteBotConfigResponse> {
+    return __request(OpenAPI, {
+      method: "DELETE",
+      url: "/api/v1/bot/configs/{config_id}",
+      path: {
+        config_id: data.configId,
+      },
+      errors: {
+        401: "Não autenticado",
+        403: "Não é assinante",
+        404: "Configuração não encontrada",
+        422: "Validation Error",
+      },
+    })
+  }
+}
 
 export class CheckoutService {
   /**
@@ -454,7 +1425,7 @@ export class LoginService {
   ): CancelablePromise<ResetPasswordResponse> {
     return __request(OpenAPI, {
       method: "POST",
-      url: "/api/v1/reset-password/",
+      url: "/api/v1/reset-password",
       body: data.requestBody,
       mediaType: "application/json",
       errors: {
@@ -561,7 +1532,7 @@ export class PaymentsService {
   ): CancelablePromise<ReadPaymentsResponse> {
     return __request(OpenAPI, {
       method: "GET",
-      url: "/api/v1/payments/",
+      url: "/api/v1/payments",
       query: {
         skip: data.skip,
         limit: data.limit,
@@ -587,7 +1558,7 @@ export class SubscriptionPlansService {
   ): CancelablePromise<ReadSubscriptionPlansResponse> {
     return __request(OpenAPI, {
       method: "GET",
-      url: "/api/v1/subscription-plans/",
+      url: "/api/v1/subscription-plans",
       query: {
         only_active: data.onlyActive,
       },
@@ -610,7 +1581,7 @@ export class SubscriptionPlansService {
   ): CancelablePromise<CreateSubscriptionPlanResponse> {
     return __request(OpenAPI, {
       method: "POST",
-      url: "/api/v1/subscription-plans/",
+      url: "/api/v1/subscription-plans",
       body: data.requestBody,
       mediaType: "application/json",
       errors: {
@@ -891,7 +1862,7 @@ export class UsersService {
   ): CancelablePromise<ReadUsersResponse> {
     return __request(OpenAPI, {
       method: "GET",
-      url: "/api/v1/users/",
+      url: "/api/v1/users",
       query: {
         skip: data.skip,
         limit: data.limit,
@@ -915,7 +1886,7 @@ export class UsersService {
   ): CancelablePromise<CreateUserResponse> {
     return __request(OpenAPI, {
       method: "POST",
-      url: "/api/v1/users/",
+      url: "/api/v1/users",
       body: data.requestBody,
       mediaType: "application/json",
       errors: {
@@ -1327,7 +2298,7 @@ export class UtilsService {
   ): CancelablePromise<TestEmailResponse> {
     return __request(OpenAPI, {
       method: "POST",
-      url: "/api/v1/utils/test-email/",
+      url: "/api/v1/utils/test-email",
       query: {
         email_to: data.emailTo,
       },
@@ -1345,7 +2316,81 @@ export class UtilsService {
   public static healthCheck(): CancelablePromise<HealthCheckResponse> {
     return __request(OpenAPI, {
       method: "GET",
-      url: "/api/v1/utils/health-check/",
+      url: "/api/v1/utils/health-check",
+    })
+  }
+}
+
+export class WebhooksService {
+  /**
+   * Handle Bot Event
+   * Recebe eventos do bot em execução. Esta rota é chamada diretamente pelo
+   * bot para informar sobre seu estado, progresso, e qualquer notificação ou
+   * ação requerida do usuário.
+   *
+   * A autenticação é feita via API key única para cada sessão de bot.
+   * @param data The data for the request.
+   * @param data.sessionId
+   * @param data.requestBody
+   * @param data.nosqlDb
+   * @param data.xApiKey
+   * @returns BotEvent Successful Response
+   * @throws ApiError
+   */
+  public static handleBotEvent(
+    data: HandleBotEventData,
+  ): CancelablePromise<HandleBotEventResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/webhooks/bot/{session_id}",
+      path: {
+        session_id: data.sessionId,
+      },
+      headers: {
+        "x-api-key": data.xApiKey,
+      },
+      query: {
+        nosql_db: data.nosqlDb,
+      },
+      body: data.requestBody,
+      mediaType: "application/json",
+      errors: {
+        400: "Requisição inválida",
+        401: "Não autorizado",
+        404: "Sessão não encontrada",
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Update Bot Statuses
+   * Endpoint para atualizar o status de todas as sessões de bot ativas.
+   * Este endpoint pode ser chamado periodicamente por um cron job para
+   * manter a sincronização entre o estado do Kubernetes e o banco de dados.
+   * @param data The data for the request.
+   * @param data.nosqlDb
+   * @param data.xApiKey
+   * @returns unknown Successful Response
+   * @throws ApiError
+   */
+  public static updateBotStatuses(
+    data: UpdateBotStatusesData = {},
+  ): CancelablePromise<UpdateBotStatusesResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/webhooks/status-update",
+      headers: {
+        "x-api-key": data.xApiKey,
+      },
+      query: {
+        nosql_db: data.nosqlDb,
+      },
+      errors: {
+        401: "Não autorizado",
+        422: "Validation Error",
+        500: "Erro interno",
+      },
     })
   }
 }
