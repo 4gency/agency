@@ -1362,6 +1362,37 @@ class BotSessionPublic(SQLModel):
     last_status_message: str | None
     error_message: str | None
 
+    @classmethod
+    def from_bot_session(cls, bot_session: "BotSession") -> "BotSessionPublic":
+        """
+        Converte um objeto BotSession para BotSessionPublic, 
+        convertendo métodos em valores simples.
+        """
+        status_str = bot_session.status.value if bot_session.status else None
+        pod_status_str = bot_session.kubernetes_pod_status.value if bot_session.kubernetes_pod_status else None
+        
+        # Avalia o método is_healthy para obter um booleano
+        is_healthy_value = bot_session.is_healthy()
+        
+        return cls(
+            id=bot_session.id,
+            subscription_id=bot_session.subscription_id,
+            bot_config_id=bot_session.bot_config_id,
+            status=status_str,
+            kubernetes_pod_status=pod_status_str,
+            total_applied=bot_session.total_applied,
+            total_success=bot_session.total_success,
+            total_failed=bot_session.total_failed,
+            success_rate=bot_session.success_rate,
+            created_at=bot_session.created_at,
+            started_at=bot_session.started_at,
+            finished_at=bot_session.finished_at,
+            last_heartbeat_at=bot_session.last_heartbeat_at,
+            is_healthy=is_healthy_value,
+            last_status_message=bot_session.last_status_message,
+            error_message=bot_session.error_message
+        )
+
 
 class BotSessionDetailPublic(BotSessionPublic):
     """Modelo público detalhado para sessão do bot."""
@@ -1382,6 +1413,54 @@ class BotSessionDetailPublic(BotSessionPublic):
     resume_version: int
     paused_at: datetime | None
     resumed_at: datetime | None
+
+    @classmethod
+    def from_bot_session(cls, bot_session: "BotSession") -> "BotSessionDetailPublic":
+        """
+        Converte um objeto BotSession para BotSessionDetailPublic, 
+        convertendo métodos em valores simples.
+        """
+        # Primeiro criamos o BotSessionPublic usando o método da classe pai
+        base = BotSessionPublic.from_bot_session(bot_session)
+        
+        # Depois adicionamos os campos extras do BotSessionDetailPublic
+        return cls(
+            # Campos herdados de BotSessionPublic
+            id=base.id,
+            subscription_id=base.subscription_id,
+            bot_config_id=base.bot_config_id,
+            status=base.status,
+            kubernetes_pod_status=base.kubernetes_pod_status,
+            total_applied=base.total_applied,
+            total_success=base.total_success,
+            total_failed=base.total_failed,
+            success_rate=base.success_rate,
+            created_at=base.created_at,
+            started_at=base.started_at,
+            finished_at=base.finished_at,
+            last_heartbeat_at=base.last_heartbeat_at,
+            is_healthy=base.is_healthy,
+            last_status_message=base.last_status_message,
+            error_message=base.error_message,
+            
+            # Campos adicionais do BotSessionDetailPublic
+            total_time=bot_session.total_time,
+            average_time_per_apply=bot_session.average_time_per_apply,
+            average_time_per_success=bot_session.average_time_per_success,
+            average_time_per_failed=bot_session.average_time_per_failed,
+            crashes_count=bot_session.crashes_count,
+            kubernetes_pod_name=bot_session.kubernetes_pod_name,
+            kubernetes_namespace=bot_session.kubernetes_namespace,
+            kubernetes_node=bot_session.kubernetes_node,
+            kubernetes_pod_ip=bot_session.kubernetes_pod_ip,
+            kubernetes_log_url=bot_session.kubernetes_log_url,
+            applies_limit=bot_session.applies_limit,
+            time_limit=bot_session.time_limit,
+            config_version=bot_session.config_version,
+            resume_version=bot_session.resume_version,
+            paused_at=bot_session.paused_at,
+            resumed_at=bot_session.resumed_at
+        )
 
 
 class BotCommandCreate(SQLModel):

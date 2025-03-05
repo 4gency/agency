@@ -95,7 +95,8 @@ async def create_bot_session(
             subscription_id=session_in.subscription_id,
         )
 
-        return bot_session
+        # Converter para o modelo público correto para evitar erros de validação
+        return BotSessionPublic.from_bot_session(bot_session)
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -146,7 +147,8 @@ async def read_bot_sessions(
         order_by=order_by,
         order_dir=order_dir,
     )
-    return sessions
+    # Converter para o modelo público correto para evitar erros de validação
+    return [BotSessionPublic.from_bot_session(sess) for sess in sessions]
 
 
 @router.get(
@@ -176,7 +178,8 @@ async def read_bot_session(
     bot_session = await bot_service.get_bot_session(
         session_id=session_id, user_id=current_user.id
     )
-    return bot_session
+    # Converter para o modelo de detalhe público correto para evitar erros de validação
+    return BotSessionDetailPublic.from_bot_session(bot_session)
 
 
 @router.get(
@@ -328,56 +331,38 @@ async def stop_bot_session(
     Para uma sessão de bot em execução.
 
     * Requer que o usuário seja assinante
-    * Inicia o processo de parada do bot e limpeza dos recursos
-    * Retorna a sessão atualizada
+    * Retorna a sessão com status atualizado
+    * Inicia o processo de desligamento do pod Kubernetes em background
     """
     bot_service = await get_bot_service(session, nosql_session)
 
     try:
-        # Parar a sessão
+        # Verificar se o bot existe e pertence ao usuário
         bot_session = await bot_service.get_bot_session(
             session_id=session_id, user_id=current_user.id
         )
-        if not bot_session:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Sessão não encontrada",
-            )
-            
-        # Verificar se a sessão já está parada
-        if bot_session.status in [
-            BotSessionStatus.STOPPED,
-            BotSessionStatus.COMPLETED,
-            BotSessionStatus.FAILED,
-        ]:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Sessão já está parada",
-            )
-            
-        # Iniciar processo de parada em background
-        success = await bot_service.stop_bot_session(
-            bot_session_id=session_id, user_id=current_user.id
+
+        # Parar a sessão (em background para não bloquear a resposta)
+        background_tasks.add_task(
+            bot_service.stop_bot_session,
+            session_id=session_id,
+            user_id=current_user.id,
         )
+
+        # Atualizar o status para STOPPING enquanto o processo de parada acontece em background
+        bot_session.status = BotSessionStatus.STOPPING
         
-        if not success:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Erro ao parar a sessão",
-            )
-            
-        # Obter a sessão atualizada
-        updated_session = await bot_service.get_bot_session(
-            session_id=session_id, user_id=current_user.id
+        # Converter para o modelo público correto para evitar erros de validação
+        return BotSessionPublic.from_bot_session(bot_session)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
         )
-        
-        return updated_session
-    except HTTPException:
-        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error stopping bot session: {str(e)}",
+            detail=f"Erro ao parar sessão do bot: {str(e)}",
         )
 
 
@@ -404,52 +389,40 @@ async def pause_bot_session(
     Pausa uma sessão de bot em execução.
 
     * Requer que o usuário seja assinante
-    * Pausa a execução do bot temporariamente
-    * Retorna a sessão atualizada
+    * Retorna a sessão com status atualizado
+    * Inicia o processo de pausa em background
     """
     bot_service = await get_bot_service(session, nosql_session)
 
     try:
-        # Verificar se a sessão existe
+        # Verificar se o bot existe e pertence ao usuário
         bot_session = await bot_service.get_bot_session(
             session_id=session_id, user_id=current_user.id
         )
-        if not bot_session:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Sessão não encontrada",
-            )
-            
-        # Verificar se a sessão está em execução
-        if bot_session.status != BotSessionStatus.RUNNING:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Sessão não está em execução",
-            )
-            
-        # Pausar a sessão
-        success = await bot_service.pause_bot_session(
-            bot_session_id=session_id, user_id=current_user.id
+
+        # Pausar a sessão (em background para não bloquear a resposta)
+        background_tasks.add_task(
+            bot_service.pause_bot_session,
+            session_id=session_id,
+            user_id=current_user.id,
         )
+
+        # Atualizar o status para PAUSED imediatamente na resposta
+        # O processo completo acontecerá em background
+        bot_session.status = BotSessionStatus.PAUSED
+        bot_session.paused_at = datetime.now()
         
-        if not success:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Erro ao pausar a sessão",
-            )
-            
-        # Obter a sessão atualizada
-        updated_session = await bot_service.get_bot_session(
-            session_id=session_id, user_id=current_user.id
+        # Converter para o modelo público correto para evitar erros de validação
+        return BotSessionPublic.from_bot_session(bot_session)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
         )
-        
-        return updated_session
-    except HTTPException:
-        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error pausing bot session: {str(e)}",
+            detail=f"Erro ao pausar sessão do bot: {str(e)}",
         )
 
 
@@ -476,52 +449,40 @@ async def resume_bot_session(
     Retoma uma sessão de bot pausada.
 
     * Requer que o usuário seja assinante
-    * Retoma a execução do bot após pausa
-    * Retorna a sessão atualizada
+    * Retorna a sessão com status atualizado
+    * Inicia o processo de retomada em background
     """
     bot_service = await get_bot_service(session, nosql_session)
 
     try:
-        # Verificar se a sessão existe
+        # Verificar se o bot existe e pertence ao usuário
         bot_session = await bot_service.get_bot_session(
             session_id=session_id, user_id=current_user.id
         )
-        if not bot_session:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Sessão não encontrada",
-            )
-            
-        # Verificar se a sessão está pausada
-        if bot_session.status != BotSessionStatus.PAUSED:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Sessão não está pausada",
-            )
-            
-        # Retomar a sessão
-        success = await bot_service.resume_bot_session(
-            bot_session_id=session_id, user_id=current_user.id
+
+        # Retomar a sessão (em background para não bloquear a resposta)
+        background_tasks.add_task(
+            bot_service.resume_bot_session,
+            session_id=session_id,
+            user_id=current_user.id,
         )
+
+        # Atualizar o status para RUNNING imediatamente na resposta
+        # O processo completo acontecerá em background
+        bot_session.status = BotSessionStatus.RUNNING
+        bot_session.resumed_at = datetime.now()
         
-        if not success:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Erro ao retomar a sessão",
-            )
-            
-        # Obter a sessão atualizada
-        updated_session = await bot_service.get_bot_session(
-            session_id=session_id, user_id=current_user.id
+        # Converter para o modelo público correto para evitar erros de validação
+        return BotSessionPublic.from_bot_session(bot_session)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
         )
-        
-        return updated_session
-    except HTTPException:
-        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error resuming bot session: {str(e)}",
+            detail=f"Erro ao retomar sessão do bot: {str(e)}",
         )
 
 

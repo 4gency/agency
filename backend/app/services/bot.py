@@ -1521,7 +1521,7 @@ class BotService:
                         "success_rate": bot_session.success_rate,
                         "total_time": bot_session.total_time,
                     },
-                    "is_healthy": bot_session.is_healthy(),
+                    "is_healthy": bot_session.is_healthy,
                     "last_heartbeat_at": bot_session.last_heartbeat_at,
                     "last_status_message": bot_session.last_status_message,
                 }
@@ -1551,7 +1551,7 @@ class BotService:
                         "success_rate": bot_session.success_rate,
                         "total_time": bot_session.total_time,
                     },
-                    "is_healthy": bot_session.is_healthy(),
+                    "is_healthy": bot_session.is_healthy,
                     "last_heartbeat_at": bot_session.last_heartbeat_at,
                     "last_status_message": bot_session.last_status_message,
                 }
@@ -1581,7 +1581,7 @@ class BotService:
                 "pod_status": status_info.get("pod_status"),
                 "pod_info": status_info.get("pod_info", {}),
                 "metrics": metrics,
-                "is_healthy": bot_session.is_healthy(),
+                "is_healthy": bot_session.is_healthy,
                 "last_heartbeat_at": bot_session.last_heartbeat_at,
                 "last_status_message": bot_session.last_status_message,
             }
