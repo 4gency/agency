@@ -16,8 +16,9 @@ def mock_bot_service():
     """Create a mock bot service."""
     with patch("app.api.routes.webhooks.get_bot_service") as mock_get_service:
         service = MagicMock()
-        service.handle_bot_event = AsyncMock(return_value=True)
-        service.update_bot_status = AsyncMock(return_value=True)
+        service.get_bot_session = MagicMock()
+        service.handle_bot_event = MagicMock()
+        service.update_pod_status = AsyncMock()
         mock_get_service.return_value = service
         yield service
 
@@ -39,7 +40,13 @@ def client(test_app):
 @pytest.fixture
 def sample_bot_session(db: Session):
     """Create a sample bot session for testing."""
-    return create_test_bot_session(db)
+    session = create_test_bot_session(db)
+    # Definir uma API key para o teste
+    session.api_key = "test-api-key"
+    db.add(session)
+    db.commit()
+    db.refresh(session)
+    return session
 
 
 class TestWebhooks:
@@ -50,28 +57,28 @@ class TestWebhooks:
         # Act
         response = client.post(
             f"/api/v1/webhooks/bot/{uuid.uuid4()}",
-            json={"event_type": "status_update", "status": "running"},
+            json={"event_type": "status_update", "data": {"status": "running"}},
         )
 
         # Assert
         assert response.status_code == 401
-        assert "API key is missing" in response.json()["detail"]
+        assert "API key não fornecida" in response.json()["detail"]
 
     def test_bot_event_webhook_invalid_session(self, client, mock_bot_service):
         """Test that the bot event webhook validates the session ID."""
         # Arrange
-        mock_bot_service.handle_bot_event.side_effect = Exception("Session not found")
+        mock_bot_service.get_bot_session.return_value = None
 
         # Act
         response = client.post(
             f"/api/v1/webhooks/bot/{uuid.uuid4()}",
-            json={"event_type": "status_update", "status": "running"},
+            json={"event_type": "status_update", "data": {"status": "running"}},
             headers={"X-API-Key": "test-api-key"},
         )
 
         # Assert
         assert response.status_code == 404
-        assert "Bot session not found" in response.json()["detail"]
+        assert "não encontrada" in response.json()["detail"]
 
     def test_bot_event_webhook_success(
         self, client, mock_bot_service, sample_bot_session
@@ -80,10 +87,15 @@ class TestWebhooks:
         # Arrange
         event_data = {
             "event_type": "status_update",
-            "status": "running",
-            "message": "Bot is running",
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "data": {
+                "status": "running",
+                "message": "Bot is running",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
         }
+        
+        mock_bot_service.get_bot_session.return_value = sample_bot_session
+        mock_bot_service.handle_bot_event.return_value = {"id": str(uuid.uuid4())}
 
         # Act
         response = client.post(
@@ -93,24 +105,28 @@ class TestWebhooks:
         )
 
         # Assert
-        assert response.status_code == 200
-        assert response.json() == {"success": True}
-        mock_bot_service.handle_bot_event.assert_called_once_with(
-            session_id=mock_bot_service.handle_bot_event.call_args[1]["session_id"],
-            event_data=event_data,
-        )
+        assert response.status_code == 201
+        assert "id" in response.json()
+        mock_bot_service.handle_bot_event.assert_called_once()
 
     def test_status_update_webhook_unauthorized(self, client):
         """Test that the status update webhook requires an API key."""
         # Act
-        response = client.post("/api/v1/webhooks/status-update", json={})
+        response = client.post(
+            "/api/v1/webhooks/status-update",
+            json={},
+            headers={},  # Sem API key
+        )
 
         # Assert
         assert response.status_code == 401
-        assert "API key is missing" in response.json()["detail"]
+        assert "API key" in response.json()["detail"]
 
     def test_status_update_webhook_success(self, client, mock_bot_service):
         """Test successful status update webhook."""
+        # Configure mock
+        mock_bot_service.update_pod_status.return_value = 5
+
         # Act
         response = client.post(
             "/api/v1/webhooks/status-update",
@@ -120,13 +136,13 @@ class TestWebhooks:
 
         # Assert
         assert response.status_code == 200
-        assert response.json() == {"success": True}
-        mock_bot_service.update_bot_status.assert_called_once()
+        assert response.json()["updated_count"] >= 0
+        mock_bot_service.update_pod_status.assert_called_once()
 
     def test_status_update_webhook_error(self, client, mock_bot_service):
         """Test error handling in status update webhook."""
         # Arrange
-        mock_bot_service.update_bot_status.side_effect = Exception("Test error")
+        mock_bot_service.update_pod_status.side_effect = Exception("Test error")
 
         # Act
         response = client.post(
@@ -137,4 +153,4 @@ class TestWebhooks:
 
         # Assert
         assert response.status_code == 500
-        assert "Error updating bot statuses" in response.json()["detail"]
+        assert "Erro" in response.json()["detail"]

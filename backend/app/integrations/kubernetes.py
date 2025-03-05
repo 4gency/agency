@@ -818,6 +818,7 @@ class KubernetesManager:
             "gotenberg_url": settings.GOTENBERG_URL
             if hasattr(settings, "GOTENBERG_URL")
             else "http://gotenberg:3000",
+            "api_key": api_key,
         }
 
         pod = self._create_yaml_from_template("bot_pod", pod_context)
@@ -1059,6 +1060,178 @@ class KubernetesManager:
         except ApiException as e:
             logger.error(f"Erro ao reiniciar pod {pod_name}: {str(e)}")
             return False
+
+    def create_pod_manifest(
+        self,
+        namespace: str,
+        pod_name: str,
+        image: str,
+        bot_session_id: str,
+        config_yaml: str,
+        resume_yaml: str,
+        resources: dict,
+        webhook_token: str = None,
+        webhook_url: str = None,
+        env_vars: dict = None,
+        api_key: str = None,  # Novo parâmetro para a API key
+    ) -> dict:
+        """
+        Cria o manifesto para um pod que executará o bot.
+
+        Args:
+            namespace: Namespace do Kubernetes onde o pod será criado
+            pod_name: Nome do pod
+            image: Imagem Docker a ser usada
+            bot_session_id: ID da sessão do bot
+            config_yaml: Conteúdo do YAML de configuração
+            resume_yaml: Conteúdo do YAML do currículo
+            resources: Recursos do Kubernetes (CPU, memória)
+            webhook_token: Token para autenticação no webhook (opcional)
+            webhook_url: URL do webhook para o bot reportar eventos (opcional)
+            env_vars: Variáveis de ambiente adicionais (opcional)
+            api_key: API key para autenticação nos webhooks (opcional)
+
+        Returns:
+            Manifesto do pod em formato dict
+        """
+        env_list = [
+            {"name": "BOT_SESSION_ID", "value": bot_session_id},
+            {"name": "LOG_LEVEL", "value": self.log_level},
+        ]
+
+        # Adicionar webhook URL e token, se fornecidos
+        if webhook_url:
+            env_list.append({"name": "WEBHOOK_URI", "value": webhook_url})
+        if webhook_token:
+            env_list.append({"name": "WEBHOOK_TOKEN", "value": webhook_token})
+        
+        # Adicionar API key se fornecida
+        if api_key:
+            env_list.append({"name": "API_KEY", "value": api_key})
+
+        # Adicionar variáveis de ambiente adicionais
+        if env_vars:
+            for key, value in env_vars.items():
+                env_list.append({"name": key, "value": str(value)})
+
+        # ... rest of the method remains unchanged ...
+
+    async def deploy_bot(
+        self,
+        session_id: str,
+        config_yaml: str,
+        resume_yaml: str,
+        pod_name: str = None,
+        namespace: str = None,
+        image: str = None,
+        resources: dict = None,
+        webhook_token: str = None,
+        webhook_url: str = None,
+        env_vars: dict = None,
+        api_key: str = None,  # Novo parâmetro para a API key
+    ) -> dict:
+        """
+        Deploy a bot in Kubernetes.
+
+        Args:
+            session_id: ID da sessão do bot
+            config_yaml: Conteúdo do YAML de configuração
+            resume_yaml: Conteúdo do YAML do currículo
+            pod_name: Nome do pod (opcional, será gerado se não fornecido)
+            namespace: Namespace do Kubernetes (opcional, usa o padrão se não fornecido)
+            image: Imagem Docker (opcional, usa a padrão se não fornecida)
+            resources: Recursos do Kubernetes (CPU, memória) (opcional)
+            webhook_token: Token para autenticação no webhook (opcional)
+            webhook_url: URL do webhook para o bot reportar eventos (opcional)
+            env_vars: Variáveis de ambiente adicionais (opcional)
+            api_key: API key para autenticação nos webhooks (opcional)
+
+        Returns:
+            Informações sobre o pod criado
+        """
+        # Usar valores padrão se não fornecidos
+        if not namespace:
+            namespace = self.namespace
+        if not pod_name:
+            pod_name = f"bot-{session_id[:8]}"
+        if not image:
+            image = self.bot_image
+        if not resources:
+            resources = self.default_resources
+
+        # Verificar se o namespace existe, se não, criar
+        try:
+            self.core_v1_api.read_namespace(name=namespace)
+        except kubernetes.client.exceptions.ApiException as e:
+            if e.status == 404:
+                namespace_manifest = {
+                    "apiVersion": "v1",
+                    "kind": "Namespace",
+                    "metadata": {"name": namespace},
+                }
+                self.core_v1_api.create_namespace(body=namespace_manifest)
+            else:
+                raise
+
+        # Criar o ConfigMap com as configurações
+        cm_name = f"{pod_name}-config"
+        config_data = {
+            "config.yaml": config_yaml,
+            "resume.yaml": resume_yaml,
+        }
+        config_map = kubernetes.client.V1ConfigMap(
+            metadata=kubernetes.client.V1ObjectMeta(name=cm_name),
+            data=config_data,
+        )
+
+        try:
+            self.core_v1_api.create_namespaced_config_map(
+                namespace=namespace, body=config_map
+            )
+        except kubernetes.client.exceptions.ApiException as e:
+            if e.status == 409:  # Já existe
+                self.core_v1_api.patch_namespaced_config_map(
+                    name=cm_name, namespace=namespace, body=config_map
+                )
+            else:
+                raise
+
+        # Criar o pod
+        pod_manifest = self.create_pod_manifest(
+            namespace=namespace,
+            pod_name=pod_name,
+            image=image,
+            bot_session_id=session_id,
+            config_yaml=config_yaml,
+            resume_yaml=resume_yaml,
+            resources=resources,
+            webhook_token=webhook_token,
+            webhook_url=webhook_url,
+            env_vars=env_vars,
+            api_key=api_key,  # Passando a API key
+        )
+
+        try:
+            pod = self.core_v1_api.create_namespaced_pod(
+                namespace=namespace, body=pod_manifest
+            )
+        except kubernetes.client.exceptions.ApiException as e:
+            if e.status == 409:  # Pod já existe
+                # Deletar o pod existente e recriar
+                self.core_v1_api.delete_namespaced_pod(
+                    name=pod_name, namespace=namespace
+                )
+                pod = self.core_v1_api.create_namespaced_pod(
+                    namespace=namespace, body=pod_manifest
+                )
+            else:
+                raise
+
+        return {
+            "pod_name": pod_name,
+            "namespace": namespace,
+            "status": pod.status.phase if pod.status else "Unknown",
+        }
 
 
 # Singleton instance

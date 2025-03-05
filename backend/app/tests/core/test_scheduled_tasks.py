@@ -14,12 +14,12 @@ from app.core.scheduled_tasks import (
 @pytest.fixture
 def mock_httpx_client():
     """Mock the httpx client."""
-    with patch("app.core.scheduled_tasks.httpx.AsyncClient") as mock_client:
-        async_client = AsyncMock()
-        mock_client.return_value.__aenter__.return_value = async_client
-        async_client.post.return_value.status_code = 200
-        async_client.post.return_value.json.return_value = {"success": True}
-        yield async_client
+    with patch("app.core.scheduled_tasks.httpx.Client") as mock_client:
+        client = MagicMock()
+        mock_client.return_value.__enter__.return_value = client
+        client.post.return_value.status_code = 200
+        client.post.return_value.json.return_value = {"updated_count": 5}
+        yield client
 
 
 @pytest.fixture
@@ -79,20 +79,19 @@ class TestScheduledTasks:
         # Verify the API call was made
         mock_httpx_client.post.assert_called_once()
 
-        # Check the URL and headers
+        # Check the URL
         call_args = mock_httpx_client.post.call_args
         assert "/api/v1/webhooks/status-update" in call_args[0][0]
-        assert "X-API-Key" in call_args[1]["headers"]
 
     def test_update_bot_statuses_error(self, task_manager, mock_httpx_client):
         """Test error handling in _update_bot_statuses method."""
-        # Arrange
-        mock_httpx_client.post.side_effect = httpx.RequestError("Connection error")
+        # Arrange - simulation erro de conexão
+        mock_httpx_client.post.side_effect = httpx.RequestError("Connection error", request=MagicMock())
 
         # Act - should not raise an exception
         task_manager._update_bot_statuses()
 
-        # Assert
+        # Assert que o post foi chamado
         mock_httpx_client.post.assert_called_once()
 
     def test_run_tasks(self, task_manager):

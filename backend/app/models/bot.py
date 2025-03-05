@@ -301,6 +301,9 @@ class BotSession(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     subscription_id: UUID = Field(foreign_key="subscription.id")
     bot_config_id: UUID = Field(foreign_key="bot_config.id")
+    
+    # Chave de API para autenticação nos endpoints de webhook
+    api_key: str | None = Field(default=None, max_length=100)
 
     # Estado e controle
     status: BotSessionStatus = Field(default=BotSessionStatus.STARTING)

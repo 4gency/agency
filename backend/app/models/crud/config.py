@@ -74,3 +74,19 @@ def create_subscription_default_configs(
     resume = create_subscription_default_resume(subscription_id, user_id, nosql_session)
 
     return config, resume
+
+
+async def get_resume_async(*, session: SyncSession, subscription_id: str) -> PlainTextResume | None:
+    """
+    Versão assíncrona do método get_resume.
+    
+    Args:
+        session: Sessão do banco NoSQL
+        subscription_id: ID da assinatura
+        
+    Returns:
+        Currículo ou None se não encontrado
+    """
+    # Como a sessão SyncSession não suporta operações assíncronas diretamente,
+    # usamos o método síncrono mas em um contexto assíncrono
+    return get_resume(session=session, subscription_id=subscription_id)

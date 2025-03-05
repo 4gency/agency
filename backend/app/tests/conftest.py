@@ -15,6 +15,10 @@ from app.models.core import (
     SubscriptionPlanBenefit,
     User,
 )
+from app.models.bot import (
+    BotConfig,
+    BotSession,
+)
 from app.tests.utils.user import (
     authentication_subscriber_token_from_email,
     authentication_token_from_email,
@@ -27,6 +31,12 @@ def db() -> Generator[Session, None, None]:
     with Session(engine) as session:
         init_db(session)
         yield session
+        # Limpar tabelas na ordem correta para evitar violações de chave estrangeira
+        # Primeiro exclui tabelas dependentes
+        statement = delete(BotSession)
+        session.execute(statement)
+        statement = delete(BotConfig)
+        session.execute(statement)
         statement = delete(Payment)
         session.execute(statement)
         statement = delete(Subscription)
