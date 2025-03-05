@@ -4,10 +4,9 @@ from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, status
 from pydantic import BaseModel
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import Session
 
-from app.api.deps import get_db, get_nosql_db
+from app.api.deps import NosqlSessionDep, SessionDep, get_db, get_nosql_db
 from app.core.config import settings
 from app.models.bot import BotEvent, BotSession
 from app.services.bot import get_bot_service
@@ -39,8 +38,8 @@ async def handle_bot_event(
     session_id: UUID,
     event: BotEventRequest,
     background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(get_db),
-    nosql_db = Depends(get_nosql_db),
+    db: SessionDep,
+    nosql_db = NosqlSessionDep,
     x_api_key: str | None = Header(None),
 ) -> BotEvent:
     """
@@ -113,8 +112,8 @@ async def handle_bot_event(
 async def update_bot_statuses(
     *,
     background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(get_db),
-    nosql_db = Depends(get_nosql_db),
+    db: SessionDep,
+    nosql_db = NosqlSessionDep,
     x_api_key: str | None = Header(None),
 ) -> Dict[str, Any]:
     """

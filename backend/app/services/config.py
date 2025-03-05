@@ -4,9 +4,8 @@ from typing import Any
 
 import yaml
 from fastapi import HTTPException, status
-from odmantic.session import AIOSession
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from odmantic.session import SyncSession
+from sqlmodel import Session, select
 
 from app.core.security import decrypt_password, encrypt_password
 from app.models.bot import (
@@ -25,7 +24,7 @@ class BotConfigService:
     Serviço para gerenciar configurações do bot e credenciais do LinkedIn.
     """
 
-    def __init__(self, db: AsyncSession, nosql_db: AIOSession):
+    def __init__(self, db: Session, nosql_db: SyncSession):
         """
         Inicializa o serviço com sessões para ambos os bancos de dados.
 
@@ -143,12 +142,12 @@ class BotConfigService:
         Returns:
             Credenciais do LinkedIn ou None se não encontradas
         """
-        result = await self.db.execute(
+        result = self.db.exec(
             select(LinkedInCredentials).where(
                 LinkedInCredentials.subscription_id == subscription_id
             )
         )
-        credentials = result.scalars().first()
+        credentials = result.first()
 
         # Descriptografa a senha, se necessário
         if credentials and credentials.password:
@@ -204,8 +203,8 @@ class BotConfigService:
             existing.email = credentials.email
             existing.password = encrypted_password
             self.db.add(existing)
-            await self.db.commit()
-            await self.db.refresh(existing)
+            self.db.commit()
+            self.db.refresh(existing)
 
             # Retornar com senha descriptografada para uso imediato
             existing.password = credentials.password
@@ -220,8 +219,8 @@ class BotConfigService:
         )
 
         self.db.add(new_credentials)
-        await self.db.commit()
-        await self.db.refresh(new_credentials)
+        self.db.commit()
+        self.db.refresh(new_credentials)
 
         # Retornar com senha descriptografada para uso imediato
         new_credentials.password = credentials.password
@@ -239,12 +238,12 @@ class BotConfigService:
         Returns:
             Configuração do bot ou None se não encontrada
         """
-        result = await self.db.execute(
+        result = self.db.exec(
             select(BotConfiguration).where(
                 BotConfiguration.subscription_id == subscription_id
             )
         )
-        return result.scalars().first()
+        return result.first()
 
     async def create_or_update_bot_configuration(
         self,
@@ -293,8 +292,8 @@ class BotConfigService:
                 existing.sec_ch_ua_platform = config.sec_ch_ua_platform
 
             self.db.add(existing)
-            await self.db.commit()
-            await self.db.refresh(existing)
+            self.db.commit()
+            self.db.refresh(existing)
             return existing
 
         # Criar nova configuração
@@ -311,8 +310,8 @@ class BotConfigService:
         )
 
         self.db.add(new_config)
-        await self.db.commit()
-        await self.db.refresh(new_config)
+        self.db.commit()
+        self.db.refresh(new_config)
 
         return new_config
 
@@ -328,7 +327,7 @@ class BotConfigService:
         """
         from app.models.core import Subscription
 
-        result = await self.db.execute(
+        result = self.db.exec(
             select(Subscription).where(Subscription.id == subscription_id)
         )
-        return result.scalars().first()
+        return result.first()

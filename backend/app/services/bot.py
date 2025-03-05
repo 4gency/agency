@@ -9,12 +9,11 @@ from uuid import UUID
 import yaml
 from fastapi import BackgroundTasks, Depends, HTTPException, status
 from odmantic.session import AIOSession, SyncSession
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import Session, select
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session
 
-from app.api.deps import get_db, get_nosql_db
+from app.api.deps import NosqlSessionDep, SessionDep, get_db, get_nosql_db
 from app.core.config import settings
 from app.core.security import decrypt_password, encrypt_password
 from app.integrations.kubernetes import get_kubernetes_manager, get_kubernetes_service
@@ -58,7 +57,7 @@ class BotService:
     - Currículos (MongoDB)
     """
 
-    def __init__(self, db: AsyncSession, nosql_db: AIOSession | SyncSession):
+    def __init__(self, db: Session, nosql_db: AIOSession | SyncSession):
         """
         Inicializa o serviço com sessões para ambos os bancos de dados.
 
@@ -85,12 +84,12 @@ class BotService:
         Returns:
             Credenciais do LinkedIn ou None se não encontradas
         """
-        result = await self.db.execute(
+        result = self.db.exec(
             select(LinkedInCredentials).where(
                 LinkedInCredentials.subscription_id == subscription_id
             )
         )
-        credentials = result.scalars().first()
+        credentials = result.first()
 
         # Descriptografa a senha, se necessário
         if credentials and credentials.password:
@@ -146,8 +145,8 @@ class BotService:
             existing.email = credentials.email
             existing.password = encrypted_password
             self.db.add(existing)
-            await self.db.commit()
-            await self.db.refresh(existing)
+            self.db.commit()
+            self.db.refresh(existing)
 
             # Retornar com senha descriptografada para uso imediato
             existing.password = credentials.password
@@ -162,8 +161,8 @@ class BotService:
         )
 
         self.db.add(new_credentials)
-        await self.db.commit()
-        await self.db.refresh(new_credentials)
+        self.db.commit()
+        self.db.refresh(new_credentials)
 
         # Retornar com senha descriptografada para uso imediato
         new_credentials.password = credentials.password
@@ -185,12 +184,12 @@ class BotService:
         Returns:
             Configuração do bot ou None se não encontrada
         """
-        result = await self.db.execute(
+        result = self.db.exec(
             select(BotConfiguration).where(
                 BotConfiguration.subscription_id == subscription_id
             )
         )
-        return result.scalars().first()
+        return result.first()
 
     async def create_or_update_bot_configuration(
         self,
@@ -239,8 +238,8 @@ class BotService:
                 existing.sec_ch_ua_platform = config.sec_ch_ua_platform
 
             self.db.add(existing)
-            await self.db.commit()
-            await self.db.refresh(existing)
+            self.db.commit()
+            self.db.refresh(existing)
             return existing
 
         # Criar nova configuração
@@ -261,8 +260,8 @@ class BotService:
         )
 
         self.db.add(new_config)
-        await self.db.commit()
-        await self.db.refresh(new_config)
+        self.db.commit()
+        self.db.refresh(new_config)
 
         return new_config
 
@@ -412,8 +411,8 @@ class BotService:
         )
 
         self.db.add(new_config)
-        await self.db.commit()
-        await self.db.refresh(new_config)
+        self.db.commit()
+        self.db.refresh(new_config)
 
         return new_config
 
@@ -456,8 +455,8 @@ class BotService:
         config.updated_at = datetime.now(timezone.utc)
 
         self.db.add(config)
-        await self.db.commit()
-        await self.db.refresh(config)
+        self.db.commit()
+        self.db.refresh(config)
 
         return config
 
@@ -498,8 +497,8 @@ class BotService:
             )
 
         # Remover configuração
-        await self.db.delete(config)
-        await self.db.commit()
+        self.db.delete(config)
+        self.db.commit()
 
         return True
 
@@ -527,9 +526,9 @@ class BotService:
         query = query.offset(skip).limit(limit)
         
         # Executar query
-        result = await self.db.execute(query)
+        result = self.db.exec(query)
         
-        return result.scalars().all()
+        return result.all()
 
     async def get_bot_config(self, config_id: UUID, user_id: UUID) -> BotConfig:
         """
@@ -656,8 +655,8 @@ class BotService:
         )
 
         self.db.add(bot_session)
-        await self.db.commit()
-        await self.db.refresh(bot_session)
+        self.db.commit()
+        self.db.refresh(bot_session)
 
         # Criar evento inicial
         event = BotEvent(
@@ -669,7 +668,7 @@ class BotService:
         )
 
         self.db.add(event)
-        await self.db.commit()
+        self.db.commit()
 
         return bot_session
 
@@ -775,8 +774,8 @@ class BotService:
 
             # Salva as alterações
             self.db.add(bot_session)
-            await self.db.commit()
-            await self.db.refresh(bot_session)
+            self.db.commit()
+            self.db.refresh(bot_session)
 
             # Agenda verificação do status do pod
             if background_tasks:
@@ -798,8 +797,8 @@ class BotService:
             )
 
             self.db.add(bot_session)
-            await self.db.commit()
-            await self.db.refresh(bot_session)
+            self.db.commit()
+            self.db.refresh(bot_session)
 
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -864,8 +863,8 @@ class BotService:
             )
 
             self.db.add(command)
-            await self.db.commit()
-            await self.db.refresh(command)
+            self.db.commit()
+            self.db.refresh(command)
 
             # Executa em segundo plano ou sincronicamente
             if background_tasks:
@@ -880,8 +879,8 @@ class BotService:
                     source="bot-service",
                 )
 
-                await self.db.commit()
-                await self.db.refresh(bot_session)
+                self.db.commit()
+                self.db.refresh(bot_session)
 
                 return bot_session
             else:
@@ -895,14 +894,14 @@ class BotService:
                         detail=f"Failed to stop bot session: {message}",
                     )
 
-                await self.db.refresh(bot_session)
+                self.db.refresh(bot_session)
                 return bot_session
 
         except HTTPException:
-            await self.db.rollback()
+            self.db.rollback()
             raise
         except Exception as e:
-            await self.db.rollback()
+            self.db.rollback()
             logger.error(f"Error stopping bot session: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -963,8 +962,8 @@ class BotService:
             )
 
             self.db.add(command)
-            await self.db.commit()
-            await self.db.refresh(command)
+            self.db.commit()
+            self.db.refresh(command)
 
             # Executa em segundo plano ou sincronicamente
             if background_tasks:
@@ -980,8 +979,8 @@ class BotService:
                     source="bot-service",
                 )
 
-                await self.db.commit()
-                await self.db.refresh(bot_session)
+                self.db.commit()
+                self.db.refresh(bot_session)
 
                 return bot_session
             else:
@@ -995,14 +994,14 @@ class BotService:
                         detail=f"Failed to pause bot session: {message}",
                     )
 
-                await self.db.refresh(bot_session)
+                self.db.refresh(bot_session)
                 return bot_session
 
         except HTTPException:
-            await self.db.rollback()
+            self.db.rollback()
             raise
         except Exception as e:
-            await self.db.rollback()
+            self.db.rollback()
             logger.error(f"Error pausing bot session: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -1214,8 +1213,8 @@ class BotService:
             )
 
             self.db.add(command)
-            await self.db.commit()
-            await self.db.refresh(command)
+            self.db.commit()
+            self.db.refresh(command)
 
             # Executa em segundo plano ou sincronicamente
             if background_tasks:
@@ -1240,8 +1239,8 @@ class BotService:
                     source="bot-service",
                 )
 
-                await self.db.commit()
-                await self.db.refresh(bot_session)
+                self.db.commit()
+                self.db.refresh(bot_session)
 
                 return bot_session
             else:
@@ -1255,14 +1254,14 @@ class BotService:
                         detail=f"Failed to resume bot session: {message}",
                     )
 
-                await self.db.refresh(bot_session)
+                self.db.refresh(bot_session)
                 return bot_session
 
         except HTTPException:
-            await self.db.rollback()
+            self.db.rollback()
             raise
         except Exception as e:
-            await self.db.rollback()
+            self.db.rollback()
             logger.error(f"Error resuming bot session: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -1316,8 +1315,8 @@ class BotService:
             )
 
             self.db.add(command)
-            await self.db.commit()
-            await self.db.refresh(command)
+            self.db.commit()
+            self.db.refresh(command)
 
             # Executa em segundo plano ou sincronicamente
             if background_tasks:
@@ -1336,8 +1335,8 @@ class BotService:
                     source="bot-service",
                 )
 
-                await self.db.commit()
-                await self.db.refresh(bot_session)
+                self.db.commit()
+                self.db.refresh(bot_session)
 
                 return bot_session
             else:
@@ -1351,14 +1350,14 @@ class BotService:
                         detail=f"Failed to restart bot session: {message}",
                     )
 
-                await self.db.refresh(bot_session)
+                self.db.refresh(bot_session)
                 return bot_session
 
         except HTTPException:
-            await self.db.rollback()
+            self.db.rollback()
             raise
         except Exception as e:
-            await self.db.rollback()
+            self.db.rollback()
             logger.error(f"Error restarting bot session: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -1420,10 +1419,10 @@ class BotService:
         """
         try:
             # Obter assinaturas do usuário
-            result = await self.db.execute(
+            result = self.db.exec(
                 select(Subscription).where(Subscription.user_id == user_id)
             )
-            subscriptions = result.scalars().all()
+            subscriptions = result.all()
 
             if not subscriptions:
                 return [], 0
@@ -1456,8 +1455,8 @@ class BotService:
                     query = query.order_by(getattr(BotSession, order_by).desc())
 
             # Executar query para contagem
-            result = await self.db.execute(query)
-            all_sessions = result.scalars().all()
+            result = self.db.exec(query)
+            all_sessions = result.all()
             total = len(all_sessions)
 
             # Aplicar paginação
@@ -1470,8 +1469,8 @@ class BotService:
             )
 
             # Executar query final
-            result = await self.db.execute(query)
-            sessions = result.scalars().all()
+            result = self.db.exec(query)
+            sessions = result.all()
 
             return sessions, total
 
@@ -1678,10 +1677,10 @@ class BotService:
         """
         try:
             # Obter assinaturas do usuário
-            result = await self.db.execute(
+            result = self.db.exec(
                 select(Subscription).where(Subscription.user_id == user_id)
             )
-            subscriptions = result.scalars().all()
+            subscriptions = result.all()
 
             if not subscriptions:
                 return [], 0
@@ -1722,8 +1721,8 @@ class BotService:
                     query = query.order_by(getattr(BotUserAction, order_by).desc())
 
             # Executar query para contagem
-            result = await self.db.execute(query)
-            all_actions = result.scalars().all()
+            result = self.db.exec(query)
+            all_actions = result.all()
             total = len(all_actions)
 
             # Aplicar paginação
@@ -1733,8 +1732,8 @@ class BotService:
             query = query.options(selectinload(BotUserAction.bot_session))
 
             # Executar query final
-            result = await self.db.execute(query)
-            actions = result.scalars().all()
+            result = self.db.exec(query)
+            actions = result.all()
 
             # Atualizar status de expiração
             for action in actions:
@@ -1745,7 +1744,7 @@ class BotService:
                 ):
                     action.expire()
 
-            await self.db.commit()
+            self.db.commit()
 
             return actions, total
 
@@ -1772,12 +1771,12 @@ class BotService:
         """
         try:
             # Obter ação
-            result = await self.db.execute(
+            result = self.db.exec(
                 select(BotUserAction)
                 .where(BotUserAction.id == action_id)
                 .options(selectinload(BotUserAction.bot_session))
             )
-            action = result.scalars().first()
+            action = result.first()
 
             if not action:
                 raise HTTPException(
@@ -1801,8 +1800,8 @@ class BotService:
                 and not action.expired_at
             ):
                 action.expire()
-                await self.db.commit()
-                await self.db.refresh(action)
+                self.db.commit()
+                self.db.refresh(action)
 
             return action
 
@@ -1846,7 +1845,7 @@ class BotService:
             # Verificar se expirou
             if action.is_expired():
                 action.expire()
-                await self.db.commit()
+                self.db.commit()
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST, detail="Action has expired"
                 )
@@ -1864,16 +1863,16 @@ class BotService:
                     user_action_id=action.id,
                 )
 
-            await self.db.commit()
-            await self.db.refresh(action)
+            self.db.commit()
+            self.db.refresh(action)
 
             return action
 
         except HTTPException:
-            await self.db.rollback()
+            self.db.rollback()
             raise
         except Exception as e:
-            await self.db.rollback()
+            self.db.rollback()
             logger.error(f"Error completing user action: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -1949,8 +1948,8 @@ class BotService:
                     query = query.order_by(getattr(BotNotification, order_by).desc())
 
             # Executar query para contagem
-            result = await self.db.execute(query)
-            all_notifications = result.scalars().all()
+            result = self.db.exec(query)
+            all_notifications = result.all()
             total = len(all_notifications)
 
             # Aplicar paginação
@@ -1963,8 +1962,8 @@ class BotService:
             )
 
             # Executar query final
-            result = await self.db.execute(query)
-            notifications = result.scalars().all()
+            result = self.db.exec(query)
+            notifications = result.all()
 
             # Atualizar status de expiração
             for notification in notifications:
@@ -1974,7 +1973,7 @@ class BotService:
                 ):
                     notification.mark_as_expired()
 
-            await self.db.commit()
+            self.db.commit()
 
             return notifications, total
 
@@ -2003,7 +2002,7 @@ class BotService:
         """
         try:
             # Obter notificação
-            result = await self.db.execute(
+            result = self.db.exec(
                 select(BotNotification)
                 .where(BotNotification.id == notification_id)
                 .options(
@@ -2011,7 +2010,7 @@ class BotService:
                     selectinload(BotNotification.user_action),
                 )
             )
-            notification = result.scalars().first()
+            notification = result.first()
 
             if not notification:
                 raise HTTPException(
@@ -2032,8 +2031,8 @@ class BotService:
                 and not notification.is_active()
             ):
                 notification.mark_as_expired()
-                await self.db.commit()
-                await self.db.refresh(notification)
+                self.db.commit()
+                self.db.refresh(notification)
 
             return notification
 
@@ -2068,16 +2067,16 @@ class BotService:
 
             # Marcar como lida
             notification.mark_as_read()
-            await self.db.commit()
-            await self.db.refresh(notification)
+            self.db.commit()
+            self.db.refresh(notification)
 
             return notification
 
         except HTTPException:
-            await self.db.rollback()
+            self.db.rollback()
             raise
         except Exception as e:
-            await self.db.rollback()
+            self.db.rollback()
             logger.error(f"Error marking notification as read: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -2150,21 +2149,21 @@ class BotService:
             )
 
             self.db.add(notification)
-            await self.db.commit()
-            await self.db.refresh(notification)
+            self.db.commit()
+            self.db.refresh(notification)
 
             # Marcar como enviada
             notification.mark_as_sent()
-            await self.db.commit()
-            await self.db.refresh(notification)
+            self.db.commit()
+            self.db.refresh(notification)
 
             return notification
 
         except HTTPException:
-            await self.db.rollback()
+            self.db.rollback()
             raise
         except Exception as e:
-            await self.db.rollback()
+            self.db.rollback()
             logger.error(f"Error creating notification: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -2231,8 +2230,8 @@ class BotService:
                     query = query.order_by(getattr(BotApply, order_by).desc())
 
             # Executar query para contagem
-            result = await self.db.execute(query)
-            all_applies = result.scalars().all()
+            result = self.db.exec(query)
+            all_applies = result.all()
             total = len(all_applies)
 
             # Aplicar paginação
@@ -2242,8 +2241,8 @@ class BotService:
             query = query.options(selectinload(BotApply.apply_steps))
 
             # Executar query final
-            result = await self.db.execute(query)
-            applies = result.scalars().all()
+            result = self.db.exec(query)
+            applies = result.all()
 
             return applies, total
 
@@ -2272,7 +2271,7 @@ class BotService:
         """
         try:
             # Obter aplicação com relacionamentos
-            result = await self.db.execute(
+            result = self.db.exec(
                 select(BotApply)
                 .where(BotApply.id == apply_id)
                 .options(
@@ -2281,7 +2280,7 @@ class BotService:
                     selectinload(BotApply.user_actions),
                 )
             )
-            apply = result.scalars().first()
+            apply = result.first()
 
             if not apply:
                 raise HTTPException(
@@ -2370,16 +2369,16 @@ class BotService:
                     query = query.order_by(getattr(BotEvent, order_by).desc())
 
             # Executar query para contagem
-            result = await self.db.execute(query)
-            all_events = result.scalars().all()
+            result = self.db.exec(query)
+            all_events = result.all()
             total = len(all_events)
 
             # Aplicar paginação
             query = query.offset(skip).limit(limit)
 
             # Executar query final
-            result = await self.db.execute(query)
-            events = result.scalars().all()
+            result = self.db.exec(query)
+            events = result.all()
 
             return events, total
 
@@ -2405,10 +2404,10 @@ class BotService:
         """
         try:
             # Obter o comando
-            result = await self.db.execute(
+            result = self.db.exec(
                 select(BotCommand).where(BotCommand.id == command_id)
             )
-            command = result.scalars().first()
+            command = result.first()
 
             if not command:
                 logger.error(f"Command {command_id} not found")
@@ -2430,10 +2429,10 @@ class BotService:
             logger.exception(f"Error executing command {command_id}: {str(e)}")
             try:
                 # Tentar marcar o comando como falho
-                result = await self.db.execute(
+                result = self.db.exec(
                     select(BotCommand).where(BotCommand.id == command_id)
                 )
-                command = result.scalars().first()
+                command = result.first()
 
                 if command:
                     await self.update_command_result(
@@ -2463,12 +2462,12 @@ class BotService:
 
             # Adicionar evento
             self.db.add(event)
-            await self.db.commit()
+            self.db.commit()
 
             return True
 
         except Exception as e:
-            await self.db.rollback()
+            self.db.rollback()
             logger.error(f"Error creating bot event: {str(e)}")
             return False
 
@@ -2513,12 +2512,12 @@ class BotService:
                         (bot_session.total_success / bot_session.total_applied) * 100, 2
                     )
 
-            await self.db.commit()
+            self.db.commit()
 
             return True
 
         except Exception as e:
-            await self.db.rollback()
+            self.db.rollback()
             logger.error(f"Error updating bot heartbeat: {str(e)}")
             return False
 
@@ -2564,12 +2563,12 @@ class BotService:
                     source="bot",
                 )
 
-            await self.db.commit()
+            self.db.commit()
 
             return True
 
         except Exception as e:
-            await self.db.rollback()
+            self.db.rollback()
             logger.error(f"Error updating bot status: {str(e)}")
             return False
 
@@ -2585,7 +2584,7 @@ class BotService:
         """
         try:
             # Obter comandos não executados
-            result = await self.db.execute(
+            result = self.db.exec(
                 select(BotCommand)
                 .where(
                     BotCommand.bot_session_id == session_id,
@@ -2594,7 +2593,7 @@ class BotService:
                 .order_by(BotCommand.sent_at.asc())
             )
 
-            return result.scalars().all()
+            return result.all()
 
         except Exception as e:
             logger.error(f"Error getting pending commands: {str(e)}")
@@ -2621,12 +2620,12 @@ class BotService:
         """
         try:
             # Obter comando
-            result = await self.db.execute(
+            result = self.db.exec(
                 select(BotCommand).where(
                     BotCommand.id == command_id, BotCommand.bot_session_id == session_id
                 )
             )
-            command = result.scalars().first()
+            command = result.first()
 
             if not command:
                 return False
@@ -2651,12 +2650,12 @@ class BotService:
                     source="bot",
                 )
 
-            await self.db.commit()
+            self.db.commit()
 
             return True
 
         except Exception as e:
-            await self.db.rollback()
+            self.db.rollback()
             logger.error(f"Error updating command result: {str(e)}")
             return False
 
@@ -2722,8 +2721,8 @@ class BotService:
                 source="bot",
             )
 
-            await self.db.commit()
-            await self.db.refresh(action)
+            self.db.commit()
+            self.db.refresh(action)
 
             # Criar notificação para o usuário
             await self.notify_user_action_required(action.id)
@@ -2731,7 +2730,7 @@ class BotService:
             return action
 
         except Exception as e:
-            await self.db.rollback()
+            self.db.rollback()
             logger.error(f"Error creating user action from webhook: {str(e)}")
             return None
 
@@ -2749,12 +2748,12 @@ class BotService:
         """
         try:
             # Obter ação
-            result = await self.db.execute(
+            result = self.db.exec(
                 select(BotUserAction)
                 .where(BotUserAction.id == action_id)
                 .options(selectinload(BotUserAction.bot_session))
             )
-            action = result.scalars().first()
+            action = result.first()
 
             if not action or not action.bot_session:
                 return None
@@ -2780,17 +2779,17 @@ class BotService:
             )
 
             self.db.add(notification)
-            await self.db.commit()
-            await self.db.refresh(notification)
+            self.db.commit()
+            self.db.refresh(notification)
 
             # Marcar como enviada
             notification.mark_as_sent()
-            await self.db.commit()
+            self.db.commit()
 
             return notification
 
         except Exception as e:
-            await self.db.rollback()
+            self.db.rollback()
             logger.error(f"Error creating notification for user action: {str(e)}")
             return None
 
@@ -2826,17 +2825,17 @@ class BotService:
             )
 
             self.db.add(notification)
-            await self.db.commit()
-            await self.db.refresh(notification)
+            self.db.commit()
+            self.db.refresh(notification)
 
             # Marcar como enviada
             notification.mark_as_sent()
-            await self.db.commit()
+            self.db.commit()
 
             return notification
 
         except Exception as e:
-            await self.db.rollback()
+            self.db.rollback()
             logger.error(
                 f"Error creating notification for session completion: {str(e)}"
             )
@@ -2875,17 +2874,17 @@ class BotService:
             )
 
             self.db.add(notification)
-            await self.db.commit()
-            await self.db.refresh(notification)
+            self.db.commit()
+            self.db.refresh(notification)
 
             # Marcar como enviada
             notification.mark_as_sent()
-            await self.db.commit()
+            self.db.commit()
 
             return notification
 
         except Exception as e:
-            await self.db.rollback()
+            self.db.rollback()
             logger.error(f"Error creating notification for session failure: {str(e)}")
             return None
 
@@ -2904,12 +2903,12 @@ class BotService:
         """
         try:
             # Obter aplicação
-            result = await self.db.execute(
+            result = self.db.exec(
                 select(BotApply)
                 .where(BotApply.id == apply_id)
                 .options(selectinload(BotApply.bot_session))
             )
-            apply = result.scalars().first()
+            apply = result.first()
 
             if not apply or not apply.bot_session:
                 return None
@@ -2955,17 +2954,17 @@ class BotService:
                 )
 
             self.db.add(notification)
-            await self.db.commit()
-            await self.db.refresh(notification)
+            self.db.commit()
+            self.db.refresh(notification)
 
             # Marcar como enviada
             notification.mark_as_sent()
-            await self.db.commit()
+            self.db.commit()
 
             return notification
 
         except Exception as e:
-            await self.db.rollback()
+            self.db.rollback()
             logger.error(f"Error creating notification for apply completion: {str(e)}")
             return None
 
@@ -2990,8 +2989,8 @@ class BotService:
         """
         # Obter a sessão do bot
         stmt = select(BotSession).where(BotSession.id == session_id)
-        result = await self.db.execute(stmt)
-        bot_session = result.scalars().first()
+        result = self.db.exec(stmt)
+        bot_session = result.first()
 
         if not bot_session:
             raise HTTPException(
@@ -3074,7 +3073,7 @@ class BotService:
             # Lógica para sessão completada
             bot_session.complete()
             self.db.add(bot_session)
-            await self.db.commit()
+            self.db.commit()
             response["notification"] = await self.notify_session_completion(session_id)
         
         # Processar sessão falhada
@@ -3083,7 +3082,7 @@ class BotService:
             reason = data.get("reason", "Unknown error")
             bot_session.fail(reason)
             self.db.add(bot_session)
-            await self.db.commit()
+            self.db.commit()
             response["notification"] = await self.notify_session_failure(session_id, reason)
 
         return response
@@ -3143,8 +3142,8 @@ class BotService:
         
         # Salvar aplicação
         self.db.add(apply)
-        await self.db.commit()
-        await self.db.refresh(apply)
+        self.db.commit()
+        self.db.refresh(apply)
         
         # Adicionar evento para registrar o início da aplicação
         event = BotEvent(
@@ -3189,10 +3188,10 @@ class BotService:
             raise ValueError("Missing apply_id in apply_progress data")
         
         # Buscar aplicação
-        result = await self.db.execute(
+        result = self.db.exec(
             select(BotApply).where(BotApply.id == apply_id)
         )
-        apply = result.scalars().first()
+        apply = result.first()
         
         if not apply:
             raise ValueError(f"Apply with ID {apply_id} not found")
@@ -3211,8 +3210,8 @@ class BotService:
         
         # Salvar alterações
         self.db.add(apply)
-        await self.db.commit()
-        await self.db.refresh(apply)
+        self.db.commit()
+        self.db.refresh(apply)
         
         # Adicionar evento para registrar o progresso
         event = BotEvent(
@@ -3252,10 +3251,10 @@ class BotService:
             raise ValueError("Missing apply_id in apply_completed data")
         
         # Buscar aplicação
-        result = await self.db.execute(
+        result = self.db.exec(
             select(BotApply).where(BotApply.id == apply_id)
         )
-        apply = result.scalars().first()
+        apply = result.first()
         
         if not apply:
             raise ValueError(f"Apply with ID {apply_id} not found")
@@ -3266,8 +3265,8 @@ class BotService:
         
         # Salvar alterações
         self.db.add(apply)
-        await self.db.commit()
-        await self.db.refresh(apply)
+        self.db.commit()
+        self.db.refresh(apply)
         
         # Enviar notificação
         notification = await self.notify_apply_completion(apply_id, success)
@@ -3292,7 +3291,7 @@ class BotService:
         bot_session.total_applied += 1
         
         self.db.add(bot_session)
-        await self.db.commit()
+        self.db.commit()
         
         return {
             "id": apply.id,
@@ -3320,10 +3319,10 @@ class BotService:
             raise ValueError("Missing apply_id in apply_failed data")
         
         # Buscar aplicação
-        result = await self.db.execute(
+        result = self.db.exec(
             select(BotApply).where(BotApply.id == apply_id)
         )
-        apply = result.scalars().first()
+        apply = result.first()
         
         if not apply:
             raise ValueError(f"Apply with ID {apply_id} not found")
@@ -3338,8 +3337,8 @@ class BotService:
         
         # Salvar alterações
         self.db.add(apply)
-        await self.db.commit()
-        await self.db.refresh(apply)
+        self.db.commit()
+        self.db.refresh(apply)
         
         # Enviar notificação
         notification = await self.notify_apply_completion(apply_id, False)
@@ -3363,7 +3362,7 @@ class BotService:
         bot_session.total_applied += 1
         
         self.db.add(bot_session)
-        await self.db.commit()
+        self.db.commit()
         
         return {
             "id": apply.id,
@@ -3385,10 +3384,10 @@ class BotService:
         Returns:
             Sessão de bot ou None se não encontrada
         """
-        result = await self.db.execute(
+        result = self.db.exec(
             select(BotSession).where(BotSession.id == session_id)
         )
-        return result.scalars().first()
+        return result.first()
 
     async def _get_bot_config(self, config_id: UUID) -> BotConfig | None:
         """
@@ -3400,10 +3399,10 @@ class BotService:
         Returns:
             Configuração de bot ou None se não encontrada
         """
-        result = await self.db.execute(
+        result = self.db.exec(
             select(BotConfig).where(BotConfig.id == config_id)
         )
-        return result.scalars().first()
+        return result.first()
 
     async def _check_user_permission(self, user_id: UUID, subscription_id: UUID) -> bool:
         """
@@ -3417,13 +3416,13 @@ class BotService:
             True se o usuário tem permissão, False caso contrário
         """
         # Verificar se o usuário é o dono da assinatura ou tem permissão de acesso
-        result = await self.db.execute(
+        result = self.db.exec(
             select(Subscription).where(
                 Subscription.id == subscription_id,
                 Subscription.user_id == user_id
             )
         )
-        subscription = result.scalars().first()
+        subscription = result.first()
         
         # Se encontrou a assinatura com o ID do usuário, ele tem permissão
         return subscription is not None
@@ -3438,10 +3437,10 @@ class BotService:
         Returns:
             Assinatura ou None se não encontrada
         """
-        result = await self.db.execute(
+        result = self.db.exec(
             select(Subscription).where(Subscription.id == subscription_id)
         )
-        return result.scalars().first()
+        return result.first()
 
     async def _count_active_sessions_with_config(self, config_id: UUID) -> int:
         """
@@ -3466,15 +3465,15 @@ class BotService:
             BotSession.status.in_(active_statuses)
         )
         
-        result = await self.db.execute(stmt)
-        sessions = result.scalars().all()
+        result = self.db.exec(stmt)
+        sessions = result.all()
         
         # Retornar contagem
         return len(sessions)
 
 
 async def get_bot_service(
-    db: AsyncSession | Session = Depends(get_db),
-    nosql_db: SyncSession = Depends(get_nosql_db),
+    db: SessionDep,
+    nosql_db: NosqlSessionDep,
 ) -> BotService:
     return BotService(db=db, nosql_db=nosql_db)

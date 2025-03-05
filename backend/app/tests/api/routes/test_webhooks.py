@@ -62,7 +62,7 @@ class TestWebhooks:
         )
 
         # Assert
-        assert response.status_code == 401
+        assert response.status_code == 401, f"Response: {response.text}"
         assert "API key não fornecida" in response.json()["detail"]
 
     def test_bot_event_webhook_invalid_session(self, client, mock_bot_service):
@@ -82,7 +82,7 @@ class TestWebhooks:
         )
 
         # Assert
-        assert response.status_code == 404
+        assert response.status_code == 404, f"Response: {response.text}"
         assert "não encontrada" in response.json()["detail"]
 
     def test_bot_event_webhook_success(
@@ -123,8 +123,8 @@ class TestWebhooks:
         )
 
         # Assert
-        assert response.status_code == 201
         assert "id" in response.json()
+        assert response.status_code == 201, f"Response: {response.text}"
         mock_bot_service.process_bot_webhook.assert_called_once()
 
     def test_status_update_webhook_unauthorized(self, client):
@@ -137,7 +137,7 @@ class TestWebhooks:
         )
 
         # Assert
-        assert response.status_code == 401
+        assert response.status_code == 401, f"Response: {response.text}"
         assert "API key" in response.json()["detail"]
 
     def test_status_update_webhook_success(self, client, mock_bot_service):
@@ -157,7 +157,7 @@ class TestWebhooks:
             )
 
             # Assert
-            assert response.status_code == 200
+            assert response.status_code == 200, f"Response: {response.text}"
             assert response.json()["updated_count"] >= 0
             mock_bot_service.update_pod_status.assert_called_once()
 
@@ -178,5 +178,5 @@ class TestWebhooks:
             )
 
             # Assert
-            assert response.status_code == 500
+            assert response.status_code == 500, f"Response: {response.text}"
             assert "Erro" in response.json()["detail"]

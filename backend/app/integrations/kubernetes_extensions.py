@@ -8,7 +8,7 @@ import yaml
 from jinja2 import Environment, FileSystemLoader
 from kubernetes import client
 from kubernetes.client.rest import ApiException
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import Session
 
 from app.core.config import settings
 from app.models.bot import (
@@ -58,7 +58,7 @@ def _create_yaml_from_template(
 
 async def create_bot_pod(
     self,
-    _session: AsyncSession,
+    _session: Session,
     bot_session: BotSession,
     bot_config: BotConfig,
     linked_credentials: LinkedInCredentials,

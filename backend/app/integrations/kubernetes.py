@@ -10,9 +10,9 @@ from fastapi import Depends
 from jinja2 import Environment, FileSystemLoader
 from kubernetes import client, config, watch
 from kubernetes.client.rest import ApiException
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import Session
 
-from app.api.deps import get_db
+from app.api.deps import SessionDep, get_db
 from app.core.config import settings
 from app.models.bot import (
     BotCommandType,
@@ -678,7 +678,7 @@ class KubernetesManager:
 
     async def create_bot_pod(
         self,
-        session: AsyncSession,
+        session: Session,
         bot_session: BotSession,
         bot_config: BotConfig,
         linked_credentials: LinkedInCredentials,
@@ -1257,7 +1257,7 @@ def get_kubernetes_manager(in_cluster: bool = False) -> KubernetesManager:
 
 
 async def get_kubernetes_service(
-    _db: AsyncSession = Depends(get_db),
+    _db: SessionDep,
 ) -> KubernetesManager:
     """
     Dependency para injetar o gerenciador Kubernetes.

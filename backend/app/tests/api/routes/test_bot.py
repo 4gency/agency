@@ -45,27 +45,6 @@ def mock_bot_service():
 
 
 @pytest.fixture
-def test_app():
-    """Create a test FastAPI application."""
-    app = FastAPI()
-    app.include_router(router, prefix="/api/v1/bot")
-    return app
-
-
-@pytest.fixture
-def client(test_app):
-    """Create a test client."""
-    return TestClient(test_app)
-
-
-@pytest.fixture
-def user_token_headers(client: TestClient):
-    """Get token headers for a normal user."""
-    # This would normally come from the conftest.py
-    return {"Authorization": "Bearer test-token"}
-
-
-@pytest.fixture
 def sample_user(db: Session):
     """Create a sample user for testing."""
     return create_random_user(db)
@@ -92,7 +71,7 @@ class TestBotRoutes:
     """Tests for the bot API routes."""
 
     def test_create_bot_config(
-        self, client, user_token_headers, mock_bot_service, sample_user
+        self, client, normal_subscriber_token_headers, mock_bot_service, sample_user
     ):
         """Test creating a bot configuration."""
         # Arrange
@@ -115,17 +94,17 @@ class TestBotRoutes:
 
         # Act
         response = client.post(
-            "/api/v1/bot/configs/", json=config_data, headers=user_token_headers
+            "/api/v1/bot/configs/", json=config_data, headers=normal_subscriber_token_headers
         )
 
         # Assert
-        assert response.status_code == 201
         assert "id" in response.json()
+        assert response.status_code == 201, f"Response: {response.text}"
         assert response.json()["name"] == config_data["name"]
         mock_bot_service.create_bot_config.assert_called_once()
 
     def test_get_bot_config(
-        self, client, user_token_headers, mock_bot_service, sample_bot_config
+        self, client, normal_subscriber_token_headers, mock_bot_service, sample_bot_config
     ):
         """Test getting a bot configuration."""
         # Arrange
@@ -134,11 +113,11 @@ class TestBotRoutes:
 
         # Act
         response = client.get(
-            f"/api/v1/bot/configs/{config_id}", headers=user_token_headers
+            f"/api/v1/bot/configs/{config_id}", headers=normal_subscriber_token_headers
         )
 
         # Assert
-        assert response.status_code == 200
+        assert response.status_code == 200, f"Response: {response.text}"
         assert response.json()["id"] == str(config_id)
         mock_bot_service.get_bot_config.assert_called_once_with(
             config_id=mock_bot_service.get_bot_config.call_args[1]["config_id"],
@@ -146,7 +125,7 @@ class TestBotRoutes:
         )
 
     def test_update_bot_config(
-        self, client, user_token_headers, mock_bot_service, sample_bot_config
+        self, client, normal_subscriber_token_headers, mock_bot_service, sample_bot_config
     ):
         """Test updating a bot configuration."""
         # Arrange
@@ -168,17 +147,18 @@ class TestBotRoutes:
         response = client.patch(
             f"/api/v1/bot/configs/{config_id}",
             json=update_data,
-            headers=user_token_headers,
+            headers=normal_subscriber_token_headers,
         )
 
         # Assert
-        assert response.status_code == 200
+        assert "name" in response.json()
+        assert response.status_code == 200, f"Response: {response.text}"
         assert response.json()["name"] == update_data["name"]
         assert response.json()["job_search_query"] == update_data["job_search_query"]
         mock_bot_service.update_bot_config.assert_called_once()
 
     def test_delete_bot_config(
-        self, client, user_token_headers, mock_bot_service, sample_bot_config
+        self, client, normal_subscriber_token_headers, mock_bot_service, sample_bot_config
     ):
         """Test deleting a bot configuration."""
         # Arrange
@@ -186,11 +166,12 @@ class TestBotRoutes:
 
         # Act
         response = client.delete(
-            f"/api/v1/bot/configs/{config_id}", headers=user_token_headers
+            f"/api/v1/bot/configs/{config_id}", headers=normal_subscriber_token_headers
         )
 
         # Assert
-        assert response.status_code == 200
+        assert "success" in response.json()
+        assert response.status_code == 200, f"Response: {response.text}"
         assert response.json()["success"] is True
         mock_bot_service.delete_bot_config.assert_called_once_with(
             config_id=mock_bot_service.delete_bot_config.call_args[1]["config_id"],
@@ -198,17 +179,17 @@ class TestBotRoutes:
         )
 
     def test_list_bot_configs(
-        self, client, user_token_headers, mock_bot_service, sample_bot_config
+        self, client, normal_subscriber_token_headers, mock_bot_service, sample_bot_config
     ):
         """Test listing bot configurations."""
         # Arrange
         mock_bot_service.list_bot_configs.return_value = [sample_bot_config]
 
         # Act
-        response = client.get("/api/v1/bot/configs/", headers=user_token_headers)
+        response = client.get("/api/v1/bot/configs/", headers=normal_subscriber_token_headers)
 
         # Assert
-        assert response.status_code == 200
+        assert response.status_code == 200, f"Response: {response.text}"
         assert isinstance(response.json(), list)
         assert len(response.json()) == 1
         assert response.json()[0]["id"] == str(sample_bot_config.id)
@@ -217,7 +198,7 @@ class TestBotRoutes:
     def test_start_bot_session(
         self,
         client,
-        user_token_headers,
+        normal_subscriber_token_headers,
         mock_bot_service,
         sample_bot_config,
         sample_bot_session,
@@ -229,17 +210,18 @@ class TestBotRoutes:
 
         # Act
         response = client.post(
-            "/api/v1/bot/sessions/", json=session_data, headers=user_token_headers
+            "/api/v1/bot/sessions/", json=session_data, headers=normal_subscriber_token_headers
         )
 
         # Assert
-        assert response.status_code == 201
+        assert "id" in response.json()
+        assert response.status_code == 201, f"Response: {response.text}"
         assert response.json()["id"] == str(sample_bot_session.id)
         assert response.json()["status"] == sample_bot_session.status.value
         mock_bot_service.start_bot_session.assert_called_once()
 
     def test_stop_bot_session(
-        self, client, user_token_headers, mock_bot_service, sample_bot_session
+        self, client, normal_subscriber_token_headers, mock_bot_service, sample_bot_session
     ):
         """Test stopping a bot session."""
         # Arrange
@@ -247,11 +229,12 @@ class TestBotRoutes:
 
         # Act
         response = client.post(
-            f"/api/v1/bot/sessions/{session_id}/stop", headers=user_token_headers
+            f"/api/v1/bot/sessions/{session_id}/stop", headers=normal_subscriber_token_headers
         )
 
         # Assert
-        assert response.status_code == 200
+        assert "success" in response.json()
+        assert response.status_code == 200, f"Response: {response.text}"
         assert response.json()["success"] is True
         mock_bot_service.stop_bot_session.assert_called_once_with(
             session_id=mock_bot_service.stop_bot_session.call_args[1]["session_id"],
@@ -259,7 +242,7 @@ class TestBotRoutes:
         )
 
     def test_pause_bot_session(
-        self, client, user_token_headers, mock_bot_service, sample_bot_session
+        self, client, normal_subscriber_token_headers, mock_bot_service, sample_bot_session
     ):
         """Test pausing a bot session."""
         # Arrange
@@ -267,11 +250,12 @@ class TestBotRoutes:
 
         # Act
         response = client.post(
-            f"/api/v1/bot/sessions/{session_id}/pause", headers=user_token_headers
+            f"/api/v1/bot/sessions/{session_id}/pause", headers=normal_subscriber_token_headers
         )
 
         # Assert
-        assert response.status_code == 200
+        assert "success" in response.json()
+        assert response.status_code == 200, f"Response: {response.text}"
         assert response.json()["success"] is True
         mock_bot_service.pause_bot_session.assert_called_once_with(
             session_id=mock_bot_service.pause_bot_session.call_args[1]["session_id"],
@@ -279,7 +263,7 @@ class TestBotRoutes:
         )
 
     def test_resume_bot_session(
-        self, client, user_token_headers, mock_bot_service, sample_bot_session
+        self, client, normal_subscriber_token_headers, mock_bot_service, sample_bot_session
     ):
         """Test resuming a bot session."""
         # Arrange
@@ -287,11 +271,12 @@ class TestBotRoutes:
 
         # Act
         response = client.post(
-            f"/api/v1/bot/sessions/{session_id}/resume", headers=user_token_headers
+            f"/api/v1/bot/sessions/{session_id}/resume", headers=normal_subscriber_token_headers
         )
 
         # Assert
-        assert response.status_code == 200
+        assert "success" in response.json()
+        assert response.status_code == 200, f"Response: {response.text}"
         assert response.json()["success"] is True
         mock_bot_service.resume_bot_session.assert_called_once_with(
             session_id=mock_bot_service.resume_bot_session.call_args[1]["session_id"],
@@ -299,7 +284,7 @@ class TestBotRoutes:
         )
 
     def test_get_bot_session(
-        self, client, user_token_headers, mock_bot_service, sample_bot_session
+        self, client, normal_subscriber_token_headers, mock_bot_service, sample_bot_session
     ):
         """Test getting a bot session."""
         # Arrange
@@ -308,11 +293,12 @@ class TestBotRoutes:
 
         # Act
         response = client.get(
-            f"/api/v1/bot/sessions/{session_id}", headers=user_token_headers
+            f"/api/v1/bot/sessions/{session_id}", headers=normal_subscriber_token_headers
         )
 
         # Assert
-        assert response.status_code == 200
+        assert "id" in response.json()
+        assert response.status_code == 200, f"Response: {response.text}"
         assert response.json()["id"] == str(session_id)
         mock_bot_service.get_bot_session.assert_called_once_with(
             session_id=mock_bot_service.get_bot_session.call_args[1]["session_id"],
@@ -320,17 +306,17 @@ class TestBotRoutes:
         )
 
     def test_list_bot_sessions(
-        self, client, user_token_headers, mock_bot_service, sample_bot_session
+        self, client, normal_subscriber_token_headers, mock_bot_service, sample_bot_session
     ):
         """Test listing bot sessions."""
         # Arrange
         mock_bot_service.list_bot_sessions.return_value = [sample_bot_session]
 
         # Act
-        response = client.get("/api/v1/bot/sessions/", headers=user_token_headers)
+        response = client.get("/api/v1/bot/sessions/", headers=normal_subscriber_token_headers)
 
         # Assert
-        assert response.status_code == 200
+        assert response.status_code == 200, f"Response: {response.text}"
         assert isinstance(response.json(), list)
         assert len(response.json()) == 1
         assert response.json()[0]["id"] == str(sample_bot_session.id)

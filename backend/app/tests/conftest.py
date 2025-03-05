@@ -18,6 +18,7 @@ from app.models.core import (
 from app.models.bot import (
     BotConfig,
     BotSession,
+    LinkedInCredentials
 )
 from app.tests.utils.user import (
     authentication_subscriber_token_from_email,
@@ -38,6 +39,8 @@ def db() -> Generator[Session, None, None]:
         statement = delete(BotConfig)
         session.execute(statement)
         statement = delete(Payment)
+        session.execute(statement)
+        statement = delete(LinkedInCredentials)
         session.execute(statement)
         statement = delete(Subscription)
         session.execute(statement)
