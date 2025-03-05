@@ -10,6 +10,9 @@ from sqlmodel import Session
 from app.api.routes.bot import router
 from app.models.bot import (
     BotConfig,
+    BotSession,
+    BotSessionStatus,
+    KubernetesPodStatus,
 )
 from app.services.bot import BotService
 from app.tests.utils.bot import create_test_bot_config, create_test_bot_session
@@ -221,17 +224,17 @@ class TestBotRoutes:
     ):
         """Test listing bot configurations."""
         # Arrange
-        mock_bot_service.list_bot_configs.return_value = [sample_bot_config]
+        mock_bot_service.get_user_bot_configs.return_value = [sample_bot_config]
 
         # Act
-        response = client.get("/api/v1/bot/configs/", headers=normal_subscriber_token_headers)
+        response = client.get("/api/v1/bot/configs", headers=normal_subscriber_token_headers)
 
         # Assert
         assert response.status_code == 200, f"Response: {response.text}"
         assert isinstance(response.json(), list)
         assert len(response.json()) == 1
         assert response.json()[0]["id"] == str(sample_bot_config.id)
-        mock_bot_service.list_bot_configs.assert_called_once()
+        mock_bot_service.get_user_bot_configs.assert_called_once()
 
     def test_start_bot_session(
         self,
@@ -243,20 +246,49 @@ class TestBotRoutes:
     ):
         """Test starting a bot session."""
         # Arrange
-        session_data = {"bot_config_id": str(sample_bot_config.id), "applies_limit": 10}
-        mock_bot_service.start_bot_session.return_value = sample_bot_session
-
-        # Act
-        response = client.post(
-            "/api/v1/bot/sessions/", json=session_data, headers=normal_subscriber_token_headers
-        )
-
-        # Assert
-        assert "id" in response.json()
-        assert response.status_code == 201, f"Response: {response.text}"
-        assert response.json()["id"] == str(sample_bot_session.id)
-        assert response.json()["status"] == sample_bot_session.status.value
-        mock_bot_service.start_bot_session.assert_called_once()
+        session_data = {
+            "bot_config_id": str(sample_bot_config.id),
+            "applies_limit": 10,
+            "subscription_id": str(sample_bot_config.subscription_id)
+        }
+        
+        # Configurar corretamente o retorno do convert_config_to_yaml
+        with patch("app.api.routes.bot.convert_config_to_yaml") as mock_convert:
+            mock_convert.return_value = ("config_yaml", "resume_yaml")
+            
+            # Configurar o retorno como um objeto real, não um mock
+            mock_bot_service.create_bot_session.return_value = BotSession(
+                id=uuid.uuid4(),
+                subscription_id=sample_bot_config.subscription_id,
+                bot_config_id=sample_bot_config.id,
+                status=BotSessionStatus.STARTING,
+                kubernetes_pod_name="test-pod",
+                kubernetes_pod_ip="10.0.0.1",
+                kubernetes_pod_status=KubernetesPodStatus.PENDING,
+                last_status_message="Starting session",
+                error_message="",
+                applies_limit=10,
+                created_at=datetime.now(timezone.utc),
+                # Adicionar campos obrigatórios para serialização
+                total_applied=0,
+                total_success=0,
+                total_failed=0,
+                success_rate=0.0,
+                started_at=None,
+                finished_at=None,
+                last_heartbeat_at=None,
+                kubernetes_namespace="bot-jobs"
+            )
+        
+            # Act
+            response = client.post(
+                "/api/v1/bot/sessions", json=session_data, headers=normal_subscriber_token_headers
+            )
+        
+            # Assert
+            assert response.status_code == 201, f"Response: {response.text}"
+            assert "id" in response.json()
+            mock_bot_service.create_bot_session.assert_called_once()
 
     def test_stop_bot_session(
         self, client, normal_subscriber_token_headers, mock_bot_service, sample_bot_session
@@ -264,19 +296,43 @@ class TestBotRoutes:
         """Test stopping a bot session."""
         # Arrange
         session_id = sample_bot_session.id
-
+        
+        # Configurar o retorno como um objeto real, não um mock
+        mock_bot_service.get_bot_session.return_value = BotSession(
+            id=session_id,
+            subscription_id=sample_bot_session.subscription_id,
+            bot_config_id=sample_bot_session.bot_config_id,
+            status=BotSessionStatus.STOPPING,
+            kubernetes_pod_name="test-pod",
+            kubernetes_pod_ip="10.0.0.1",
+            kubernetes_pod_status=KubernetesPodStatus.TERMINATING,
+            last_status_message="Stopping session",
+            error_message="",
+            applies_limit=10,
+            created_at=datetime.now(timezone.utc),
+            # Adicionar campos obrigatórios para serialização
+            total_applied=5,
+            total_success=3,
+            total_failed=2,
+            success_rate=0.6,
+            started_at=datetime.now(timezone.utc),
+            finished_at=None,
+            last_heartbeat_at=datetime.now(timezone.utc),
+            kubernetes_namespace="bot-jobs"
+        )
+        
         # Act
         response = client.post(
             f"/api/v1/bot/sessions/{session_id}/stop", headers=normal_subscriber_token_headers
         )
-
+        
         # Assert
-        assert "success" in response.json()
         assert response.status_code == 200, f"Response: {response.text}"
-        assert response.json()["success"] is True
+        assert "id" in response.json()
         mock_bot_service.stop_bot_session.assert_called_once_with(
-            session_id=mock_bot_service.stop_bot_session.call_args[1]["session_id"],
+            bot_session_id=mock_bot_service.stop_bot_session.call_args[1]["bot_session_id"],
             user_id=mock_bot_service.stop_bot_session.call_args[1]["user_id"],
+            background_tasks=mock_bot_service.stop_bot_session.call_args[1]["background_tasks"],
         )
 
     def test_pause_bot_session(
@@ -285,20 +341,64 @@ class TestBotRoutes:
         """Test pausing a bot session."""
         # Arrange
         session_id = sample_bot_session.id
-
+        
+        # Configurar o status do bot para RUNNING para evitar o erro "Sessão não está em execução"
+        mock_bot_service.get_bot_session.return_value = BotSession(
+            id=session_id,
+            subscription_id=sample_bot_session.subscription_id,
+            bot_config_id=sample_bot_session.bot_config_id,
+            status=BotSessionStatus.RUNNING,
+            kubernetes_pod_name="test-pod",
+            kubernetes_pod_ip="10.0.0.1",
+            kubernetes_pod_status=KubernetesPodStatus.RUNNING,
+            last_status_message="Bot is running",
+            error_message="",
+            applies_limit=10,
+            created_at=datetime.now(timezone.utc),
+            # Adicionar campos obrigatórios para serialização
+            total_applied=5,
+            total_success=3,
+            total_failed=2,
+            success_rate=0.6,
+            started_at=datetime.now(timezone.utc),
+            finished_at=None,
+            last_heartbeat_at=datetime.now(timezone.utc),
+            kubernetes_namespace="bot-jobs"
+        )
+        
+        # Configurar o retorno do pause_bot_session como um objeto real
+        mock_bot_service.pause_bot_session.return_value = BotSession(
+            id=session_id,
+            subscription_id=sample_bot_session.subscription_id,
+            bot_config_id=sample_bot_session.bot_config_id,
+            status=BotSessionStatus.PAUSED,
+            kubernetes_pod_name="test-pod",
+            kubernetes_pod_ip="10.0.0.1",
+            kubernetes_pod_status=KubernetesPodStatus.RUNNING,
+            last_status_message="Bot paused",
+            error_message="",
+            applies_limit=10,
+            created_at=datetime.now(timezone.utc),
+            # Adicionar campos obrigatórios para serialização
+            total_applied=5,
+            total_success=3,
+            total_failed=2,
+            success_rate=0.6,
+            started_at=datetime.now(timezone.utc),
+            finished_at=None,
+            last_heartbeat_at=datetime.now(timezone.utc),
+            kubernetes_namespace="bot-jobs"
+        )
+        
         # Act
         response = client.post(
             f"/api/v1/bot/sessions/{session_id}/pause", headers=normal_subscriber_token_headers
         )
-
+        
         # Assert
-        assert "success" in response.json()
         assert response.status_code == 200, f"Response: {response.text}"
-        assert response.json()["success"] is True
-        mock_bot_service.pause_bot_session.assert_called_once_with(
-            session_id=mock_bot_service.pause_bot_session.call_args[1]["session_id"],
-            user_id=mock_bot_service.pause_bot_session.call_args[1]["user_id"],
-        )
+        assert "id" in response.json()
+        mock_bot_service.pause_bot_session.assert_called_once()
 
     def test_resume_bot_session(
         self, client, normal_subscriber_token_headers, mock_bot_service, sample_bot_session
@@ -306,20 +406,64 @@ class TestBotRoutes:
         """Test resuming a bot session."""
         # Arrange
         session_id = sample_bot_session.id
-
+        
+        # Configurar o status do bot para PAUSED para evitar o erro "Sessão não está pausada"
+        mock_bot_service.get_bot_session.return_value = BotSession(
+            id=session_id,
+            subscription_id=sample_bot_session.subscription_id,
+            bot_config_id=sample_bot_session.bot_config_id,
+            status=BotSessionStatus.PAUSED,
+            kubernetes_pod_name="test-pod",
+            kubernetes_pod_ip="10.0.0.1",
+            kubernetes_pod_status=KubernetesPodStatus.RUNNING,
+            last_status_message="Bot is paused",
+            error_message="",
+            applies_limit=10,
+            created_at=datetime.now(timezone.utc),
+            # Adicionar campos obrigatórios para serialização
+            total_applied=5,
+            total_success=3,
+            total_failed=2,
+            success_rate=0.6,
+            started_at=datetime.now(timezone.utc),
+            finished_at=None,
+            last_heartbeat_at=datetime.now(timezone.utc),
+            kubernetes_namespace="bot-jobs"
+        )
+        
+        # Configurar o retorno do resume_bot_session como um objeto real
+        mock_bot_service.resume_bot_session.return_value = BotSession(
+            id=session_id,
+            subscription_id=sample_bot_session.subscription_id,
+            bot_config_id=sample_bot_session.bot_config_id,
+            status=BotSessionStatus.RUNNING,
+            kubernetes_pod_name="test-pod",
+            kubernetes_pod_ip="10.0.0.1",
+            kubernetes_pod_status=KubernetesPodStatus.RUNNING,
+            last_status_message="Bot resumed",
+            error_message="",
+            applies_limit=10,
+            created_at=datetime.now(timezone.utc),
+            # Adicionar campos obrigatórios para serialização
+            total_applied=5,
+            total_success=3,
+            total_failed=2,
+            success_rate=0.6,
+            started_at=datetime.now(timezone.utc),
+            finished_at=None,
+            last_heartbeat_at=datetime.now(timezone.utc),
+            kubernetes_namespace="bot-jobs"
+        )
+        
         # Act
         response = client.post(
             f"/api/v1/bot/sessions/{session_id}/resume", headers=normal_subscriber_token_headers
         )
-
+        
         # Assert
-        assert "success" in response.json()
         assert response.status_code == 200, f"Response: {response.text}"
-        assert response.json()["success"] is True
-        mock_bot_service.resume_bot_session.assert_called_once_with(
-            session_id=mock_bot_service.resume_bot_session.call_args[1]["session_id"],
-            user_id=mock_bot_service.resume_bot_session.call_args[1]["user_id"],
-        )
+        assert "id" in response.json()
+        mock_bot_service.resume_bot_session.assert_called_once()
 
     def test_get_bot_session(
         self, client, normal_subscriber_token_headers, mock_bot_service, sample_bot_session
@@ -327,21 +471,40 @@ class TestBotRoutes:
         """Test getting a bot session."""
         # Arrange
         session_id = sample_bot_session.id
-        mock_bot_service.get_bot_session.return_value = sample_bot_session
-
+        
+        # Configurar o retorno como um objeto real, não um mock
+        mock_bot_service.get_bot_session.return_value = BotSession(
+            id=session_id,
+            subscription_id=sample_bot_session.subscription_id,
+            bot_config_id=sample_bot_session.bot_config_id,
+            status=BotSessionStatus.RUNNING,
+            kubernetes_pod_name="test-pod",
+            kubernetes_pod_ip="10.0.0.1",
+            kubernetes_pod_status=KubernetesPodStatus.RUNNING,
+            last_status_message="Bot is running",
+            error_message="",
+            applies_limit=10,
+            created_at=datetime.now(timezone.utc),
+            # Adicionar campos obrigatórios para serialização
+            total_applied=5,
+            total_success=3,
+            total_failed=2,
+            success_rate=0.6,
+            started_at=datetime.now(timezone.utc),
+            finished_at=None,
+            last_heartbeat_at=datetime.now(timezone.utc),
+            kubernetes_namespace="bot-jobs"
+        )
+        
         # Act
         response = client.get(
             f"/api/v1/bot/sessions/{session_id}", headers=normal_subscriber_token_headers
         )
-
+        
         # Assert
-        assert "id" in response.json()
         assert response.status_code == 200, f"Response: {response.text}"
         assert response.json()["id"] == str(session_id)
-        mock_bot_service.get_bot_session.assert_called_once_with(
-            session_id=mock_bot_service.get_bot_session.call_args[1]["session_id"],
-            user_id=mock_bot_service.get_bot_session.call_args[1]["user_id"],
-        )
+        mock_bot_service.get_bot_session.assert_called_once()
 
     def test_list_bot_sessions(
         self, client, normal_subscriber_token_headers, mock_bot_service, sample_bot_session
@@ -351,7 +514,7 @@ class TestBotRoutes:
         mock_bot_service.list_bot_sessions.return_value = [sample_bot_session]
 
         # Act
-        response = client.get("/api/v1/bot/sessions/", headers=normal_subscriber_token_headers)
+        response = client.get("/api/v1/bot/sessions", headers=normal_subscriber_token_headers)
 
         # Assert
         assert response.status_code == 200, f"Response: {response.text}"

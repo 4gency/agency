@@ -27,6 +27,7 @@ from app.models.bot import (
     BotSessionCreate,
     BotSessionDetailPublic,
     BotSessionPublic,
+    BotSessionStatus,
     BotUserActionPublic,
     BotUserActionUpdate,
     LinkedInCredentialsCreate,
@@ -57,7 +58,7 @@ router = APIRouter()
 
 
 @router.post(
-    "/sessions/",
+    "/sessions",
     response_model=BotSessionPublic,
     status_code=status.HTTP_201_CREATED,
     responses={
@@ -91,6 +92,7 @@ async def create_bot_session(
             bot_config_id=session_in.bot_config_id,
             applies_limit=session_in.applies_limit,
             time_limit=session_in.time_limit,
+            subscription_id=session_in.subscription_id,
         )
 
         return bot_session
@@ -107,7 +109,7 @@ async def create_bot_session(
 
 
 @router.get(
-    "/sessions/",
+    "/sessions",
     response_model=list[BotSessionPublic],
     responses={
         401: {"model": ErrorMessage, "description": "Não autenticado"},
@@ -323,21 +325,53 @@ async def stop_bot_session(
     session_id: uuid.UUID = Path(..., description="ID da sessão do bot"),
 ) -> Any:
     """
-    Para uma sessão de bot.
+    Para uma sessão de bot em execução.
 
     * Requer que o usuário seja assinante
-    * Para a execução do bot
-    * Remove o pod Kubernetes
+    * Inicia o processo de parada do bot e limpeza dos recursos
+    * Retorna a sessão atualizada
     """
     bot_service = await get_bot_service(session, nosql_session)
 
     try:
-        bot_session = await bot_service.stop_bot_session(
-            bot_session_id=session_id,
-            user_id=current_user.id,
-            background_tasks=background_tasks,
+        # Parar a sessão
+        bot_session = await bot_service.get_bot_session(
+            session_id=session_id, user_id=current_user.id
         )
-        return bot_session
+        if not bot_session:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Sessão não encontrada",
+            )
+            
+        # Verificar se a sessão já está parada
+        if bot_session.status in [
+            BotSessionStatus.STOPPED,
+            BotSessionStatus.COMPLETED,
+            BotSessionStatus.FAILED,
+        ]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Sessão já está parada",
+            )
+            
+        # Iniciar processo de parada em background
+        success = await bot_service.stop_bot_session(
+            bot_session_id=session_id, user_id=current_user.id
+        )
+        
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Erro ao parar a sessão",
+            )
+            
+        # Obter a sessão atualizada
+        updated_session = await bot_service.get_bot_session(
+            session_id=session_id, user_id=current_user.id
+        )
+        
+        return updated_session
     except HTTPException:
         raise
     except Exception as e:
@@ -367,21 +401,49 @@ async def pause_bot_session(
     session_id: uuid.UUID = Path(..., description="ID da sessão do bot"),
 ) -> Any:
     """
-    Pausa uma sessão de bot.
+    Pausa uma sessão de bot em execução.
 
     * Requer que o usuário seja assinante
-    * Pausa a execução do bot
-    * Mantém o pod Kubernetes ativo
+    * Pausa a execução do bot temporariamente
+    * Retorna a sessão atualizada
     """
     bot_service = await get_bot_service(session, nosql_session)
 
     try:
-        bot_session = await bot_service.pause_bot_session(
-            bot_session_id=session_id,
-            user_id=current_user.id,
-            background_tasks=background_tasks,
+        # Verificar se a sessão existe
+        bot_session = await bot_service.get_bot_session(
+            session_id=session_id, user_id=current_user.id
         )
-        return bot_session
+        if not bot_session:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Sessão não encontrada",
+            )
+            
+        # Verificar se a sessão está em execução
+        if bot_session.status != BotSessionStatus.RUNNING:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Sessão não está em execução",
+            )
+            
+        # Pausar a sessão
+        success = await bot_service.pause_bot_session(
+            bot_session_id=session_id, user_id=current_user.id
+        )
+        
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Erro ao pausar a sessão",
+            )
+            
+        # Obter a sessão atualizada
+        updated_session = await bot_service.get_bot_session(
+            session_id=session_id, user_id=current_user.id
+        )
+        
+        return updated_session
     except HTTPException:
         raise
     except Exception as e:
@@ -414,17 +476,46 @@ async def resume_bot_session(
     Retoma uma sessão de bot pausada.
 
     * Requer que o usuário seja assinante
-    * Retoma a execução de uma sessão pausada
+    * Retoma a execução do bot após pausa
+    * Retorna a sessão atualizada
     """
     bot_service = await get_bot_service(session, nosql_session)
 
     try:
-        bot_session = await bot_service.resume_bot_session(
-            bot_session_id=session_id,
-            user_id=current_user.id,
-            background_tasks=background_tasks,
+        # Verificar se a sessão existe
+        bot_session = await bot_service.get_bot_session(
+            session_id=session_id, user_id=current_user.id
         )
-        return bot_session
+        if not bot_session:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Sessão não encontrada",
+            )
+            
+        # Verificar se a sessão está pausada
+        if bot_session.status != BotSessionStatus.PAUSED:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Sessão não está pausada",
+            )
+            
+        # Retomar a sessão
+        success = await bot_service.resume_bot_session(
+            bot_session_id=session_id, user_id=current_user.id
+        )
+        
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Erro ao retomar a sessão",
+            )
+            
+        # Obter a sessão atualizada
+        updated_session = await bot_service.get_bot_session(
+            session_id=session_id, user_id=current_user.id
+        )
+        
+        return updated_session
     except HTTPException:
         raise
     except Exception as e:
@@ -457,17 +548,38 @@ async def restart_bot_session(
 
     * Requer que o usuário seja assinante
     * Para e reinicia a execução do bot
-    * Recria o pod Kubernetes
+    * Retorna a sessão atualizada
     """
     bot_service = await get_bot_service(session, nosql_session)
 
     try:
-        bot_session = await bot_service.restart_bot_session(
-            bot_session_id=session_id,
-            user_id=current_user.id,
-            background_tasks=background_tasks,
+        # Verificar se a sessão existe
+        bot_session = await bot_service.get_bot_session(
+            session_id=session_id, user_id=current_user.id
         )
-        return bot_session
+        if not bot_session:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Sessão não encontrada",
+            )
+            
+        # Reiniciar a sessão
+        success = await bot_service.restart_bot_session(
+            bot_session_id=session_id, user_id=current_user.id
+        )
+        
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Erro ao reiniciar a sessão",
+            )
+            
+        # Obter a sessão atualizada
+        updated_session = await bot_service.get_bot_session(
+            session_id=session_id, user_id=current_user.id
+        )
+        
+        return updated_session
     except HTTPException:
         raise
     except Exception as e:
@@ -641,7 +753,7 @@ async def read_bot_session_events(
 
 
 @router.get(
-    "/user-actions/",
+    "/user-actions",
     response_model=list[BotUserActionPublic],
     responses={
         401: {"model": ErrorMessage, "description": "Não autenticado"},
@@ -774,7 +886,7 @@ async def complete_user_action(
 
 
 @router.get(
-    "/notifications/",
+    "/notifications",
     response_model=list[BotNotificationPublic],
     responses={
         401: {"model": ErrorMessage, "description": "Não autenticado"},
@@ -1194,7 +1306,7 @@ async def get_bot_configuration_v2_duplicate(
 
 
 @router.post(
-    "/configs/",
+    "/configs",
     response_model=BotConfig,
     status_code=status.HTTP_201_CREATED,
     responses={
@@ -1235,8 +1347,8 @@ async def create_bot_config(
 
 
 @router.get(
-    "/configs/",
-    response_model=list[BotConfig],
+    "/configs",
+    response_model=list[BotConfigPublic],
     responses={
         401: {"model": ErrorMessage, "description": "Não autenticado"},
         403: {"model": ErrorMessage, "description": "Não é assinante"},
@@ -1247,32 +1359,24 @@ async def list_bot_configs(
     session: SessionDep,
     nosql_session: NosqlSessionDep,
     current_user: CurrentSubscriber,
-    subscription_id: UUID = Query(None, description="ID da assinatura (opcional)"),
-    skip: int = 0,
-    limit: int = 100,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=100),
 ) -> Any:
     """
     Lista todas as configurações de bot do usuário.
 
     * Requer que o usuário seja assinante
-    * Pode ser filtrado por assinatura específica
-    * Retorna uma lista de configurações de bot
+    * Retorna uma lista paginada de configurações
     """
     bot_service = await get_bot_service(session, nosql_session)
-
-    try:
-        configs = await bot_service.list_bot_configs(
-            user_id=current_user.id,
-            subscription_id=subscription_id,
-            skip=skip,
-            limit=limit,
-        )
-        return configs
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
-        )
+    
+    configs = await bot_service.get_user_bot_configs(
+        user_id=current_user.id,
+        skip=skip,
+        limit=limit,
+    )
+    
+    return configs
 
 
 @router.get(
