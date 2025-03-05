@@ -30,14 +30,14 @@ def mock_bot_service():
         service.get_bot_config = AsyncMock()
         service.update_bot_config = AsyncMock()
         service.delete_bot_config = AsyncMock(return_value=True)
-        service.list_bot_configs = AsyncMock(return_value=[])
+        service.get_user_bot_configs = AsyncMock(return_value=[])
 
         service.start_bot_session = AsyncMock()
         service.stop_bot_session = AsyncMock(return_value=True)
         service.pause_bot_session = AsyncMock(return_value=True)
         service.resume_bot_session = AsyncMock(return_value=True)
         service.get_bot_session = AsyncMock()
-        service.list_bot_sessions = AsyncMock(return_value=[])
+        service.get_bot_sessions = AsyncMock(return_value=([], 0))
 
         service.create_linkedin_credentials = AsyncMock()
         service.get_linkedin_credentials = AsyncMock()
@@ -551,7 +551,7 @@ class TestBotRoutes:
     ):
         """Test listing bot sessions."""
         # Arrange
-        mock_bot_service.list_bot_sessions.return_value = [sample_bot_session]
+        mock_bot_service.get_bot_sessions.return_value = ([sample_bot_session], 1)
 
         # Act
         response = client.get("/api/v1/bot/sessions", headers=normal_subscriber_token_headers)
@@ -561,4 +561,4 @@ class TestBotRoutes:
         assert isinstance(response.json(), list)
         assert len(response.json()) == 1
         assert response.json()[0]["id"] == str(sample_bot_session.id)
-        mock_bot_service.list_bot_sessions.assert_called_once()
+        mock_bot_service.get_bot_sessions.assert_called_once()

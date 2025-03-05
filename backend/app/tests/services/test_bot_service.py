@@ -215,12 +215,13 @@ class TestBotService:
     async def test_list_bot_sessions(self, mock_bot_service, sample_bot_session):
         """Test listing bot sessions for a user."""
         # Act
-        sessions = await mock_bot_service.list_bot_sessions(
+        sessions, total = await mock_bot_service.get_bot_sessions(
             user_id=sample_bot_session.user_id
         )
 
         # Assert
         assert len(sessions) >= 1
+        assert total >= 1
         assert any(session.id == sample_bot_session.id for session in sessions)
 
     async def test_handle_bot_event(self, mock_bot_service, sample_bot_session, db):
