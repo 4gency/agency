@@ -6,9 +6,9 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, 
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from odmantic.session import SyncSession
 
 from app.api.deps import get_db, get_nosql_db
+from app.core.config import settings
 from app.models.bot import BotEvent, BotSession
 from app.services.bot import get_bot_service
 
@@ -40,7 +40,7 @@ async def handle_bot_event(
     event: BotEventRequest,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
-    nosql_db: SyncSession = Depends(get_nosql_db),
+    nosql_db = Depends(get_nosql_db),
     x_api_key: str | None = Header(None),
 ) -> BotEvent:
     """
@@ -75,7 +75,7 @@ async def handle_bot_event(
             raise e
 
         if "event" in result:
-            return result["event"]  # type: BotEvent
+            return result["event"]  # Retorna o evento criado
         else:
             # Fallback para compatibilidade
             created_event = BotEvent(
@@ -106,6 +106,7 @@ async def handle_bot_event(
     "/status-update",
     status_code=status.HTTP_200_OK,
     responses={
+        401: {"description": "Não autorizado"},
         500: {"description": "Erro interno"},
     },
 )
@@ -113,13 +114,21 @@ async def update_bot_statuses(
     *,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
-    nosql_db: SyncSession = Depends(get_nosql_db),
+    nosql_db = Depends(get_nosql_db),
+    x_api_key: str | None = Header(None),
 ) -> Dict[str, Any]:
     """
     Endpoint para atualizar o status de todas as sessões de bot ativas.
     Este endpoint pode ser chamado periodicamente por um cron job para
     manter a sincronização entre o estado do Kubernetes e o banco de dados.
     """
+    # Verificar API key
+    if not x_api_key or x_api_key != settings.BOT_API_KEY:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="API key inválida ou não fornecida",
+        )
+        
     try:
         bot_service = await get_bot_service(db, nosql_db)
         updated_count = await bot_service.update_pod_status(background_tasks)
