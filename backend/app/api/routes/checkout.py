@@ -97,14 +97,12 @@ def stripe_success(
     stripe_controller.handle_success_callback(session, checkout)
 
     try:
-        # create a new session that can be rolled back if the sub_session fails
-        with session.begin_nested():
-            stripe_controller.handle_invoice_payment_succeeded_in_checkout_callback(
-                session=session,
-                checkout=checkout,
-                user=user,
-                plan=checkout.plan,
-            )
+        stripe_controller.handle_invoice_payment_succeeded_in_checkout_callback(
+            session=session,
+            checkout=checkout,
+            user=user,
+            plan=checkout.plan,
+        )
     except stripe_controller.AlreadyProcessed as e:
         logger.info(
             f"Already processed invoice payment succeeded in checkout callback: {e}"

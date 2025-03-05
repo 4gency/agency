@@ -541,6 +541,13 @@ def test_payments_me(
     assert user is not None
     assert user.id
 
+    # Limpar pagamentos existentes para este usuário
+    statement = select(Payment).where(Payment.user_id == user.id)
+    existing_payments = db.exec(statement).all()
+    for payment in existing_payments:
+        db.delete(payment)
+    db.commit()
+
     subscription_plan = SubscriptionPlan(
         name="basic",
         price=10.0,

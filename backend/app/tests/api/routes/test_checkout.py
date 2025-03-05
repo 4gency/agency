@@ -18,11 +18,11 @@ from app.models.core import (
 
 
 class DummyUser:
-    id: str
+    id: uuid.UUID
 
 
 dummy_user = DummyUser()
-dummy_user.id = "00000000-0000-0000-0000-000000000000"
+dummy_user.id = uuid.UUID("00000000-0000-0000-0000-000000000000")
 
 
 @pytest.fixture(autouse=True)
@@ -87,7 +87,7 @@ def create_dummy_subscription_plan(db: Session, plan_id: uuid.UUID) -> Subscript
 
 
 def create_dummy_checkout_session(
-    db: Session, session_id: str, plan_id: uuid.UUID, user_id: str
+    db: Session, session_id: str, plan_id: uuid.UUID, user_id: uuid.UUID
 ) -> CheckoutSession:
     checkout = CheckoutSession(
         session_id=session_id,
@@ -247,15 +247,12 @@ def test_stripe_success(
             headers=superuser_token_headers,
         )
 
-        # Verify response
+        # Verify response - aqui a mensagem deve ser diferente porque existe uma data de término
         assert response.status_code == 200, f"Response: {response.text}"
         data = response.json()
-        assert (
-            "expire on" in data["message"].lower()
-        ), f"Expected expiration message not found, got: {data['message']}"
-        assert (
-            formatted_date in data["message"]
-        ), f"Expected date '{formatted_date}' not found in: {data['message']}"
+        # A mensagem agora deve conter a data de expiração
+        assert "expire on" in data["message"]
+        assert formatted_date in data["message"]
 
         # Verify callbacks were called with expected arguments
         mock_success_callback.assert_called_once()

@@ -129,7 +129,7 @@ def recover_password(email: str, session: SessionDep) -> Message:
 
 
 @router.post(
-    "/reset-password/",
+    "/reset-password",
     responses={
         400: {
             "model": ErrorMessage,

@@ -18,7 +18,7 @@ from app.models.crud import subscription as crud_subs
 router = APIRouter()
 
 
-@router.get("/", response_model=SubscriptionPlansPublic)
+@router.get("", response_model=SubscriptionPlansPublic)
 def read_subscription_plans(
     *, session: SessionDep, only_active: bool = True, user: OptionalCurrentUser
 ) -> Any:
@@ -109,7 +109,7 @@ def read_subscription_plan(
 
 
 @router.post(
-    "/",
+    "",
     dependencies=[Depends(get_current_active_superuser)],
     response_model=SubscriptionPlanPublic,
     responses={

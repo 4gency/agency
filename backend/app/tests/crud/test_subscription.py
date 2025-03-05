@@ -37,7 +37,7 @@ def test_read_subscription_plans(
     # Create two subscription plans first.
     for _ in range(2):
         resp = client.post(
-            f"{base_url}/",
+            f"{base_url}",
             headers=superuser_token_headers,
             json=subscription_plan_payload,
         )
@@ -45,7 +45,7 @@ def test_read_subscription_plans(
         assert resp.status_code == 200, f"Create response: {resp.text}"
 
     # Now, retrieve the list of plans.
-    resp = client.get(f"{base_url}/", headers=superuser_token_headers)
+    resp = client.get(f"{base_url}", headers=superuser_token_headers)
     assert resp.status_code == 200, f"List response: {resp.text}"
     data = resp.json()
     # The response should have a "plans" key.
@@ -63,7 +63,7 @@ def test_read_subscription_plan(
 ) -> None:
     # Create a subscription plan.
     create_resp = client.post(
-        f"{base_url}/",
+        f"{base_url}",
         headers=superuser_token_headers,
         json=subscription_plan_payload,
     )
@@ -99,7 +99,7 @@ def test_create_subscription_plan(
         "app.integrations.stripe.create_subscription_plan"
     ) as mock_create:
         resp = client.post(
-            f"{base_url}/",
+            f"{base_url}",
             headers=superuser_token_headers,
             json=subscription_plan_payload,
         )
@@ -118,7 +118,7 @@ def test_update_subscription_plan(
 ) -> None:
     # First, create a subscription plan.
     create_resp = client.post(
-        f"{base_url}/",
+        f"{base_url}",
         headers=superuser_token_headers,
         json=subscription_plan_payload,
     )
@@ -153,7 +153,7 @@ def test_delete_subscription_plan(
 ) -> None:
     # Create a subscription plan first.
     create_resp = client.post(
-        f"{base_url}/",
+        f"{base_url}",
         headers=superuser_token_headers,
         json=subscription_plan_payload,
     )

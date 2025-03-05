@@ -119,6 +119,36 @@ class Settings(BaseSettings):
     FIRST_SUPERUSER: str
     FIRST_SUPERUSER_PASSWORD: str
 
+    # Kubernetes Configuration
+    KUBERNETES_IN_CLUSTER: bool = False
+    KUBERNETES_NAMESPACE: str = "bot-jobs"
+    KUBERNETES_SERVICE_ACCOUNT: str = "bot-service-account"
+    KUBERNETES_RESOURCE_PREFIX: str = "job-apply-bot"
+    CLOUD_STORAGE_SECRET_NAME: str = "cloud-storage-credentials"
+
+    # Bot Configuration
+    BOT_IMAGE: str = "lambdagency/job-apply-bot:latest"
+    BOT_API_KEY: str = "changethis"
+    API_BASE_URL: str = "http://localhost:8000/api/v1"
+    BOT_LOG_LEVEL: str = "INFO"
+
+    # Kubernetes Resources
+    BOT_DEFAULT_CPU_REQUEST: str = "500m"
+    BOT_DEFAULT_MEMORY_REQUEST: str = "1Gi"
+    BOT_DEFAULT_CPU_LIMIT: str = "1000m"
+    BOT_DEFAULT_MEMORY_LIMIT: str = "2Gi"
+
+    @model_validator(mode="after")
+    def _validate_kubernetes_config(self) -> Self:
+        if self.ENVIRONMENT == "production" and not self.KUBERNETES_IN_CLUSTER:
+            warnings.warn(
+                "Running in production mode but KUBERNETES_IN_CLUSTER is set to False",
+                stacklevel=1,
+            )
+
+        self._check_default_secret("BOT_API_KEY", self.BOT_API_KEY)
+        return self
+
     def _check_default_secret(self, var_name: str, value: str | None) -> None:
         if value == "changethis":
             message = (

@@ -18,3 +18,5 @@ app.egg-info
 .coverage
 htmlcov
 .venv
+
+*.log

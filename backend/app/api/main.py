@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from app.api.routes import (
+    bot,
     checkout,
     configs,
     login,
@@ -8,6 +9,7 @@ from app.api.routes import (
     subscription_plans,
     users,
     utils,
+    webhooks,
 )
 
 api_router = APIRouter()
@@ -20,3 +22,5 @@ api_router.include_router(
     subscription_plans.router, prefix="/subscription-plans", tags=["subscription-plans"]
 )  # noqa
 api_router.include_router(checkout.router, prefix="/checkout", tags=["checkout"])
+api_router.include_router(bot.router, prefix="/bot", tags=["bot"])
+api_router.include_router(webhooks.router, prefix="/webhooks", tags=["webhooks"])

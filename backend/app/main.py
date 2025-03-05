@@ -1,3 +1,5 @@
+import logging
+
 import sentry_sdk
 import stripe
 from fastapi import FastAPI
@@ -7,6 +9,10 @@ from starlette.middleware.cors import CORSMiddleware
 
 from app.api.main import api_router
 from app.core.config import settings
+from app.core.scheduled_tasks import start_scheduled_tasks, stop_scheduled_tasks
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 def custom_generate_unique_id(route: APIRoute) -> str:
@@ -56,6 +62,8 @@ def create_application() -> FastAPI:
     """
     Creates and configures the FastAPI application.
     """
+    init_stripe()
+
     app = FastAPI(
         title=settings.PROJECT_NAME,
         openapi_url=f"{settings.API_V1_STR}/openapi.json",
@@ -73,10 +81,18 @@ def create_application() -> FastAPI:
 
     app.include_router(api_router, prefix=settings.API_V1_STR)
 
+    # Add event handlers for scheduled tasks
+    @app.on_event("startup")
+    def start_scheduler():
+        logger.info("Starting scheduled tasks")
+        start_scheduled_tasks()
+
+    @app.on_event("shutdown")
+    def stop_scheduler():
+        logger.info("Stopping scheduled tasks")
+        stop_scheduled_tasks()
+
     return app
 
-
-init_sentry()
-init_stripe()
 
 app = create_application()

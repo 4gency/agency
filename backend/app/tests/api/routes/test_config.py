@@ -60,7 +60,7 @@ def test_get_job_preferences_not_found(
     sub_id = uuid.uuid4()
     url = f"{PREFERENCES_PREFIX}/{sub_id}/job-preferences"
     response = client.get(url, headers=normal_subscriber_token_headers)
-    assert response.status_code == 404
+    assert response.status_code == 404, f"Response: {response.text}"
     assert response.json()["detail"] == "Subscription not found"
 
 
@@ -77,7 +77,7 @@ def test_get_job_preferences_creates_default_if_missing(
     )
     url = f"{PREFERENCES_PREFIX}/{subscription.id}/job-preferences"
     response = client.get(url, headers=headers)
-    assert response.status_code == 200
+    assert response.status_code == 200, f"Response: {response.text}"
     data = response.json()
     for field in ConfigPublic.model_fields:
         assert field in data
@@ -103,7 +103,7 @@ def test_update_job_preferences_creates_default_if_missing(
         "locations": ["Canada"],
     }
     response = client.patch(url, headers=headers, json=update_data)
-    assert response.status_code == 202
+    assert response.status_code == 202, f"Response: {response.text}"
 
     get_response = client.get(url, headers=headers)
     assert get_response.status_code == 200
@@ -135,7 +135,7 @@ def test_update_job_preferences_existing_config(
         "company_blacklist": ["AcmeInc"],
     }
     response = client.patch(patch_url, headers=headers, json=update_data)
-    assert response.status_code == 202
+    assert response.status_code == 202, f"Response: {response.text}"
 
     get_response = client.get(get_url, headers=headers)
     assert get_response.status_code == 200
@@ -153,7 +153,7 @@ def test_get_resume_not_found(
     sub_id = uuid.uuid4()
     url = f"{PREFERENCES_PREFIX}/{sub_id}/resume"
     response = client.get(url, headers=normal_subscriber_token_headers)
-    assert response.status_code == 404
+    assert response.status_code == 404, f"Response: {response.text}"
     assert response.json()["detail"] == "Subscription not found"
 
 
@@ -170,7 +170,7 @@ def test_get_resume_creates_default_if_missing(
     )
     url = f"{PREFERENCES_PREFIX}/{subscription.id}/resume"
     response = client.get(url, headers=headers)
-    assert response.status_code == 200
+    assert response.status_code == 200, f"Response: {response.text}"
     data = response.json()
     for field in PlainTextResumePublic.model_fields:
         assert field in data
@@ -190,7 +190,7 @@ def test_update_resume_creates_default_if_missing(
     url = f"{PREFERENCES_PREFIX}/{subscription.id}/resume"
     update_data = {"interests": ["Music", "Traveling"]}
     response = client.patch(url, headers=headers, json=update_data)
-    assert response.status_code == 202
+    assert response.status_code == 202, f"Response: {response.text}"
 
     get_response = client.get(url, headers=headers)
     assert get_response.status_code == 200
@@ -219,7 +219,7 @@ def test_update_resume_existing_document(
         "subscription_id": str(subscription.id),
     }
     response = client.patch(patch_url, headers=headers, json=update_data)
-    assert response.status_code == 202
+    assert response.status_code == 202, f"Response: {response.text}"
 
     get_response = client.get(get_url, headers=headers)
     assert get_response.status_code == 200
