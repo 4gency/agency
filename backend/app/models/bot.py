@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from enum import Enum
+from typing import Any
 from uuid import UUID, uuid4
 
 from sqlmodel import Field, Relationship, SQLModel
@@ -353,6 +354,7 @@ class BotEvent(SQLModel, table=True):
     type: str  # log, error, warning, info, kubernetes, system, user_action
     severity: str = Field(default="info")  # info, warning, error, critical
     message: str
+    details: str | None = None  # JSON string with additional details
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     # Relacionamentos
@@ -432,4 +434,4 @@ class WebhookEvent(SQLModel):
     """Modelo para recebimento de eventos via webhook."""
 
     event_type: str
-    data: dict
+    data: dict[str, Any]

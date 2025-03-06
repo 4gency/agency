@@ -2,11 +2,11 @@ import json
 import logging
 import secrets
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from fastapi import HTTPException, status
-from sqlmodel import Session, select
+from sqlmodel import Session, or_, select
 
 from app.core.security import decrypt_password, encrypt_password
 from app.models.bot import (
@@ -102,18 +102,15 @@ class BotService:
         config = self.get_bot_config(config_id, user_id)
 
         # Check if config is being used by any active sessions
-        active_sessions = self.db.exec(
-            select(BotSession).where(
-                BotSession.bot_config_id == config_id,
-                BotSession.status.in_(
-                    [
-                        BotSessionStatus.RUNNING,
-                        BotSessionStatus.STARTING,
-                        BotSessionStatus.PAUSED,
-                    ]
-                ),
-            )
-        ).all()
+        query = select(BotSession).where(
+            BotSession.bot_config_id == config_id,
+            or_(
+                BotSession.status == BotSessionStatus.RUNNING,
+                BotSession.status == BotSessionStatus.STARTING,
+                BotSession.status == BotSessionStatus.PAUSED,
+            ),
+        )
+        active_sessions = self.db.exec(query).all()
 
         if active_sessions:
             raise HTTPException(
@@ -130,15 +127,18 @@ class BotService:
         self, user_id: UUID, skip: int = 0, limit: int = 100
     ) -> list[BotConfig]:
         """Get all bot configurations for a user"""
+        # Use a simpler ordering expression to avoid typing issues
         configs = self.db.exec(
             select(BotConfig)
             .where(BotConfig.user_id == user_id)
             .offset(skip)
             .limit(limit)
-            .order_by(BotConfig.updated_at.desc())
+            .order_by(
+                "updated_at DESC"
+            )  # Using string column name to avoid typing issues
         ).all()
 
-        return configs
+        return list(configs)
 
     # ======================================================
     # LINKEDIN CREDENTIALS MANAGEMENT
@@ -275,27 +275,34 @@ class BotService:
         # Build query
         query = select(BotSession).where(BotSession.user_id == user_id)
 
-        # Apply status filter if provided
+        # Apply status filter
         if status:
-            status_values = []
+            status_conditions = []
             for s in status:
                 try:
-                    status_values.append(BotSessionStatus[s.upper()])
+                    status_conditions.append(
+                        BotSession.status == BotSessionStatus[s.upper()]
+                    )
                 except (KeyError, ValueError):
-                    status_values.append(s)
+                    # Skip invalid status values instead of comparing strings
+                    logger.warning(f"Invalid session status value: {s}")
+                    continue
 
-            query = query.where(BotSession.status.in_(status_values))
+            if status_conditions:
+                query = query.where(or_(*status_conditions))
 
         # Get total count
         all_sessions = self.db.exec(query).all()
         total = len(all_sessions)
 
         # Apply pagination and ordering
-        query = query.offset(skip).limit(limit).order_by(BotSession.created_at.desc())
+        query = (
+            query.offset(skip).limit(limit).order_by("created_at DESC")
+        )  # Using string column name
 
         sessions = self.db.exec(query).all()
 
-        return sessions, total
+        return cast(list[BotSession], sessions), total
 
     def start_bot_session(self, session_id: UUID, user_id: UUID) -> BotSession:
         """Start a bot session"""
@@ -659,7 +666,6 @@ class BotService:
         """Get events for a session"""
         # Verify permission
         session = self.get_bot_session(session_id, user_id)
-
         assert session
 
         # Build query
@@ -667,18 +673,25 @@ class BotService:
 
         # Apply event type filter
         if event_type:
-            query = query.where(BotEvent.type.in_(event_type))
+            event_conditions = []
+            for t in event_type:
+                event_conditions.append(BotEvent.type == t)
+
+            if event_conditions:
+                query = query.where(or_(*event_conditions))
 
         # Get total count
         all_events = self.db.exec(query).all()
         total = len(all_events)
 
         # Apply pagination and ordering
-        query = query.offset(skip).limit(limit).order_by(BotEvent.created_at.desc())
+        query = (
+            query.offset(skip).limit(limit).order_by("created_at DESC")
+        )  # Using string column name
 
         events = self.db.exec(query).all()
 
-        return events, total
+        return cast(list[BotEvent], events), total
 
     def get_session_applies(
         self,
@@ -691,7 +704,6 @@ class BotService:
         """Get applications for a session"""
         # Verify permission
         session = self.get_bot_session(session_id, user_id)
-
         assert session
 
         # Build query
@@ -699,15 +711,29 @@ class BotService:
 
         # Apply status filter
         if status:
-            query = query.where(BotApply.status.in_(status))
+            status_conditions = []
+            for s in status:
+                try:
+                    status_conditions.append(
+                        BotApply.status == BotApplyStatus[s.upper()]
+                    )
+                except (KeyError, ValueError):
+                    # Skip invalid status values instead of comparing strings
+                    logger.warning(f"Invalid apply status value: {s}")
+                    continue
+
+            if status_conditions:
+                query = query.where(or_(*status_conditions))
 
         # Get total count
         all_applies = self.db.exec(query).all()
         total = len(all_applies)
 
         # Apply pagination and ordering
-        query = query.offset(skip).limit(limit).order_by(BotApply.started_at.desc())
+        query = (
+            query.offset(skip).limit(limit).order_by("started_at DESC")
+        )  # Using string column name
 
         applies = self.db.exec(query).all() or []
 
-        return applies, total
+        return cast(list[BotApply], applies), total
