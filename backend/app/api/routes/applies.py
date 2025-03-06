@@ -2,7 +2,7 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException
-from sqlmodel import SQLModel, Field
+from sqlmodel import Field, SQLModel
 
 from app.api.deps import CurrentUser, SessionDep
 from app.models.bot import BotApplyStatus

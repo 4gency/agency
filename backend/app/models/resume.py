@@ -1,7 +1,7 @@
 import datetime
 
 from odmantic import EmbeddedModel, Field, Model
-from sqlmodel import SQLModel, EmailStr
+from pydantic import BaseModel, EmailStr
 
 
 class PersonalInformation(EmbeddedModel):

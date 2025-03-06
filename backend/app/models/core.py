@@ -111,6 +111,9 @@ class User(UserBase, table=True):
     credentials: list["Credentials"] = Relationship(
         back_populates="user", cascade_delete=True
     )
+    bot_sessions: list["BotSession"] = Relationship(
+        back_populates="user", cascade_delete=True
+    )
 
     def get_active_subscriptions(self) -> list["Subscription"]:
         """Retorna as assinaturas ativas do usuário."""
@@ -336,7 +339,6 @@ class Subscription(SQLModel, table=True):
     user: User = Relationship(back_populates="subscriptions")
     subscription_plan: SubscriptionPlan = Relationship(back_populates="subscriptions")
     payments: list["Payment"] = Relationship(back_populates="subscription")
-    bot_sessions: list["BotSession"] = Relationship(back_populates="subscription")
 
     def extend_subscription(self, plan: SubscriptionPlan | None = None) -> None:
         """

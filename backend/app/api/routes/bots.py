@@ -106,7 +106,7 @@ def create_bot_session(
         user_id=user.id,
         credentials_id=bot_session_in.credentials_id,
         applies_limit=bot_session_in.applies_limit,
-        style=bot_session_in.style
+        style=bot_session_in.style,
     )
 
     return SessionPublic.model_validate(bot_session)

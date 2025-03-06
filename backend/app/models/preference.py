@@ -1,5 +1,5 @@
 from odmantic import EmbeddedModel, Field, Model
-from sqlmodel import SQLModel, model_validator
+from pydantic import BaseModel, model_validator
 
 
 class ExperienceLevel(EmbeddedModel):

@@ -28,7 +28,11 @@ class BotService:
     # ======================================================
 
     def create_bot_session(
-        self, user_id: UUID, credentials_id: UUID, applies_limit: int = 200, style: BotStyleChoice = BotStyleChoice.DEFAULT
+        self,
+        user_id: UUID,
+        credentials_id: UUID,
+        applies_limit: int = 200,
+        style: BotStyleChoice = BotStyleChoice.DEFAULT,
     ) -> BotSession:
         """Create a new bot session"""
         # Create session
@@ -37,7 +41,7 @@ class BotService:
             credentials_id=credentials_id,
             applies_limit=applies_limit,
             status=BotSessionStatus.STARTING,
-            style=style
+            style=style,
         )
 
         self.db.add(session)

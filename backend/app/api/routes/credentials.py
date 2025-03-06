@@ -2,7 +2,8 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, status
-from sqlmodel import SQLModel, EmailStr
+from pydantic import EmailStr
+from sqlmodel import SQLModel
 
 from app.api.deps import CurrentUser, SessionDep
 from app.models.core import ErrorMessage, Message

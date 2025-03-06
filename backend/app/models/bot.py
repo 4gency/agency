@@ -4,7 +4,8 @@ from enum import Enum
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlmodel import Field, Relationship, SQLModel
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
+from sqlmodel import Column, Field, ForeignKey, Relationship, SQLModel
 
 from app.core.config import settings
 from app.models.core import User
@@ -73,7 +74,13 @@ class Credentials(SQLModel, table=True):
     """Armazena credenciais do LinkedIn para uso pelo bot."""
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    user_id: UUID = Field(foreign_key="users.id")
+    user_id: UUID = Field(
+        sa_column=Column(
+            PGUUID(as_uuid=True),
+            ForeignKey("user.id", ondelete="CASCADE"),
+            nullable=False,
+        )
+    )
     email: str
     password: str
 
@@ -82,7 +89,7 @@ class Credentials(SQLModel, table=True):
 
     # Relacionamentos
     user: User = Relationship(back_populates="credentials")
-    sessions: list["BotSession"] = Relationship(back_populates="credentials")
+    bot_sessions: list["BotSession"] = Relationship(back_populates="credentials")
 
     def gen_obfuscated_fields(self) -> None:
         """Gera email parcialmente visível e senha em asteriscos."""
@@ -106,8 +113,20 @@ class BotSession(SQLModel, table=True):
     __tablename__ = "bot_sessions"
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    user_id: UUID = Field(foreign_key="users.id")
-    credentials_id: UUID = Field(foreign_key="credentials.id")
+    user_id: UUID = Field(
+        sa_column=Column(
+            PGUUID(as_uuid=True),
+            ForeignKey("user.id", ondelete="CASCADE"),
+            nullable=False,
+        )
+    )
+    credentials_id: UUID = Field(
+        sa_column=Column(
+            PGUUID(as_uuid=True),
+            ForeignKey("credentials.id", ondelete="CASCADE"),
+            nullable=False,
+        )
+    )
 
     # Configurações de comportamento
     applies_limit: int = Field(default=200)
@@ -147,7 +166,7 @@ class BotSession(SQLModel, table=True):
 
     # Relacionamentos
     user: User = Relationship(back_populates="bot_sessions")
-    credentials: Credentials = Relationship(back_populates="credentials")
+    credentials: Credentials = Relationship(back_populates="bot_sessions")
     bot_applies: list["BotApply"] = Relationship(back_populates="bot_session")
     bot_events: list["BotEvent"] = Relationship(back_populates="bot_session")
     bot_user_actions: list["BotUserAction"] = Relationship(back_populates="bot_session")
@@ -248,7 +267,13 @@ class BotUserAction(SQLModel, table=True):
     __tablename__ = "bot_user_actions"
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    bot_session_id: UUID = Field(foreign_key="bot_sessions.id")
+    bot_session_id: UUID = Field(
+        sa_column=Column(
+            PGUUID(as_uuid=True),
+            ForeignKey("bot_sessions.id", ondelete="CASCADE"),
+            nullable=False,
+        )
+    )
     action_type: UserActionType
     description: str = Field(max_length=1000)
 
@@ -286,7 +311,13 @@ class BotApply(SQLModel, table=True):
     __tablename__ = "bot_applies"
 
     id: int | None = Field(default=None, primary_key=True)
-    bot_session_id: UUID = Field(foreign_key="bot_sessions.id")
+    bot_session_id: UUID = Field(
+        sa_column=Column(
+            PGUUID(as_uuid=True),
+            ForeignKey("bot_sessions.id", ondelete="CASCADE"),
+            nullable=False,
+        )
+    )
 
     # Status e progresso
     status: BotApplyStatus = Field(default=BotApplyStatus.SUCCESS)
@@ -313,7 +344,13 @@ class BotEvent(SQLModel, table=True):
     __tablename__ = "bot_events"
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    bot_session_id: UUID = Field(foreign_key="bot_sessions.id")
+    bot_session_id: UUID = Field(
+        sa_column=Column(
+            PGUUID(as_uuid=True),
+            ForeignKey("bot_sessions.id", ondelete="CASCADE"),
+            nullable=False,
+        )
+    )
 
     type: str  # log, error, warning, info, kubernetes, system, user_action
     severity: str = Field(default="info")  # info, warning, error, critical
@@ -358,6 +395,7 @@ class CredentialsInternal(SQLModel):
 
     obfuscated_email: str
     obfuscated_password: str
+
 
 class ApplyCreate(SQLModel):
     """Modelo para criação de aplicação."""
@@ -413,8 +451,3 @@ class WebhookEvent(SQLModel):
 
     event_type: str
     data: dict[str, Any]
-
-
-class SessionsResponse(SQLModel):
-    total: int
-    items: list[SessionPublic]
