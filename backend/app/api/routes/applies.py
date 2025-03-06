@@ -2,7 +2,7 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from sqlmodel import SQLModel, Field
 
 from app.api.deps import CurrentUser, SessionDep
 from app.models.bot import BotApplyStatus
@@ -10,31 +10,31 @@ from app.models.core import ErrorMessage
 from app.services.apply import ApplyService
 
 
-class ApplyPublic(BaseModel):
+class ApplyPublic(SQLModel):
     """Modelo para exibição pública de uma aplicação de emprego"""
 
-    id: int
+    id: UUID
     bot_session_id: UUID
-    status: BotApplyStatus
+    status: BotApplyStatus = BotApplyStatus.SUCCESS
+    total_time: int = Field(default=0, description="Total time in seconds")
+
+    # Informações da vaga
     job_title: str | None = None
     job_url: str | None = None
     company_name: str | None = None
-    total_time: int | None = None
-    failed_reason: str | None = None
-    created_at: str
 
     class Config:
         from_attributes = True
 
 
-class AppliesResponse(BaseModel):
+class AppliesResponse(SQLModel):
     """Modelo para resposta de listagem de aplicações"""
 
     total: int
     items: list[ApplyPublic]
 
 
-class ApplySummary(BaseModel):
+class ApplySummary(SQLModel):
     """Modelo para resumo de aplicações"""
 
     total_applies: int

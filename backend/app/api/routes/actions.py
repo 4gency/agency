@@ -2,7 +2,7 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, status
-from pydantic import BaseModel
+from sqlmodel import SQLModel
 
 from app.api.deps import CurrentUser, SessionDep
 from app.models.bot import UserActionType
@@ -10,13 +10,13 @@ from app.models.core import ErrorMessage, Message
 from app.services.action import UserActionService
 
 
-class ActionResponse(BaseModel):
+class ActionResponse(SQLModel):
     """Modelo para resposta de ação do usuário"""
 
     user_input: str
 
 
-class UserActionPublic(BaseModel):
+class UserActionPublic(SQLModel):
     """Modelo para exibição pública de uma ação do usuário"""
 
     id: UUID
@@ -33,7 +33,7 @@ class UserActionPublic(BaseModel):
         from_attributes = True
 
 
-class UserActionsResponse(BaseModel):
+class UserActionsResponse(SQLModel):
     """Modelo para resposta de listagem de ações"""
 
     total: int

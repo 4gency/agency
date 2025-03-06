@@ -2,7 +2,7 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from sqlmodel import SQLModel
 
 from app.api.deps import SessionDep, get_current_active_superuser
 from app.models.bot import BotSession, KubernetesPodStatus
@@ -10,7 +10,7 @@ from app.models.core import ErrorMessage, Message
 from app.services.monitoring import MonitoringService
 
 
-class PodInfo(BaseModel):
+class PodInfo(SQLModel):
     """Modelo para informações de um pod Kubernetes"""
 
     session_id: str
@@ -20,21 +20,21 @@ class PodInfo(BaseModel):
     kubernetes_pod_ip: str | None = None
 
 
-class ActiveSessionsResponse(BaseModel):
+class ActiveSessionsResponse(SQLModel):
     """Modelo para resposta de sessões ativas"""
 
     total: int
     items: list[BotSession]
 
 
-class KubernetesPodsResponse(BaseModel):
+class KubernetesPodsResponse(SQLModel):
     """Modelo para resposta de pods Kubernetes"""
 
     total: int
     items: list[PodInfo]
 
 
-class SystemHealthResponse(BaseModel):
+class SystemHealthResponse(SQLModel):
     """Modelo para resposta de saúde do sistema"""
 
     total_sessions: int

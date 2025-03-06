@@ -1,56 +1,57 @@
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, status
-from pydantic import BaseModel
+from sqlmodel import SQLModel
 
 from app.api.deps import (
     CurrentSubscriber,
     CurrentUser,
     SessionDep,
 )
-from app.models.bot import BotSessionStatus
+from app.models.bot import BotSessionStatus, BotStyleChoice
 from app.models.core import ErrorMessage, Message
 from app.services.bot import BotService
 
 
 # Modelos para as rotas
-class SessionCreate(BaseModel):
+class SessionCreate(SQLModel):
     """Modelo para criação de uma sessão de bot"""
 
     credentials_id: UUID
     applies_limit: int = 200
+    style: BotStyleChoice = BotStyleChoice.DEFAULT
 
 
-class SessionPublic(BaseModel):
-    """Modelo para exibição pública de uma sessão de bot"""
-
+class SessionPublic(SQLModel):
     id: UUID
-    user_id: UUID
+
+    # Configs
     credentials_id: UUID
+    applies_limit: int = 200
+    style: BotStyleChoice = BotStyleChoice.DEFAULT
+
+    # Métricas básicas
     status: BotSessionStatus
-    applies_limit: int
     total_applied: int
     total_success: int
     total_failed: int
-    created_at: str
-    started_at: str | None = None
-    finished_at: str | None = None
-    paused_at: str | None = None
-    resumed_at: str | None = None
-    last_heartbeat_at: str | None = None
-    last_status_message: str | None = None
-    error_message: str | None = None
-    kubernetes_pod_name: str
-    kubernetes_namespace: str
-    kubernetes_pod_status: str | None = None
-    kubernetes_pod_ip: str | None = None
+
+    # Controle de tempo
+    created_at: datetime
+    started_at: datetime
+    finished_at: datetime
+    resumed_at: datetime
+    paused_at: datetime
+    total_paused_time: int
+    last_heartbeat_at: datetime | None
 
     class Config:
         from_attributes = True
 
 
-class SessionsResponse(BaseModel):
+class SessionsResponse(SQLModel):
     """Modelo para resposta de listagem de sessões"""
 
     total: int
@@ -105,6 +106,7 @@ def create_bot_session(
         user_id=user.id,
         credentials_id=bot_session_in.credentials_id,
         applies_limit=bot_session_in.applies_limit,
+        style=bot_session_in.style
     )
 
     return SessionPublic.model_validate(bot_session)

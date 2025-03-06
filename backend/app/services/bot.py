@@ -7,7 +7,7 @@ from fastapi import HTTPException, status
 from sqlmodel import Session, or_, select
 
 from app.core.config import settings
-from app.models.bot import BotSession, BotSessionStatus
+from app.models.bot import BotSession, BotSessionStatus, BotStyleChoice
 from app.models.core import User
 
 logger = logging.getLogger(__name__)
@@ -28,7 +28,7 @@ class BotService:
     # ======================================================
 
     def create_bot_session(
-        self, user_id: UUID, credentials_id: UUID, applies_limit: int = 200
+        self, user_id: UUID, credentials_id: UUID, applies_limit: int = 200, style: BotStyleChoice = BotStyleChoice.DEFAULT
     ) -> BotSession:
         """Create a new bot session"""
         # Create session
@@ -37,6 +37,7 @@ class BotService:
             credentials_id=credentials_id,
             applies_limit=applies_limit,
             status=BotSessionStatus.STARTING,
+            style=style
         )
 
         self.db.add(session)

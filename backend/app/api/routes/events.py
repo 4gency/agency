@@ -2,14 +2,14 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from sqlmodel import SQLModel
 
 from app.api.deps import CurrentUser, SessionDep
 from app.models.core import ErrorMessage
 from app.services.event import EventService
 
 
-class EventPublic(BaseModel):
+class EventPublic(SQLModel):
     """Modelo para exibição pública de um evento"""
 
     id: UUID
@@ -24,14 +24,14 @@ class EventPublic(BaseModel):
         from_attributes = True
 
 
-class EventsResponse(BaseModel):
+class EventsResponse(SQLModel):
     """Modelo para resposta de listagem de eventos"""
 
     total: int
     items: list[EventPublic]
 
 
-class EventSummary(BaseModel):
+class EventSummary(SQLModel):
     """Modelo para resumo de eventos"""
 
     total_events: int

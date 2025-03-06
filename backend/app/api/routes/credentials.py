@@ -2,7 +2,7 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, status
-from pydantic import BaseModel, EmailStr
+from sqlmodel import SQLModel, EmailStr
 
 from app.api.deps import CurrentUser, SessionDep
 from app.models.core import ErrorMessage, Message
@@ -10,21 +10,21 @@ from app.services.credentials import CredentialsService
 
 
 # Modelos para as rotas
-class CredentialsCreate(BaseModel):
+class CredentialsCreate(SQLModel):
     """Modelo para criação de credenciais"""
 
     email: EmailStr
     password: str
 
 
-class CredentialsUpdate(BaseModel):
+class CredentialsUpdate(SQLModel):
     """Modelo para atualização de credenciais"""
 
     email: EmailStr | None = None
     password: str | None = None
 
 
-class CredentialsPublic(BaseModel):
+class CredentialsPublic(SQLModel):
     """Modelo para exibição pública de credenciais"""
 
     id: UUID
@@ -36,7 +36,7 @@ class CredentialsPublic(BaseModel):
 
 
 # Definição do modelo de resposta para a listagem de credenciais
-class CredentialsResponse(BaseModel):
+class CredentialsResponse(SQLModel):
     total: int
     items: list[CredentialsPublic]
 

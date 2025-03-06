@@ -111,6 +111,7 @@ class BotSession(SQLModel, table=True):
 
     # Configurações de comportamento
     applies_limit: int = Field(default=200)
+    style: BotStyleChoice = Field(default=BotStyleChoice.DEFAULT)
 
     # Chave de API para autenticação nos endpoints de webhook
     api_key: str = Field(default_factory=lambda: secrets.token_urlsafe(16))
@@ -357,41 +358,6 @@ class CredentialsInternal(SQLModel):
 
     obfuscated_email: str
     obfuscated_password: str
-
-
-class SessionCreate(SQLModel):
-    """Modelo para criação de sessão do bot."""
-
-    credentials_id: UUID
-    applies_limit: int = 200
-
-
-class SessionEvent(SQLModel):
-    session_id: UUID
-
-
-class SessionPublic(SQLModel):
-    id: UUID
-
-    # Configs
-    credentials_id: UUID
-    applies_limit: int = 200
-
-    # Métricas básicas
-    status: BotSessionStatus
-    total_applied: int
-    total_success: int
-    total_failed: int
-
-    # Controle de tempo
-    created_at: datetime
-    started_at: datetime
-    finished_at: datetime
-    resumed_at: datetime
-    paused_at: datetime
-    total_paused_time: int
-    last_heartbeat_at: datetime | None
-
 
 class ApplyCreate(SQLModel):
     """Modelo para criação de aplicação."""
