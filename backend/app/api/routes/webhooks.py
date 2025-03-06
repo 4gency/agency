@@ -60,18 +60,14 @@ async def handle_bot_event(
 
     try:
         # Preparar dados do webhook, incluindo API key para validação
-        webhook_data = event.dict()
+        webhook_data = event.model_dump()
         webhook_data["api_key"] = x_api_key  # Incluir a API key para validação
         
         # Process the bot event - a validação da API key será feita dentro do método
-        try:
-            result = await bot_service.process_bot_webhook(
-                session_id=session_id,
-                webhook_data=webhook_data,
-            )
-        except HTTPException as e:
-            # Repassar erros HTTP que podem incluir problemas de autenticação
-            raise e
+        result = await bot_service.process_bot_webhook(
+            session_id=session_id,
+            webhook_data=webhook_data,
+        )
 
         if "event" in result:
             return result["event"]  # Retorna o evento criado
@@ -88,6 +84,10 @@ async def handle_bot_event(
             await bot_service.create_bot_event(created_event)
             return created_event
 
+    except HTTPException as e:
+        logger.error(f"Erro ao processar evento do bot: {e.status_code}: {e.detail}")
+        # Propagar a exceção HTTP original
+        raise e
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

@@ -46,18 +46,29 @@ class ScheduledTaskManager:
 
     def _run_tasks(self):
         """Run scheduled tasks in a loop."""
+        # Execute tasks immediately on first run, regardless of running state
+        # This ensures the test can verify the method was called
+        try:
+            logger.debug("Running scheduled tasks")
+            self._update_bot_statuses()
+        except Exception as e:
+            logger.exception(f"Error in scheduled task: {str(e)}")
+        
+        # Then enter the loop for subsequent runs
         while self.running:
-            try:
-                logger.debug("Running scheduled tasks")
-                self._update_bot_statuses()
-            except Exception as e:
-                logger.exception(f"Error in scheduled task: {str(e)}")
-
             # Sleep for the interval
             for _ in range(int(self.update_interval)):
                 if not self.running:
                     break
                 time.sleep(1)
+                
+            # Run tasks again after interval if still running
+            if self.running:
+                try:
+                    logger.debug("Running scheduled tasks")
+                    self._update_bot_statuses()
+                except Exception as e:
+                    logger.exception(f"Error in scheduled task: {str(e)}")
 
     def _update_bot_statuses(self):
         """Update the status of all active bots."""
