@@ -12,10 +12,7 @@ from sqlmodel import Column, Field, ForeignKey, Relationship, SQLModel
 # Handle circular imports with TYPE_CHECKING
 if TYPE_CHECKING:
     from app.models.bot import (
-        BotCommand,
         BotConfig,
-        BotConfiguration,
-        BotNotification,
         BotSession,
         LinkedInCredentials,
     )
@@ -98,7 +95,7 @@ class User(UserBase, table=True):
     hashed_password: str
     is_subscriber: bool = Field(default=False)
     stripe_customer_id: str | None = Field(default=None)
-    
+
     user_agent: str = Field(
         default="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
     )
@@ -118,14 +115,6 @@ class User(UserBase, table=True):
     linkedin_credentials: list["LinkedInCredentials"] = Relationship(
         back_populates="user", cascade_delete=True
     )
-    bot_configurations: list["BotConfiguration"] = Relationship(
-        back_populates="user", cascade_delete=True
-    )
-    bot_commands_sent: list["BotCommand"] = Relationship(
-        back_populates="sent_by_user",
-        sa_relationship_kwargs={"foreign_keys": "[BotCommand.sent_by_user_id]"},
-    )
-    bot_notifications: list["BotNotification"] = Relationship(back_populates="user")
 
     def get_active_subscriptions(self) -> list["Subscription"]:
         """Retorna as assinaturas ativas do usuário."""
@@ -138,10 +127,11 @@ class User(UserBase, table=True):
 
 class BotConfigurationCreate(SQLModel):
     """Modelo para criação de configurações específicas do bot."""
+
     user_id: uuid.UUID
-    user_agent: Optional[str] = None
-    sec_ch_ua: Optional[str] = None
-    sec_ch_ua_platform: Optional[str] = None
+    user_agent: str | None = None
+    sec_ch_ua: str | None = None
+    sec_ch_ua_platform: str | None = None
 
 
 # Modelo público de usuário para API
@@ -361,9 +351,6 @@ class Subscription(SQLModel, table=True):
     payments: list["Payment"] = Relationship(back_populates="subscription")
     bot_sessions: list["BotSession"] = Relationship(back_populates="subscription")
     linkedin_credentials: Optional["LinkedInCredentials"] = Relationship(
-        back_populates="subscription", sa_relationship_kwargs={"uselist": False}
-    )
-    bot_configuration: Optional["BotConfiguration"] = Relationship(
         back_populates="subscription", sa_relationship_kwargs={"uselist": False}
     )
     bot_configs: list["BotConfig"] = Relationship(back_populates="subscription")

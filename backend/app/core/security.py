@@ -29,7 +29,8 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
 
-def _get_fernet():
+
+def _get_fernet() -> Fernet:
     key = hashlib.sha256(settings.SECRET_KEY.encode()).digest()
     key = base64.urlsafe_b64encode(key)
     return Fernet(key)
