@@ -1,3 +1,4 @@
+import secrets
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
@@ -5,6 +6,7 @@ from uuid import UUID, uuid4
 
 from sqlmodel import Field, Relationship, SQLModel
 
+from app.core.config import settings
 from app.models.core import User
 
 # ======================================================
@@ -39,10 +41,6 @@ class KubernetesPodStatus(Enum):
 class BotApplyStatus(Enum):
     """Status possíveis para uma aplicação."""
 
-    AWAITING = "awaiting"
-    STARTED = "started"
-    IN_PROGRESS = "in_progress"
-    SUBMITTED = "submitted"
     SUCCESS = "success"
     FAILED = "failed"
 
@@ -71,48 +69,35 @@ class BotStyleChoice(str, Enum):
 # ======================================================
 
 
-class LinkedInCredentials(SQLModel, table=True):
+class Credentials(SQLModel, table=True):
     """Armazena credenciais do LinkedIn para uso pelo bot."""
-
-    __tablename__ = "linkedin_credentials"
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     user_id: UUID = Field(foreign_key="users.id")
     email: str
     password: str
 
-    # Relacionamentos
-    user: User = Relationship(back_populates="linkedin_credentials")
-
-
-class BotConfig(SQLModel, table=True):
-    """Configuração do bot."""
-
-    __tablename__ = "bot_configs"
-
-    id: UUID = Field(default_factory=uuid4, primary_key=True)
-    user_id: UUID = Field(foreign_key="users.id")
-    name: str = Field(max_length=100)
-
-    # Configuração de infraestrutura
-    kubernetes_namespace: str = Field(default="bot-jobs", max_length=50)
-    kubernetes_resources_cpu: str = Field(default="500m", max_length=20)
-    kubernetes_resources_memory: str = Field(default="1Gi", max_length=20)
-
-    # Configuração de armazenamento
-    config_yaml: str = Field()  # Conteúdo YAML da configuração
-    resume_yaml: str = Field()  # Conteúdo YAML do currículo
-
-    # Configurações de comportamento
-    max_applies_per_session: int = Field(default=200)
-
-    # Controle de tempo
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    obfuscated_email: str | None = None
+    obfuscated_password: str | None = None
 
     # Relacionamentos
-    user: User = Relationship(back_populates="bot_configs")
-    bot_sessions: list["BotSession"] = Relationship(back_populates="bot_config")
+    user: User = Relationship(back_populates="credentials")
+    sessions: list["BotSession"] = Relationship(back_populates="credentials")
+
+    def gen_obfuscated_fields(self) -> None:
+        """Gera email parcialmente visível e senha em asteriscos."""
+        email_parts = self.email.split("@")
+
+        if len(email_parts[0]) > 2:
+            visible_part = email_parts[0][:2]
+            hidden_part = "*" * (len(email_parts[0]) - 2)
+        else:
+            visible_part = email_parts[0][0]
+            hidden_part = "*" * (len(email_parts[0]) - 1)
+
+        domain = email_parts[1]
+        self.obfuscated_email = f"{visible_part}{hidden_part}@{domain}"
+        self.obfuscated_password = "*" * len(self.password)
 
 
 class BotSession(SQLModel, table=True):
@@ -122,17 +107,22 @@ class BotSession(SQLModel, table=True):
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     user_id: UUID = Field(foreign_key="users.id")
-    bot_config_id: UUID = Field(foreign_key="bot_configs.id")
+    credentials_id: UUID = Field(foreign_key="credentials.id")
+
+    # Configurações de comportamento
+    applies_limit: int = Field(default=200)
 
     # Chave de API para autenticação nos endpoints de webhook
-    api_key: str = Field(default_factory=lambda: str(uuid4()))
+    api_key: str = Field(default_factory=lambda: secrets.token_urlsafe(16))
 
     # Estado e controle
     status: BotSessionStatus = Field(default=BotSessionStatus.STARTING)
 
     # Informações do Kubernetes
-    kubernetes_pod_name: str = Field(default_factory=lambda: f"bot-{uuid4().hex[:8]}")
-    kubernetes_namespace: str = Field(default="bot-jobs")
+    kubernetes_pod_name: str = Field(
+        default_factory=lambda: f"{settings.KUBERNETES_BOT_PREFIX}-{uuid4().hex[:8]}"
+    )
+    kubernetes_namespace: str = Field(default=settings.KUBERNETES_NAMESPACE)
     kubernetes_pod_status: KubernetesPodStatus | None = None
     kubernetes_pod_ip: str | None = None
 
@@ -140,9 +130,6 @@ class BotSession(SQLModel, table=True):
     total_applied: int = Field(default=0)
     total_success: int = Field(default=0)
     total_failed: int = Field(default=0)
-
-    # Limites
-    applies_limit: int = Field(default=50)
 
     # Controle de tempo
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -159,10 +146,14 @@ class BotSession(SQLModel, table=True):
 
     # Relacionamentos
     user: User = Relationship(back_populates="bot_sessions")
-    bot_config: BotConfig = Relationship(back_populates="bot_sessions")
+    credentials: Credentials = Relationship(back_populates="credentials")
     bot_applies: list["BotApply"] = Relationship(back_populates="bot_session")
     bot_events: list["BotEvent"] = Relationship(back_populates="bot_session")
     bot_user_actions: list["BotUserAction"] = Relationship(back_populates="bot_session")
+
+    def create(self) -> None:
+        """Indica criação do bot."""
+        self.add_event("system", "Bot session created")
 
     def start(self) -> None:
         """Inicia a sessão do bot."""
@@ -174,12 +165,19 @@ class BotSession(SQLModel, table=True):
     def pause(self) -> None:
         """Pausa a sessão do bot."""
         self.status = BotSessionStatus.PAUSED
+        self.updated_at = datetime.now(timezone.utc)
         self.add_event("system", "Bot session paused")
 
     def resume(self) -> None:
         """Retoma a sessão do bot após pausa."""
+        # Update session status
         self.status = BotSessionStatus.RUNNING
-        self.last_heartbeat_at = datetime.now(timezone.utc)
+        self.resumed_at = datetime.now(timezone.utc)
+
+        # Calculate pause duration
+        if self.paused_at:
+            pause_duration = int((self.resumed_at - self.paused_at).total_seconds())
+            self.total_paused_time = (self.total_paused_time or 0) + pause_duration
         self.add_event("system", "Bot session resumed")
 
     def stop(self) -> None:
@@ -257,9 +255,6 @@ class BotUserAction(SQLModel, table=True):
     input_field: str | None = Field(
         default=None, max_length=100
     )  # Nome do campo para entrada
-    extra_data: str | None = Field(
-        default=None, max_length=5000
-    )  # Dados adicionais (URL da imagem CAPTCHA, etc.)
 
     # Estado da ação
     requested_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -293,54 +288,22 @@ class BotApply(SQLModel, table=True):
     bot_session_id: UUID = Field(foreign_key="bot_sessions.id")
 
     # Status e progresso
-    status: BotApplyStatus = Field(default=BotApplyStatus.AWAITING)
-    progress: int = Field(default=0)  # 0-100% de progresso
+    status: BotApplyStatus = Field(default=BotApplyStatus.SUCCESS)
 
     # Tempos
-    started_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    completed_at: datetime | None = None
-    total_time: int | None = None  # em segundos
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    total_time: int = 0  # em segundos
 
     # Informações da vaga
-    job_id: str
-    job_title: str
-    job_url: str
+    job_title: str | None = None
+    job_url: str | None = None
     company_name: str | None = None
 
-    # Informações adicionais da vaga
-    job_description: str | None = None
-    job_location: str | None = None
-
     # Resultado
-    failed: bool = Field(default=False)
     failed_reason: str | None = None
 
     # Relacionamentos
     bot_session: BotSession = Relationship(back_populates="bot_applies")
-
-    def complete(self, success: bool, reason: str | None = None) -> None:
-        """Marca a aplicação como concluída."""
-        self.completed_at = datetime.now(timezone.utc)
-
-        # Calcular tempo total
-        if self.started_at:
-            self.total_time = int((self.completed_at - self.started_at).total_seconds())
-
-        if success:
-            self.status = BotApplyStatus.SUCCESS
-            self.progress = 100
-        else:
-            self.status = BotApplyStatus.FAILED
-            self.failed = True
-            self.failed_reason = reason
-
-        # Atualizar contadores na sessão
-        if hasattr(self, "bot_session"):
-            if success:
-                self.bot_session.total_success += 1
-            else:
-                self.bot_session.total_failed += 1
-            self.bot_session.total_applied += 1
 
 
 class BotEvent(SQLModel, table=True):
@@ -366,13 +329,6 @@ class BotEvent(SQLModel, table=True):
 # ======================================================
 
 
-class UserCreate(SQLModel):
-    """Modelo para criação de usuário."""
-
-    email: str
-    name: str
-
-
 class CredentialsCreate(SQLModel):
     """Modelo para criação de credenciais."""
 
@@ -380,39 +336,88 @@ class CredentialsCreate(SQLModel):
     password: str
 
 
-class BotConfigCreate(SQLModel):
-    """Modelo para criação de configuração do bot."""
+class CredentialsUpdate(SQLModel):
+    email: str | None = None
+    password: str | None = None
 
-    name: str
-    config_yaml: str
-    resume_yaml: str
-    max_applies_per_session: int = 50
-    kubernetes_namespace: str = "bot-jobs"
+
+class CredentialsPublic(SQLModel):
+    """Modelo para mostrar email e usuário escolher as credenciais para usar"""
+
+    id: UUID
+    email: str = Field(description="Obfuscated email")
+    password: str = Field(default="********", description="Only asterisks")
+
+
+class CredentialsInternal(SQLModel):
+    id: UUID
+    user_id: UUID
+    email: str
+    password: str
+
+    obfuscated_email: str
+    obfuscated_password: str
 
 
 class SessionCreate(SQLModel):
     """Modelo para criação de sessão do bot."""
 
-    bot_config_id: UUID
-    applies_limit: int = 50
+    credentials_id: UUID
+    applies_limit: int = 200
 
 
-class KubernetesStatusUpdate(SQLModel):
-    """Modelo para atualização de status do Kubernetes."""
+class SessionEvent(SQLModel):
+    session_id: UUID
 
-    pod_status: KubernetesPodStatus
-    pod_ip: str | None = None
+
+class SessionPublic(SQLModel):
+    id: UUID
+
+    # Configs
+    credentials_id: UUID
+    applies_limit: int = 200
+
+    # Métricas básicas
+    status: BotSessionStatus
+    total_applied: int
+    total_success: int
+    total_failed: int
+
+    # Controle de tempo
+    created_at: datetime
+    started_at: datetime
+    finished_at: datetime
+    resumed_at: datetime
+    paused_at: datetime
+    total_paused_time: int
+    last_heartbeat_at: datetime | None
 
 
 class ApplyCreate(SQLModel):
     """Modelo para criação de aplicação."""
 
-    job_id: str
-    job_title: str
-    job_url: str
+    bot_session_id: UUID
+    status: BotApplyStatus = BotApplyStatus.SUCCESS
+    total_time: int = Field(default=0, description="Total time in seconds")
+
+    # Informações da vaga
+    job_title: str | None = None
+    job_url: str | None = None
     company_name: str | None = None
-    job_description: str | None = None
-    job_location: str | None = None
+
+    # Resultado
+    failed_reason: str | None = None
+
+
+class ApplyPublic(SQLModel):
+    bot_session_id: UUID
+    status: BotApplyStatus = BotApplyStatus.SUCCESS
+    total_time: int = Field(default=0, description="Total time in seconds")
+
+    # Informações da vaga
+    job_title: str | None = None
+    job_url: str | None = None
+    company_name: str | None = None
 
 
 class UserActionCreate(SQLModel):
@@ -421,7 +426,14 @@ class UserActionCreate(SQLModel):
     action_type: UserActionType
     description: str
     input_field: str | None = None
-    extra_data: str | None = None
+
+
+class UserActionPublic(SQLModel):
+    action_type: UserActionType
+    description: str
+    input_field: str | None
+
+    requested_at: datetime
 
 
 class UserActionUpdate(SQLModel):

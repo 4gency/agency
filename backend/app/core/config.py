@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     # 60 minutes * 24 hours * 8 days = 8 days
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8
     FRONTEND_HOST: str = "http://localhost:5173"
+    BACKEND_HOST: str = "http://localhost:8000"
     ENVIRONMENT: Literal["local", "staging", "production"] = "local"
 
     STRIPE_SECRET_KEY: str | None = None
@@ -119,6 +120,22 @@ class Settings(BaseSettings):
     FIRST_SUPERUSER: str
     FIRST_SUPERUSER_PASSWORD: str
 
+    # Kubernetes Configuration
+    KUBERNETES_IN_CLUSTER: bool = False
+    KUBERNETES_NAMESPACE: str = "bot-jobs"
+    KUBERNETES_BOT_PREFIX: str = "applier"
+
+    # Bot Configuration
+    BOT_IMAGE: str = "lambdagency/job-apply-bot:latest"
+    BOT_API_URL: str = "http://localhost:8000/api/v1"
+    BOT_LOG_LEVEL: str = "INFO"
+
+    # Kubernetes Bot Resources
+    BOT_DEFAULT_CPU_REQUEST: str = "500m"
+    BOT_DEFAULT_MEMORY_REQUEST: str = "1Gi"
+    BOT_DEFAULT_CPU_LIMIT: str = "1000m"
+    BOT_DEFAULT_MEMORY_LIMIT: str = "2Gi"
+
     def _check_default_secret(self, var_name: str, value: str | None) -> None:
         if value == "changethis":
             message = (
@@ -129,6 +146,11 @@ class Settings(BaseSettings):
                 raise ValueError(message)
             else:
                 warnings.warn(message, stacklevel=1)
+
+    @model_validator(mode="after")
+    def _fill_bot_api_url(self) -> Self:
+        self.BOT_API_URL = f"{self.BACKEND_HOST}{self.API_V1_STR}"
+        return self
 
     @model_validator(mode="after")
     def _enforce_non_default_secrets(self) -> Self:

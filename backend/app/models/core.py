@@ -2,7 +2,7 @@
 import uuid
 from datetime import datetime, timedelta, timezone
 from enum import Enum
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from dateutil.relativedelta import relativedelta
 from pydantic import EmailStr, field_validator
@@ -12,9 +12,8 @@ from sqlmodel import Column, Field, ForeignKey, Relationship, SQLModel
 # Handle circular imports with TYPE_CHECKING
 if TYPE_CHECKING:
     from app.models.bot import (
-        BotConfig,
         BotSession,
-        LinkedInCredentials,
+        Credentials,
     )
 
 
@@ -109,10 +108,7 @@ class User(UserBase, table=True):
         back_populates="user", cascade_delete=True
     )
     payments: list["Payment"] = Relationship(back_populates="user", cascade_delete=True)
-    bot_configs: list["BotConfig"] = Relationship(
-        back_populates="user", cascade_delete=True
-    )
-    linkedin_credentials: list["LinkedInCredentials"] = Relationship(
+    credentials: list["Credentials"] = Relationship(
         back_populates="user", cascade_delete=True
     )
 
@@ -350,10 +346,6 @@ class Subscription(SQLModel, table=True):
     subscription_plan: SubscriptionPlan = Relationship(back_populates="subscriptions")
     payments: list["Payment"] = Relationship(back_populates="subscription")
     bot_sessions: list["BotSession"] = Relationship(back_populates="subscription")
-    linkedin_credentials: Optional["LinkedInCredentials"] = Relationship(
-        back_populates="subscription", sa_relationship_kwargs={"uselist": False}
-    )
-    bot_configs: list["BotConfig"] = Relationship(back_populates="subscription")
 
     def extend_subscription(self, plan: SubscriptionPlan | None = None) -> None:
         """
