@@ -99,7 +99,7 @@ class Credentials(SQLModel, table=True):
     def obfuscate_password(self, plain_password: str) -> None:
         self.obfuscated_password = "*" * len(plain_password)
 
-    def obfuscate_email(self):
+    def obfuscate_email(self) -> None:
         email_parts = self.email.split("@")
 
         if len(email_parts[0]) > 2:
