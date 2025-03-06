@@ -71,11 +71,11 @@ class ApplyService:
             self.db.rollback()
             return None
 
-    def get_apply_by_id(self, apply_id: int, user: User) -> BotApply:
+    def get_apply_by_id(self, apply_id: int, session_id: UUID, user: User) -> BotApply:
         """Get a specific application by ID with permission check"""
         apply = self.db.exec(select(BotApply).where(BotApply.id == apply_id)).first()
 
-        if not apply:
+        if not apply or apply.bot_session_id != session_id:
             raise HTTPException(
                 status_code=http_status.HTTP_404_NOT_FOUND,
                 detail="Application not found",

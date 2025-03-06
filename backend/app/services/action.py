@@ -156,11 +156,17 @@ class UserActionService:
         return cast(list[BotUserAction], actions)
 
     def complete_action(
-        self, action_id: UUID, user: User, user_input: str
+        self, action_id: UUID, session_id: UUID, user: User, user_input: str
     ) -> BotUserAction:
         """Complete a user action with the provided input"""
         # Get the action and verify permissions
         action = self.get_action_by_id(action_id, user)
+
+        if action.bot_session_id != session_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Action not found",
+            )
 
         if action.is_completed:
             raise HTTPException(

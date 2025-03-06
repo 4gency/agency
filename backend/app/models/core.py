@@ -121,15 +121,6 @@ class User(UserBase, table=True):
         ]
 
 
-class BotConfigurationCreate(SQLModel):
-    """Modelo para criação de configurações específicas do bot."""
-
-    user_id: uuid.UUID
-    user_agent: str | None = None
-    sec_ch_ua: str | None = None
-    sec_ch_ua_platform: str | None = None
-
-
 # Modelo público de usuário para API
 class UserPublic(UserBase):
     """Modelo de usuário para retorno via API."""

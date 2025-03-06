@@ -447,3 +447,8 @@ class WebhookEvent(SQLModel):
 
     event_type: str
     data: dict[str, Any]
+
+
+class SessionsResponse(SQLModel):
+    total: int
+    items: list[SessionPublic]
