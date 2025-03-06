@@ -99,7 +99,7 @@ class BotService:
         total = len(all_sessions)
 
         # Apply pagination and ordering
-        query = query.offset(skip).limit(limit).order_by(BotSession.created_at.desc())
+        query = query.offset(skip).limit(limit).order_by(BotSession.created_at.desc())  # type: ignore
         sessions = self.db.exec(query).all()
 
         return cast(list[BotSession], sessions), total

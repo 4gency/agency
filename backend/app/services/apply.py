@@ -144,7 +144,7 @@ class ApplyService:
         total = len(all_applies)
 
         # Apply pagination and ordering
-        query = query.offset(skip).limit(limit).order_by(BotApply.created_at.desc())
+        query = query.offset(skip).limit(limit).order_by(BotApply.created_at.desc())  # type: ignore
 
         applies = self.db.exec(query).all() or []
 
@@ -169,7 +169,7 @@ class ApplyService:
             return [], 0
 
         # Build query for applications from these sessions
-        query = select(BotApply).where(BotApply.bot_session_id.in_(session_ids))
+        query = select(BotApply).where(BotApply.bot_session_id.in_(session_ids))  # type: ignore
 
         # Apply status filter
         if status:
@@ -191,7 +191,7 @@ class ApplyService:
         total = len(all_applies)
 
         # Apply pagination and ordering
-        query = query.offset(skip).limit(limit).order_by(BotApply.created_at.desc())
+        query = query.offset(skip).limit(limit).order_by(BotApply.created_at.desc())  # type: ignore
 
         applies = self.db.exec(query).all() or []
 

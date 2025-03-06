@@ -126,7 +126,7 @@ class EventService:
         total = len(all_events)
 
         # Apply pagination and ordering
-        query = query.offset(skip).limit(limit).order_by(BotEvent.created_at.desc())
+        query = query.offset(skip).limit(limit).order_by(BotEvent.created_at.desc())  # type: ignore
 
         events = self.db.exec(query).all()
 
@@ -152,7 +152,7 @@ class EventService:
             return [], 0
 
         # Build query for events from these sessions
-        query = select(BotEvent).where(BotEvent.bot_session_id.in_(session_ids))
+        query = select(BotEvent).where(BotEvent.bot_session_id.in_(session_ids))  # type: ignore
 
         # Apply event type filter
         if event_type:
@@ -171,7 +171,7 @@ class EventService:
         total = len(all_events)
 
         # Apply pagination and ordering
-        query = query.offset(skip).limit(limit).order_by(BotEvent.created_at.desc())
+        query = query.offset(skip).limit(limit).order_by(BotEvent.created_at.desc())  # type: ignore
 
         events = self.db.exec(query).all()
 

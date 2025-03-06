@@ -1,7 +1,9 @@
 import logging
 from datetime import datetime, timedelta, timezone
+from typing import Any
 from uuid import UUID
 
+from sqlalchemy import func
 from sqlmodel import Session, select
 
 from app.models.bot import BotSession, BotSessionStatus, KubernetesPodStatus
@@ -31,12 +33,12 @@ class MonitoringService:
                 .where(BotSession.status == BotSessionStatus.RUNNING)
                 .where(
                     # This handles cases where last_heartbeat_at might be None
-                    (BotSession.last_heartbeat_at.is_(None))
-                    | (BotSession.last_heartbeat_at < cutoff_time)
+                    (BotSession.last_heartbeat_at is None)
+                    | (BotSession.last_heartbeat_at < cutoff_time)  # type: ignore
                 )
             )
 
-            stalled_sessions = self.db.exec(query).all()
+            stalled_sessions = list(self.db.exec(query).all())
 
             return stalled_sessions
 
@@ -57,12 +59,12 @@ class MonitoringService:
                 .where(BotSession.status == BotSessionStatus.RUNNING)
                 .where(
                     # Handle cases where started_at might be None
-                    (BotSession.started_at.is_(None))
-                    | (BotSession.started_at < cutoff_time)
+                    (BotSession.started_at is None)
+                    | (BotSession.started_at < cutoff_time)  # type: ignore
                 )
             )
 
-            potential_zombies = self.db.exec(query).all()
+            potential_zombies = list(self.db.exec(query).all())
 
             return potential_zombies
 
@@ -70,27 +72,36 @@ class MonitoringService:
             logger.error(f"Error checking for zombie sessions: {str(e)}")
             return []
 
-    def get_system_health(self) -> dict[str, any]:
+    def get_system_health(self) -> dict[str, Any]:
         """Get overall system health metrics"""
         try:
             # Get session counts by status
             status_counts = {}
             for status in BotSessionStatus:
-                count = self.db.exec(
-                    select(BotSession).where(BotSession.status == status)
-                ).count()
+                query = (
+                    select(func.count())
+                    .select_from(BotSession)
+                    .where(BotSession.status == status)
+                )
+                count = self.db.exec(query).one()
                 status_counts[status.value] = count
 
             # Get recent sessions (last 24 hours)
             cutoff_time = datetime.now(timezone.utc) - timedelta(hours=24)
-            recent_count = self.db.exec(
-                select(BotSession).where(BotSession.created_at > cutoff_time)
-            ).count()
+            recent_query = (
+                select(func.count())
+                .select_from(BotSession)
+                .where(BotSession.created_at > cutoff_time)
+            )
+            recent_count = self.db.exec(recent_query).one()
 
             # Get sessions with errors
-            error_count = self.db.exec(
-                select(BotSession).where(BotSession.status == BotSessionStatus.FAILED)
-            ).count()
+            error_query = (
+                select(func.count())
+                .select_from(BotSession)
+                .where(BotSession.status == BotSessionStatus.FAILED)
+            )
+            error_count = self.db.exec(error_query).one()
 
             # Construct health report
             health_report = {
@@ -171,18 +182,22 @@ class MonitoringService:
             # Calculate the cutoff time
             cutoff_time = datetime.now(timezone.utc) - timedelta(days=older_than_days)
 
-            # Find completed or failed sessions older than the cutoff
-            query = (
-                select(BotSession)
-                .where(
-                    BotSession.status.in_(
-                        [BotSessionStatus.COMPLETED, BotSessionStatus.FAILED]
-                    )
+            # First, get completed and failed sessions with finished_at not null
+            sessions_not_null = self.db.exec(
+                select(BotSession).where(
+                    (BotSession.status == BotSessionStatus.COMPLETED)
+                    | (BotSession.status == BotSessionStatus.FAILED),
+                    BotSession.finished_at is not None,
                 )
-                .where(BotSession.finished_at < cutoff_time)
-            )
+            ).all()
 
-            old_sessions = self.db.exec(query).all()
+            # Then filter them to find the ones older than cutoff
+            old_sessions = [
+                session
+                for session in sessions_not_null
+                if session.finished_at and session.finished_at < cutoff_time
+            ]
+
             count = len(old_sessions)
 
             # In a real implementation, we might archive these to long-term storage
@@ -197,7 +212,7 @@ class MonitoringService:
 
     def get_session_statistics(
         self, user_id: UUID | None = None, days: int = 30
-    ) -> dict[str, any]:
+    ) -> dict[str, Any]:
         """Get statistics about bot sessions"""
         try:
             # Calculate the cutoff time

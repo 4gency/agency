@@ -124,7 +124,7 @@ class UserActionService:
 
         # Apply pagination and ordering (most recent first)
         query = (
-            query.offset(skip).limit(limit).order_by(BotUserAction.requested_at.desc())
+            query.offset(skip).limit(limit).order_by(BotUserAction.requested_at.desc())  # type: ignore
         )
 
         actions = self.db.exec(query).all()
@@ -146,9 +146,9 @@ class UserActionService:
         # Build query for pending actions from these sessions
         query = (
             select(BotUserAction)
-            .where(BotUserAction.bot_session_id.in_(session_ids))
+            .where(BotUserAction.bot_session_id.in_(session_ids))  # type: ignore
             .where(BotUserAction.is_completed is False)
-            .order_by(BotUserAction.requested_at.desc())
+            .order_by(BotUserAction.requested_at.desc())  # type: ignore
         )
 
         actions = self.db.exec(query).all()
@@ -300,7 +300,7 @@ class UserActionService:
         # Build query for actions of this type
         query = (
             select(BotUserAction)
-            .where(BotUserAction.bot_session_id.in_(session_ids))
+            .where(BotUserAction.bot_session_id.in_(session_ids))  # type: ignore
             .where(BotUserAction.action_type == action_type)
         )
 
@@ -309,7 +309,7 @@ class UserActionService:
             query = query.where(BotUserAction.is_completed is False)
 
         # Order by most recent first
-        query = query.order_by(BotUserAction.requested_at.desc())
+        query = query.order_by(BotUserAction.requested_at.desc())  # type: ignore
 
         actions = self.db.exec(query).all()
 
