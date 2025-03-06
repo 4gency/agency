@@ -75,7 +75,7 @@ class CredentialsService:
         )
 
         # Generate obfuscated fields
-        new_credentials.gen_obfuscated_fields()
+        new_credentials.obfuscate_fields(password)
 
         # Save to database
         self.db.add(new_credentials)
@@ -110,13 +110,23 @@ class CredentialsService:
 
         # Update fields if provided
         if email is not None:
+            existing_email = self.db.exec(
+                select(Credentials)
+                .where(Credentials.email == email)
+                .where(Credentials.user_id == user_id)
+            ).first()
+            if existing_email and email != credentials.email:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="You already have another account registered with that email",
+                )
             credentials.email = email
+            credentials.obfuscate_email()
 
         if password is not None:
             credentials.password = encrypt_password(password)
-
-        # Regenerate obfuscated fields
-        credentials.gen_obfuscated_fields()
+            # Regenerate obfuscated fields
+            credentials.obfuscate_password(password)
 
         # Save to database
         self.db.add(credentials)

@@ -85,7 +85,11 @@ def create_credentials(
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
-    return CredentialsPublic.model_validate(credentials)
+    return CredentialsPublic(
+        id=credentials.id,
+        email=credentials.obfuscated_email,
+        password=credentials.obfuscated_password,
+    )
 
 
 @router.put(
@@ -120,7 +124,11 @@ def update_credentials(
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
-    return CredentialsPublic.model_validate(credentials)
+    return CredentialsPublic(
+        id=credentials.id,
+        email=credentials.obfuscated_email,
+        password=credentials.obfuscated_password,
+    )
 
 
 @router.delete(

@@ -91,8 +91,15 @@ class Credentials(SQLModel, table=True):
     user: User = Relationship(back_populates="credentials")
     bot_sessions: list["BotSession"] = Relationship(back_populates="credentials")
 
-    def gen_obfuscated_fields(self) -> None:
+    def obfuscate_fields(self, plain_password: str) -> None:
         """Gera email parcialmente visível e senha em asteriscos."""
+        self.obfuscate_email()
+        self.obfuscate_password(plain_password)
+
+    def obfuscate_password(self, plain_password: str) -> None:
+        self.obfuscated_password = "*" * len(plain_password)
+
+    def obfuscate_email(self):
         email_parts = self.email.split("@")
 
         if len(email_parts[0]) > 2:
@@ -104,7 +111,6 @@ class Credentials(SQLModel, table=True):
 
         domain = email_parts[1]
         self.obfuscated_email = f"{visible_part}{hidden_part}@{domain}"
-        self.obfuscated_password = "*" * len(self.password)
 
 
 class BotSession(SQLModel, table=True):
