@@ -568,6 +568,7 @@ def handle_checkout_session(session: Session, event: stripe.Event) -> None:
                 checkout.payment_status = "paid"
                 checkout.updated_at = datetime.now(timezone.utc)
                 session.add(checkout)
+                session.commit()
                 logger.info(
                     "CheckoutSession %s marcado como complete (payment_status paid)",
                     checkout_session_id,
@@ -606,6 +607,7 @@ def handle_cancel_callback(
             checkout.payment_status = "unpaid"
             checkout.updated_at = datetime.now(timezone.utc)
             session.add(checkout)
+            session.commit()
             logger.info(
                 "CheckoutSession %s marcado como canceled", checkout.session_id
             )
