@@ -2,15 +2,60 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, status
+from pydantic import BaseModel
 
 from app.api.deps import (
     CurrentSubscriber,
     CurrentUser,
     SessionDep,
 )
-from app.models.bot import SessionCreate, SessionPublic, SessionsResponse
+from app.models.bot import BotSessionStatus
 from app.models.core import ErrorMessage, Message
 from app.services.bot import BotService
+
+
+# Modelos para as rotas
+class SessionCreate(BaseModel):
+    """Modelo para criação de uma sessão de bot"""
+
+    credentials_id: UUID
+    applies_limit: int = 200
+
+
+class SessionPublic(BaseModel):
+    """Modelo para exibição pública de uma sessão de bot"""
+
+    id: UUID
+    user_id: UUID
+    credentials_id: UUID
+    status: BotSessionStatus
+    applies_limit: int
+    total_applied: int
+    total_success: int
+    total_failed: int
+    created_at: str
+    started_at: str | None = None
+    finished_at: str | None = None
+    paused_at: str | None = None
+    resumed_at: str | None = None
+    last_heartbeat_at: str | None = None
+    last_status_message: str | None = None
+    error_message: str | None = None
+    kubernetes_pod_name: str
+    kubernetes_namespace: str
+    kubernetes_pod_status: str | None = None
+    kubernetes_pod_ip: str | None = None
+
+    class Config:
+        from_attributes = True
+
+
+class SessionsResponse(BaseModel):
+    """Modelo para resposta de listagem de sessões"""
+
+    total: int
+    items: list[SessionPublic]
+
 
 router = APIRouter()
 

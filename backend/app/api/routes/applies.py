@@ -2,16 +2,54 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 
 from app.api.deps import CurrentUser, SessionDep
+from app.models.bot import BotApplyStatus
 from app.models.core import ErrorMessage
 from app.services.apply import ApplyService
+
+
+class ApplyPublic(BaseModel):
+    """Modelo para exibição pública de uma aplicação de emprego"""
+
+    id: int
+    bot_session_id: UUID
+    status: BotApplyStatus
+    job_title: str | None = None
+    job_url: str | None = None
+    company_name: str | None = None
+    total_time: int | None = None
+    failed_reason: str | None = None
+    created_at: str
+
+    class Config:
+        from_attributes = True
+
+
+class AppliesResponse(BaseModel):
+    """Modelo para resposta de listagem de aplicações"""
+
+    total: int
+    items: list[ApplyPublic]
+
+
+class ApplySummary(BaseModel):
+    """Modelo para resumo de aplicações"""
+
+    total_applies: int
+    by_status: dict[str, int]
+    by_company: dict[str, int]
+    total_time_seconds: int
+    latest_applies: list[ApplyPublic]
+
 
 router = APIRouter()
 
 
 @router.get(
     "/sessions/{session_id}/applies",
+    response_model=AppliesResponse,
     responses={
         401: {"model": ErrorMessage, "description": "Authentication error"},
         403: {"model": ErrorMessage, "description": "Permission error"},
@@ -39,11 +77,12 @@ def get_session_applies(
     except HTTPException as e:
         raise e
 
-    return {"total": total, "items": applies}
+    return {"total": total, "items": [ApplyPublic.model_validate(a) for a in applies]}
 
 
 @router.get(
     "/sessions/{session_id}/applies/{apply_id}",
+    response_model=ApplyPublic,
     responses={
         401: {"model": ErrorMessage, "description": "Authentication error"},
         403: {"model": ErrorMessage, "description": "Permission error"},
@@ -65,11 +104,12 @@ def get_apply_details(
     except HTTPException as e:
         raise e
 
-    return apply
+    return ApplyPublic.model_validate(apply)
 
 
 @router.get(
     "/sessions/{session_id}/applies/summary",
+    response_model=ApplySummary,
     responses={
         401: {"model": ErrorMessage, "description": "Authentication error"},
         403: {"model": ErrorMessage, "description": "Permission error"},
@@ -125,5 +165,5 @@ def get_applies_summary(
         "by_status": status_counts,
         "by_company": companies,
         "total_time_seconds": total_time,
-        "latest_applies": applies[:10],  # Últimos 10 applies
+        "latest_applies": [ApplyPublic.model_validate(a) for a in applies],
     }

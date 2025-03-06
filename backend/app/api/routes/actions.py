@@ -5,12 +5,39 @@ from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
 
 from app.api.deps import CurrentUser, SessionDep
-from app.models.core import ErrorMessage
+from app.models.bot import UserActionType
+from app.models.core import ErrorMessage, Message
 from app.services.action import UserActionService
 
 
 class ActionResponse(BaseModel):
+    """Modelo para resposta de ação do usuário"""
+
     user_input: str
+
+
+class UserActionPublic(BaseModel):
+    """Modelo para exibição pública de uma ação do usuário"""
+
+    id: UUID
+    bot_session_id: UUID
+    type: UserActionType
+    message: str
+    details: dict[str, Any] | None = None
+    completed: bool
+    user_input: str | None = None
+    created_at: str
+    completed_at: str | None = None
+
+    class Config:
+        from_attributes = True
+
+
+class UserActionsResponse(BaseModel):
+    """Modelo para resposta de listagem de ações"""
+
+    total: int
+    items: list[UserActionPublic]
 
 
 router = APIRouter()
@@ -18,6 +45,7 @@ router = APIRouter()
 
 @router.get(
     "/sessions/{session_id}/actions",
+    response_model=UserActionsResponse,
     responses={
         401: {"model": ErrorMessage, "description": "Authentication error"},
         403: {"model": ErrorMessage, "description": "Permission error"},
@@ -49,11 +77,15 @@ def get_session_actions(
     except HTTPException as e:
         raise e
 
-    return {"total": total, "items": actions}
+    return {
+        "total": total,
+        "items": [UserActionPublic.model_validate(a) for a in actions],
+    }
 
 
 @router.post(
     "/sessions/{session_id}/actions/{action_id}/complete",
+    response_model=Message,
     responses={
         401: {"model": ErrorMessage, "description": "Authentication error"},
         403: {"model": ErrorMessage, "description": "Permission error"},

@@ -239,9 +239,11 @@ class ApplyService:
 
         return apply
 
-    def delete_apply(self, apply_id: int, user: User) -> bool:
+    def delete_apply(self, apply_id: int, session_id: UUID, user: User) -> bool:
         """Delete an application record with permission check"""
-        apply = self.get_apply_by_id(apply_id, user)  # This already checks permissions
+        apply = self.get_apply_by_id(
+            apply_id, session_id, user
+        )  # This already checks permissions
 
         try:
             # Update session metrics

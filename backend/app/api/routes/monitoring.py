@@ -2,11 +2,49 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
 
 from app.api.deps import SessionDep, get_current_active_superuser
 from app.models.bot import BotSession, KubernetesPodStatus
 from app.models.core import ErrorMessage, Message
 from app.services.monitoring import MonitoringService
+
+
+class PodInfo(BaseModel):
+    """Modelo para informações de um pod Kubernetes"""
+
+    session_id: str
+    kubernetes_pod_name: str
+    kubernetes_namespace: str
+    kubernetes_pod_status: str | None = None
+    kubernetes_pod_ip: str | None = None
+
+
+class ActiveSessionsResponse(BaseModel):
+    """Modelo para resposta de sessões ativas"""
+
+    total: int
+    items: list[BotSession]
+
+
+class KubernetesPodsResponse(BaseModel):
+    """Modelo para resposta de pods Kubernetes"""
+
+    total: int
+    items: list[PodInfo]
+
+
+class SystemHealthResponse(BaseModel):
+    """Modelo para resposta de saúde do sistema"""
+
+    total_sessions: int
+    status_counts: dict[str, int]
+    recent_sessions: int
+    error_sessions: int
+    stalled_sessions: int
+    zombie_sessions: int
+    timestamp: str
+
 
 router = APIRouter()
 
@@ -14,6 +52,7 @@ router = APIRouter()
 @router.get(
     "/sessions",
     dependencies=[Depends(get_current_active_superuser)],
+    response_model=ActiveSessionsResponse,
     responses={
         401: {"model": ErrorMessage, "description": "Authentication error"},
         403: {"model": ErrorMessage, "description": "Permission error"},
@@ -38,6 +77,7 @@ def get_all_active_sessions(
 @router.get(
     "/sessions/status",
     dependencies=[Depends(get_current_active_superuser)],
+    response_model=SystemHealthResponse,
     responses={
         401: {"model": ErrorMessage, "description": "Authentication error"},
         403: {"model": ErrorMessage, "description": "Permission error"},
@@ -59,6 +99,7 @@ def get_sessions_status_summary(
 @router.get(
     "/kubernetes/pods",
     dependencies=[Depends(get_current_active_superuser)],
+    response_model=KubernetesPodsResponse,
     responses={
         401: {"model": ErrorMessage, "description": "Authentication error"},
         403: {"model": ErrorMessage, "description": "Permission error"},
@@ -75,21 +116,22 @@ def get_kubernetes_pods(
     stalled_sessions = monitoring_service.check_stalled_sessions()
     zombie_sessions = monitoring_service.check_zombie_sessions()
 
-    pods_info: list[dict[str, Any]] = []
+    pods_info: list[PodInfo] = []
+
     for s in stalled_sessions + zombie_sessions:
         session_data: BotSession = s
-        pod_info = {
-            "session_id": str(session_data.id),
-            "kubernetes_pod_name": session_data.kubernetes_pod_name,
-            "kubernetes_namespace": session_data.kubernetes_namespace,
-            "kubernetes_pod_status": session_data.kubernetes_pod_status.value
+        pod_info = PodInfo(
+            session_id=str(session_data.id),
+            kubernetes_pod_name=session_data.kubernetes_pod_name,
+            kubernetes_namespace=session_data.kubernetes_namespace,
+            kubernetes_pod_status=session_data.kubernetes_pod_status.value
             if session_data.kubernetes_pod_status
             else "unknown",
-            "kubernetes_pod_ip": session_data.kubernetes_pod_ip,
-        }
+            kubernetes_pod_ip=session_data.kubernetes_pod_ip,
+        )
         pods_info.append(pod_info)
 
-    return pods_info
+    return {"total": len(pods_info), "items": pods_info}
 
 
 @router.post(

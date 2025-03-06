@@ -2,15 +2,40 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 
 from app.api.deps import CurrentUser, SessionDep
-from app.models.bot import CredentialsCreate, CredentialsPublic, CredentialsUpdate
 from app.models.core import ErrorMessage, Message
 from app.services.credentials import CredentialsService
 
 
-# Definição do modelo de resposta que faltava
+# Modelos para as rotas
+class CredentialsCreate(BaseModel):
+    """Modelo para criação de credenciais"""
+
+    email: EmailStr
+    password: str
+
+
+class CredentialsUpdate(BaseModel):
+    """Modelo para atualização de credenciais"""
+
+    email: EmailStr | None = None
+    password: str | None = None
+
+
+class CredentialsPublic(BaseModel):
+    """Modelo para exibição pública de credenciais"""
+
+    id: UUID
+    email: str  # Email ofuscado exibido ao usuário
+    password: str  # Senha ofuscada exibida ao usuário (geralmente asteriscos)
+
+    class Config:
+        from_attributes = True
+
+
+# Definição do modelo de resposta para a listagem de credenciais
 class CredentialsResponse(BaseModel):
     total: int
     items: list[CredentialsPublic]

@@ -2,16 +2,50 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 
 from app.api.deps import CurrentUser, SessionDep
 from app.models.core import ErrorMessage
 from app.services.event import EventService
+
+
+class EventPublic(BaseModel):
+    """Modelo para exibição pública de um evento"""
+
+    id: UUID
+    bot_session_id: UUID
+    type: str
+    message: str
+    severity: str = "info"
+    details: dict[str, Any] | None = None
+    created_at: str
+
+    class Config:
+        from_attributes = True
+
+
+class EventsResponse(BaseModel):
+    """Modelo para resposta de listagem de eventos"""
+
+    total: int
+    items: list[EventPublic]
+
+
+class EventSummary(BaseModel):
+    """Modelo para resumo de eventos"""
+
+    total_events: int
+    by_type: dict[str, int]
+    by_severity: dict[str, int]
+    latest_events: list[EventPublic]
+
 
 router = APIRouter()
 
 
 @router.get(
     "/sessions/{session_id}/events",
+    response_model=EventsResponse,
     responses={
         401: {"model": ErrorMessage, "description": "Authentication error"},
         403: {"model": ErrorMessage, "description": "Permission error"},
@@ -43,11 +77,12 @@ def get_session_events(
     except HTTPException as e:
         raise e
 
-    return {"total": total, "items": events}
+    return {"total": total, "items": [EventPublic.model_validate(e) for e in events]}
 
 
 @router.get(
     "/sessions/{session_id}/events/summary",
+    response_model=EventSummary,
     responses={
         401: {"model": ErrorMessage, "description": "Authentication error"},
         403: {"model": ErrorMessage, "description": "Permission error"},
@@ -74,8 +109,8 @@ def get_session_events_summary(
         raise e
 
     # Criar um resumo básico dos eventos
-    event_types = {}
-    severities = {}
+    event_types: dict[str, int] = {}
+    severities: dict[str, int] = {}
 
     for event in events:
         # Contar por tipo
@@ -96,5 +131,5 @@ def get_session_events_summary(
         "total_events": total,
         "by_type": event_types,
         "by_severity": severities,
-        "latest_events": events[:10],  # Últimos 10 eventos
+        "latest_events": [EventPublic.model_validate(e) for e in events],
     }
