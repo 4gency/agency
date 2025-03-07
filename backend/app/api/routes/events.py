@@ -1,5 +1,6 @@
 from typing import Any
 from uuid import UUID
+from datetime import datetime
 
 from fastapi import APIRouter, HTTPException
 from sqlmodel import SQLModel
@@ -18,7 +19,7 @@ class EventPublic(SQLModel):
     message: str
     severity: str = "info"
     details: dict[str, Any] | None = None
-    created_at: str
+    created_at: datetime
 
     class Config:
         from_attributes = True
@@ -59,7 +60,7 @@ def get_session_events(
     session_id: UUID,
     skip: int = 0,
     limit: int = 100,
-    event_type: list[str] | None = None,
+    event_type: str | None = None,
 ) -> Any:
     """
     Get all events for a specific bot session.
@@ -67,17 +68,40 @@ def get_session_events(
     event_service = EventService(session)
 
     try:
+        # Converte event_type de string única para lista se necessário
+        event_type_list = None
+        if event_type:
+            event_type_list = [event_type]
+                
         events, total = event_service.get_session_events(
             session_id=session_id,
             user=user,
             skip=skip,
             limit=limit,
-            event_type=event_type,
+            event_type=event_type_list,
         )
     except HTTPException as e:
         raise e
 
-    return {"total": total, "items": [EventPublic.model_validate(e) for e in events]}
+    # Processa os eventos antes de retornar
+    processed_events = []
+    for event in events:
+        # Converte details de string JSON para dicionário, se existir
+        if event.details:
+            import json
+            try:
+                event_dict = event.__dict__.copy()
+                event_dict["details"] = json.loads(event.details)
+                processed_events.append(event_dict)
+            except json.JSONDecodeError:
+                # Se não for um JSON válido, mantém como None
+                event_dict = event.__dict__.copy()
+                event_dict["details"] = None
+                processed_events.append(event_dict)
+        else:
+            processed_events.append(event)
+
+    return {"total": total, "items": [EventPublic.model_validate(e) for e in processed_events]}
 
 
 @router.get(
@@ -111,7 +135,9 @@ def get_session_events_summary(
     # Criar um resumo básico dos eventos
     event_types: dict[str, int] = {}
     severities: dict[str, int] = {}
-
+    
+    # Processa os eventos antes de retornar
+    processed_events = []
     for event in events:
         # Contar por tipo
         event_type = event.type
@@ -126,10 +152,25 @@ def get_session_events_summary(
             severities[severity] += 1
         else:
             severities[severity] = 1
+            
+        # Converte details de string JSON para dicionário, se existir
+        if event.details:
+            import json
+            try:
+                event_dict = event.__dict__.copy()
+                event_dict["details"] = json.loads(event.details)
+                processed_events.append(event_dict)
+            except json.JSONDecodeError:
+                # Se não for um JSON válido, mantém como None
+                event_dict = event.__dict__.copy()
+                event_dict["details"] = None
+                processed_events.append(event_dict)
+        else:
+            processed_events.append(event)
 
     return {
         "total_events": total,
         "by_type": event_types,
         "by_severity": severities,
-        "latest_events": [EventPublic.model_validate(e) for e in events],
+        "latest_events": [EventPublic.model_validate(e) for e in processed_events],
     }

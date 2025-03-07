@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 
 from fastapi.testclient import TestClient
 from sqlmodel import Session
+from sqlalchemy import text
 
 from app.core.config import settings
 from app.models.bot import BotSession, BotSessionStatus, BotStyleChoice, Credentials
@@ -279,11 +280,6 @@ def test_stop_bot_session(
     db.refresh(bot_session)
     assert bot_session.status == BotSessionStatus.STOPPING
 
-    # Limpa os dados criados para o teste
-    db.delete(bot_session)
-    db.delete(credentials)
-    db.commit()
-
 
 def test_pause_bot_session(
     client: TestClient, normal_subscriber_token_headers: dict[str, str], db: Session
@@ -325,11 +321,6 @@ def test_pause_bot_session(
     # Verificar se foi atualizado no banco de dados
     db.refresh(bot_session)
     assert bot_session.status == BotSessionStatus.PAUSED
-
-    # Limpa os dados criados para o teste
-    db.delete(bot_session)
-    db.delete(credentials)
-    db.commit()
 
 
 def test_resume_bot_session(
@@ -373,11 +364,6 @@ def test_resume_bot_session(
     db.refresh(bot_session)
     assert bot_session.status == BotSessionStatus.RUNNING
 
-    # Limpa os dados criados para o teste
-    db.delete(bot_session)
-    db.delete(credentials)
-    db.commit()
-
 
 def test_delete_bot_session(
     client: TestClient, normal_subscriber_token_headers: dict[str, str], db: Session
@@ -419,7 +405,3 @@ def test_delete_bot_session(
     # Verificar se foi excluído do banco de dados
     deleted_session = db.get(BotSession, session_id)
     assert deleted_session is None
-
-    # Limpa as credenciais criadas para o teste
-    db.delete(credentials)
-    db.commit()

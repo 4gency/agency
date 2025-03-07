@@ -40,12 +40,12 @@ class SessionPublic(SQLModel):
 
     # Controle de tempo
     created_at: datetime
-    started_at: datetime
-    finished_at: datetime
-    resumed_at: datetime
-    paused_at: datetime
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
+    resumed_at: datetime | None = None
+    paused_at: datetime | None = None
     total_paused_time: int
-    last_heartbeat_at: datetime | None
+    last_heartbeat_at: datetime | None = None
 
     class Config:
         from_attributes = True

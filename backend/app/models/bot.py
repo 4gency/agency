@@ -191,7 +191,7 @@ class BotSession(SQLModel, table=True):
     def pause(self) -> None:
         """Pausa a sessão do bot."""
         self.status = BotSessionStatus.PAUSED
-        self.updated_at = datetime.now(timezone.utc)
+        self.paused_at = datetime.now(timezone.utc)
         self.add_event("system", "Bot session paused")
 
     def resume(self) -> None:
@@ -254,8 +254,13 @@ class BotSession(SQLModel, table=True):
 
     def add_event(
         self, event_type: str, message: str, severity: str = "info"
-    ) -> "BotEvent":
+    ) -> "BotEvent | None":
         """Adiciona um evento à sessão."""
+        # Verifica se o ID da sessão é válido
+        if not self.id:
+            # Se a sessão não tem ID, não cria o evento
+            return None
+            
         event = BotEvent(
             bot_session_id=self.id, type=event_type, severity=severity, message=message
         )
