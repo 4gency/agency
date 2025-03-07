@@ -15,13 +15,24 @@ import { UsersService } from "../../client"
 import useCustomToast from "../../hooks/useCustomToast"
 
 interface DeleteProps {
-  type: string
-  id: string
+  title?: string
+  message?: string
   isOpen: boolean
   onClose: () => void
+  onDelete?: () => Promise<void>
+  type?: string
+  id?: string
 }
 
-const Delete = ({ type, id, isOpen, onClose }: DeleteProps) => {
+const DeleteAlert = ({ 
+  title = "Delete Confirmation", 
+  message = "Are you sure? You will not be able to undo this action.",
+  type, 
+  id, 
+  isOpen, 
+  onClose,
+  onDelete
+}: DeleteProps) => {
   const queryClient = useQueryClient()
   const showToast = useCustomToast()
   const cancelRef = React.useRef<HTMLButtonElement | null>(null)
@@ -39,11 +50,11 @@ const Delete = ({ type, id, isOpen, onClose }: DeleteProps) => {
   }
 
   const mutation = useMutation({
-    mutationFn: deleteEntity,
+    mutationFn: id ? () => deleteEntity(id) : undefined,
     onSuccess: () => {
       showToast(
         "Success",
-        `The ${type.toLowerCase()} was deleted successfully.`,
+        `The ${type?.toLowerCase()} was deleted successfully.`,
         "success",
       )
       onClose()
@@ -51,19 +62,30 @@ const Delete = ({ type, id, isOpen, onClose }: DeleteProps) => {
     onError: () => {
       showToast(
         "An error occurred.",
-        `An error occurred while deleting the ${type.toLowerCase()}.`,
+        `An error occurred while deleting the ${type?.toLowerCase()}.`,
         "error",
       )
     },
     onSettled: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["users"],
-      })
+      if (type === "User") {
+        queryClient.invalidateQueries({
+          queryKey: ["users"],
+        })
+      }
     },
   })
 
   const onSubmit = async () => {
-    mutation.mutate(id)
+    if (onDelete) {
+      try {
+        await onDelete();
+        onClose();
+      } catch (error) {
+        console.error("Error in custom delete function:", error);
+      }
+    } else if (id && type) {
+      mutation.mutate();
+    }
   }
 
   return (
@@ -77,7 +99,7 @@ const Delete = ({ type, id, isOpen, onClose }: DeleteProps) => {
       >
         <AlertDialogOverlay>
           <AlertDialogContent as="form" onSubmit={handleSubmit(onSubmit)}>
-            <AlertDialogHeader>Delete {type}</AlertDialogHeader>
+            <AlertDialogHeader>{title}</AlertDialogHeader>
 
             <AlertDialogBody>
               {type === "User" && (
@@ -86,7 +108,7 @@ const Delete = ({ type, id, isOpen, onClose }: DeleteProps) => {
                   <strong>permantly deleted. </strong>
                 </span>
               )}
-              Are you sure? You will not be able to undo this action.
+              {message}
             </AlertDialogBody>
 
             <AlertDialogFooter gap={3}>
@@ -108,4 +130,4 @@ const Delete = ({ type, id, isOpen, onClose }: DeleteProps) => {
   )
 }
 
-export default Delete
+export default DeleteAlert
