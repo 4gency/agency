@@ -260,7 +260,7 @@ class BotSession(SQLModel, table=True):
         if not self.id:
             # Se a sessão não tem ID, não cria o evento
             return None
-            
+
         event = BotEvent(
             bot_session_id=self.id, type=event_type, severity=severity, message=message
         )

@@ -1,6 +1,6 @@
+from datetime import datetime
 from typing import Any
 from uuid import UUID
-from datetime import datetime
 
 from fastapi import APIRouter, HTTPException
 from sqlmodel import SQLModel
@@ -72,7 +72,7 @@ def get_session_events(
         event_type_list = None
         if event_type:
             event_type_list = [event_type]
-                
+
         events, total = event_service.get_session_events(
             session_id=session_id,
             user=user,
@@ -89,6 +89,7 @@ def get_session_events(
         # Converte details de string JSON para dicionário, se existir
         if event.details:
             import json
+
             try:
                 event_dict = event.__dict__.copy()
                 event_dict["details"] = json.loads(event.details)
@@ -101,7 +102,10 @@ def get_session_events(
         else:
             processed_events.append(event)
 
-    return {"total": total, "items": [EventPublic.model_validate(e) for e in processed_events]}
+    return {
+        "total": total,
+        "items": [EventPublic.model_validate(e) for e in processed_events],
+    }
 
 
 @router.get(
@@ -135,7 +139,7 @@ def get_session_events_summary(
     # Criar um resumo básico dos eventos
     event_types: dict[str, int] = {}
     severities: dict[str, int] = {}
-    
+
     # Processa os eventos antes de retornar
     processed_events = []
     for event in events:
@@ -152,10 +156,11 @@ def get_session_events_summary(
             severities[severity] += 1
         else:
             severities[severity] = 1
-            
+
         # Converte details de string JSON para dicionário, se existir
         if event.details:
             import json
+
             try:
                 event_dict = event.__dict__.copy()
                 event_dict["details"] = json.loads(event.details)

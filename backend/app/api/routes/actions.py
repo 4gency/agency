@@ -1,6 +1,6 @@
+from datetime import datetime
 from typing import Any
 from uuid import UUID
-from datetime import datetime
 
 from fastapi import APIRouter, HTTPException, status
 from sqlmodel import SQLModel

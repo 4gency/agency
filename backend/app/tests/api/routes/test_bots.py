@@ -3,7 +3,6 @@ from datetime import datetime, timezone
 
 from fastapi.testclient import TestClient
 from sqlmodel import Session
-from sqlalchemy import text
 
 from app.core.config import settings
 from app.models.bot import BotSession, BotSessionStatus, BotStyleChoice, Credentials
