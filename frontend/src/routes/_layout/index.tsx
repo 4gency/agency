@@ -160,13 +160,17 @@ function Dashboard() {
     )
 
     const metricDisplay = () => {
-      switch (plan.frequency) {
-        case "monthly":
-          return "month"
-        case "yearly":
-          return "year"
+      switch (plan.metric_type) {
+        case "day":
+          return `${plan.metric_value} days`
+        case "week":
+          return `${plan.metric_value} weeks`  
+        case "month":
+          return `${plan.metric_value} months`
+        case "year":
+          return `${plan.metric_value} years`
         default:
-          return plan.frequency
+          return "subscription"
       }
     }
 
@@ -197,15 +201,16 @@ function Dashboard() {
               </Text>
             </Flex>
             <List spacing={1} w="full" mt={2}>
-              {plan.features?.slice(0, 2).map((feature, idx) => (
-                <ListItem key={idx} fontSize="sm">
-                  <ListIcon as={CheckIcon} color={highlightColor} />
-                  {feature}
-                </ListItem>
-              ))}
-              {plan.features && plan.features.length > 2 && (
+              {plan.benefits && plan.benefits.length > 0 && 
+                plan.benefits.slice(0, 2).map((benefit, idx) => (
+                  <ListItem key={idx} fontSize="sm">
+                    <ListIcon as={CheckIcon} color={highlightColor} />
+                    {benefit.name}
+                  </ListItem>
+                ))}
+              {plan.benefits && plan.benefits.length > 2 && (
                 <Text fontSize="xs" color="gray.500" ml={6}>
-                  +{plan.features.length - 2} more features
+                  +{plan.benefits.length - 2} more benefits
                 </Text>
               )}
             </List>

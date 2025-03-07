@@ -182,9 +182,10 @@ const BotSessionManager = ({
 
   const getCredentialName = (credentialsId: string) => {
     const credential = credentials.find((c) => c.id === credentialsId)
-    return credential ? credential.name : "Unknown"
+    return credential ? credential.email : "Unknown"
   }
 
+  // Handle input changes for create form
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
       ...formData,
@@ -193,6 +194,7 @@ const BotSessionManager = ({
     })
   }
 
+  // Handle select changes for create form
   const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setFormData({
       ...formData,
@@ -200,6 +202,7 @@ const BotSessionManager = ({
     })
   }
 
+  // Handle radio group changes
   const handleRadioChange = (value: string) => {
     setFormData({
       ...formData,
@@ -459,38 +462,24 @@ const BotSessionManager = ({
 
   return (
     <Box>
-      <Flex justifyContent="space-between" alignItems="center" mb={4}>
+      <Flex justify="space-between" mb={4}>
         <Heading size="md">Bot Sessions</Heading>
         <Button
           leftIcon={<FiPlus />}
-          variant="primary"
+          colorScheme="teal"
+          size="sm"
           onClick={onCreateOpen}
-          isDisabled={credentials.length === 0}
         >
           New Session
         </Button>
       </Flex>
-
-      {credentials.length === 0 && (
-        <Card mb={4} bg="yellow.50">
-          <CardBody>
-            <Flex align="center">
-              <Icon as={FiAlertCircle} color="yellow.500" mr={2} />
-              <Text>
-                You need to add LinkedIn credentials before creating a bot
-                session.
-              </Text>
-            </Flex>
-          </CardBody>
-        </Card>
-      )}
 
       {isLoadingSessions ? (
         <Flex justifyContent="center" py={8}>
           <Spinner size="lg" />
         </Flex>
       ) : sessionsError ? (
-        <Text color="red.500">{sessionsError}</Text>
+        <Text color="red.500">Erro ao carregar sessões do bot</Text>
       ) : sessions.length === 0 ? (
         <Card>
           <CardBody>
@@ -618,10 +607,9 @@ const BotSessionManager = ({
               <FormControl isRequired>
                 <FormLabel>LinkedIn Credential</FormLabel>
                 <Select
+                  name="credentials_id"
                   value={formData.credentials_id}
-                  onChange={(e) =>
-                    handleInputChange("credentials_id", e.target.value)
-                  }
+                  onChange={handleSelectChange}
                 >
                   {credentials.map((cred) => (
                     <option key={cred.id} value={cred.id}>
@@ -631,15 +619,19 @@ const BotSessionManager = ({
                 </Select>
               </FormControl>
 
-              <FormControl>
+              <FormControl mt={4}>
                 <FormLabel>Applications Limit</FormLabel>
                 <NumberInput
+                  name="applies_limit"
                   min={1}
-                  max={500}
+                  max={1000}
                   value={formData.applies_limit}
-                  onChange={(value) =>
-                    handleInputChange("applies_limit", Number.parseInt(value))
-                  }
+                  onChange={(valueString) => {
+                    setFormData({
+                      ...formData,
+                      applies_limit: parseInt(valueString)
+                    })
+                  }}
                 >
                   <NumberInputField />
                   <NumberInputStepper>
@@ -647,16 +639,13 @@ const BotSessionManager = ({
                     <NumberDecrementStepper />
                   </NumberInputStepper>
                 </NumberInput>
-                <Text fontSize="sm" color="gray.500" mt={1}>
-                  Maximum number of job applications the bot will submit
-                </Text>
               </FormControl>
 
-              <FormControl>
-                <FormLabel>Bot Style</FormLabel>
+              <FormControl mt={4}>
+                <FormLabel>Application Style</FormLabel>
                 <RadioGroup
                   value={formData.style}
-                  onChange={(value) => handleRadioChange(value)}
+                  onChange={handleRadioChange}
                 >
                   <Stack spacing={2}>
                     <Radio value="Cloyola Grey">Cloyola Grey</Radio>
