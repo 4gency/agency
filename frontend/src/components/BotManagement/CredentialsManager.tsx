@@ -4,13 +4,19 @@ import {
   Button,
   Card,
   CardBody,
+  Center,
+  Divider,
   Flex,
   FormControl,
   FormLabel,
+  Grid,
+  GridItem,
   HStack,
   Heading,
   IconButton,
   Input,
+  InputGroup,
+  InputRightElement,
   Modal,
   ModalBody,
   ModalCloseButton,
@@ -21,12 +27,13 @@ import {
   Spinner,
   Stack,
   Text,
+  Tooltip,
   VStack,
   useDisclosure,
   useToast,
 } from "@chakra-ui/react"
 import { useEffect, useState } from "react"
-import { FiEdit, FiPlus, FiTrash2 } from "react-icons/fi"
+import { FiEdit, FiEye, FiEyeOff, FiPlus, FiTrash2 } from "react-icons/fi"
 import {
   type CredentialsCreate,
   type CredentialsPublic,
@@ -34,6 +41,7 @@ import {
   type CredentialsUpdate,
 } from "../../client"
 import DeleteAlert from "../Common/DeleteAlert"
+import useCredentialsData from "../../hooks/useCredentialsData"
 
 export type CredentialsManagerProps = {
   onCredentialSelect?: (credentialId: string) => void
@@ -46,20 +54,26 @@ const CredentialsManager = ({
   selectedCredentialId,
   onCredentialsUpdate,
 }: CredentialsManagerProps) => {
-  const [credentials, setCredentials] = useState<CredentialsPublic[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { 
+    credentials, 
+    isLoading, 
+    error: credentialsError, 
+    refetchCredentials 
+  } = useCredentialsData()
   const [credentialToDelete, setCredentialToDelete] = useState<string | null>(
     null,
   )
   const [credentialToEdit, setCredentialToEdit] =
     useState<CredentialsPublic | null>(null)
-  const [formData, setFormData] = useState<
-    CredentialsCreate | CredentialsUpdate
-  >({
+  const [formData, setFormData] = useState<{
+    email: string
+    password: string
+  }>({
     email: "",
     password: "",
   })
+  const [showPassword, setShowPassword] = useState(false)
+  const [isLoadingAction, setIsLoadingAction] = useState(false)
 
   const {
     isOpen: isCreateOpen,
@@ -78,33 +92,6 @@ const CredentialsManager = ({
   } = useDisclosure()
 
   const toast = useToast()
-
-  // Fetch credentials on component mount
-  useEffect(() => {
-    fetchCredentials()
-  }, [])
-
-  // Fetch credentials from API
-  const fetchCredentials = async () => {
-    setIsLoading(true)
-    setError(null)
-    try {
-      const response = await CredentialsService.getUserCredentials()
-      setCredentials(response.items || [])
-    } catch (err) {
-      console.error("Error fetching credentials:", err)
-      setError("Failed to load credentials. Please try again.")
-      toast({
-        title: "Error",
-        description: "Failed to load credentials",
-        status: "error",
-        duration: 3000,
-        isClosable: true,
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
   // Handle input changes for create/edit forms
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -140,7 +127,7 @@ const CredentialsManager = ({
       })
       onCreateClose()
       setFormData({ email: "", password: "" })
-      await fetchCredentials()
+      await refetchCredentials()
 
       // Notify parent component that credentials have been updated
       if (onCredentialsUpdate) {
@@ -176,7 +163,7 @@ const CredentialsManager = ({
       })
       onEditClose()
       setFormData({ email: "", password: "" })
-      await fetchCredentials()
+      await refetchCredentials()
 
       // Notify parent component that credentials have been updated
       if (onCredentialsUpdate) {
@@ -217,7 +204,7 @@ const CredentialsManager = ({
       })
       onDeleteClose()
       setCredentialToDelete(null)
-      await fetchCredentials()
+      await refetchCredentials()
 
       // Notify parent component that credentials have been updated
       if (onCredentialsUpdate) {
@@ -260,8 +247,8 @@ const CredentialsManager = ({
         <Flex justifyContent="center" py={8}>
           <Spinner size="lg" />
         </Flex>
-      ) : error ? (
-        <Text color="red.500">{error}</Text>
+      ) : credentialsError ? (
+        <Text color="red.500">Erro ao carregar credenciais</Text>
       ) : credentials.length === 0 ? (
         <Card>
           <CardBody>

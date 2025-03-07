@@ -49,10 +49,8 @@ import {
 } from "react-icons/fi"
 
 import {
-  BotsService,
   type SubscriptionPlanPublic,
   SubscriptionPlansService,
-  type UserDashboardStats,
 } from "../../client"
 import {
   BotSessionManager,
@@ -60,13 +58,22 @@ import {
   SessionDetails,
 } from "../../components/BotManagement"
 import useAuth from "../../hooks/useAuth"
+import useDashboardStats from "../../hooks/useDashboardStats"
 
 export const Route = createFileRoute("/_layout/")({
   component: Dashboard,
 })
 
 function Dashboard() {
+  // Usando apenas o hook useAuth para obter o usuário atual que já contém a propriedade is_subscriber
   const { user: currentUser, isLoading: isLoadingUser } = useAuth()
+  
+  // Usando o hook de estatísticas do dashboard (com cache e compartilhamento)
+  const { 
+    stats: dashboardStats, 
+    isLoading: loadingStats, 
+    refreshStats: refreshDashboardStats 
+  } = useDashboardStats()
   
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(
     null,
@@ -78,9 +85,6 @@ function Dashboard() {
     SubscriptionPlanPublic[]
   >([])
   const [loadingPlans, setLoadingPlans] = useState<boolean>(false)
-  const [dashboardStats, setDashboardStats] =
-    useState<UserDashboardStats | null>(null)
-  const [loadingStats, setLoadingStats] = useState<boolean>(false)
   const [credentialsUpdated, setCredentialsUpdated] = useState<number>(0)
   
   // Estado para controlar a visibilidade do overlay
@@ -95,6 +99,7 @@ function Dashboard() {
     onClose: onSessionDetailsClose,
   } = useDisclosure()
 
+  // Uso direto da propriedade is_subscriber do usuário atual
   const isSubscriber = currentUser?.is_subscriber || false
   
   // Apenas verificamos o status de assinatura baseado nas informações do usuário atual
@@ -107,42 +112,13 @@ function Dashboard() {
         fetchSubscriptionPlans()
         // Não carrega componentes pesados para não-assinantes
         setCanLoadHeavyComponents(false)
-        
-        // Define estatísticas vazias/genéricas para não-assinantes
-        setDashboardStats({
-          total_applications: 0,
-          successful_applications: 0,
-          success_rate: 0,
-          failed_applications: 0,
-          failure_rate: 0,
-          pending_applications: 0,
-          timestamp: new Date().toISOString()
-        })
       } else {
         // Se for assinante, mantém o overlay oculto e permite carregar componentes pesados
         setShowSubscriptionOverlay(false)
         setCanLoadHeavyComponents(true)
-        
-        // Só carrega as estatísticas do dashboard para assinantes
-        fetchDashboardStats()
       }
     }
   }, [isLoadingUser, currentUser, isSubscriber])
-
-  const fetchDashboardStats = async () => {
-    // Verificação adicional de segurança - só busca dados se for assinante
-    if (!isSubscriber) return;
-    
-    setLoadingStats(true)
-    try {
-      const stats = await BotsService.getUserDashboardStats()
-      setDashboardStats(stats)
-    } catch (error) {
-      console.error("Error fetching dashboard stats:", error)
-    } finally {
-      setLoadingStats(false)
-    }
-  }
 
   const fetchSubscriptionPlans = async () => {
     setLoadingPlans(true)
@@ -161,15 +137,7 @@ function Dashboard() {
   }
 
   // Use real stats from API if available, otherwise use empty values
-  const stats = dashboardStats || {
-    total_applications: 0,
-    successful_applications: 0,
-    failed_applications: 0,
-    pending_applications: 0,
-    success_rate: 0,
-    failure_rate: 0,
-    timestamp: "",
-  }
+  const stats = dashboardStats
 
   const handleViewSessionDetails = (sessionId: string) => {
     setSelectedSessionId(sessionId)
@@ -180,131 +148,83 @@ function Dashboard() {
     setSelectedCredentialId(credentialId)
   }
 
-  // Function to call when credentials are updated
   const handleCredentialsUpdate = () => {
     setCredentialsUpdated((prev) => prev + 1)
   }
 
-  // Subscription card styling
-  const highlightColor = useColorModeValue("teal.500", "teal.300")
-  const accentColor = useColorModeValue("teal.500", "teal.300")
-
-  // Mini plan card component for subscription overlay
   const MiniPlanCard = ({ plan }: { plan: SubscriptionPlanPublic }) => {
-    // Format the price correctly (assuming price is in cents)
-    const formattedPrice = new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: plan.currency || "USD",
-      minimumFractionDigits: 0,
-    }).format(plan.price / 100)
+    const highlightColor = useColorModeValue("teal.500", "teal.300")
+    const cardBg = useColorModeValue(
+      "rgba(255, 255, 255, 0.9)",
+      "rgba(26, 32, 44, 0.6)",
+    )
 
-    // Determine metric display
     const metricDisplay = () => {
-      switch (plan.metric_type) {
-        case "applies":
-          return `${plan.metric_value} Applications`
-        case "day":
-          return `${plan.metric_value} Days`
-        case "week":
-          return `${plan.metric_value} Weeks`
-        case "month":
-          return `${plan.metric_value} Months`
-        case "year":
-          return `${plan.metric_value} Years`
+      switch (plan.frequency) {
+        case "monthly":
+          return "month"
+        case "yearly":
+          return "year"
         default:
-          return "Unlimited"
+          return plan.frequency
       }
     }
 
     return (
-      <VStack
-        p={4}
-        bg={useColorModeValue(
-          "rgba(255, 255, 255, 0.01)",
-          "rgba(45, 55, 72, 0.35)",
-        )}
-        backdropFilter="blur(25px)"
-        style={{ WebkitBackdropFilter: "blur(25px)" }}
-        borderRadius="md"
+      <Card
+        bg={cardBg}
         borderWidth="1px"
         borderColor={useColorModeValue(
-          "rgba(209, 213, 219, 0.15)",
+          "rgba(209, 213, 219, 0.4)",
           "rgba(255, 255, 255, 0.1)",
         )}
-        align="flex-start"
-        spacing={2}
-        height="full"
-        boxShadow="md"
+        borderRadius="lg"
+        overflow="hidden"
         transition="all 0.2s"
-        _hover={{
-          transform: "translateY(-2px)",
-          boxShadow: "lg",
-        }}
+        _hover={{ transform: "translateY(-2px)", boxShadow: "md" }}
       >
-        {plan.has_badge && plan.badge_text && (
-          <Badge colorScheme="teal" fontWeight="bold">
-            {plan.badge_text}
-          </Badge>
-        )}
-        <Text
-          fontWeight="bold"
-          fontSize="lg"
-          color={useColorModeValue("gray.800", "white")}
-        >
-          {plan.name}
-        </Text>
-        <HStack>
-          <Text fontWeight="bold" fontSize="xl" color={highlightColor}>
-            {formattedPrice}
-          </Text>
-          {plan.metric_type && (
-            <Text
-              fontSize="sm"
-              color={useColorModeValue("gray.600", "gray.300")}
-            >
-              / {plan.metric_type}
-            </Text>
-          )}
-        </HStack>
-        <Text fontSize="sm" color={useColorModeValue("gray.700", "gray.200")}>
-          {metricDisplay()}
-        </Text>
-
-        {plan.benefits && plan.benefits.length > 0 && (
-          <List spacing={1} mt={2} fontSize="sm" width="full">
-            {plan.benefits.slice(0, 2).map((benefit, index) => (
-              <ListItem key={index}>
-                <Flex align="center">
-                  <ListIcon as={CheckIcon} color={accentColor} />
-                  <Text
-                    noOfLines={1}
-                    color={useColorModeValue("gray.700", "gray.200")}
-                  >
-                    {benefit.name}
-                  </Text>
-                </Flex>
-              </ListItem>
-            ))}
-            {plan.benefits.length > 2 && (
-              <ListItem>
-                <Text ml={6} fontSize="xs" color="gray.500">
-                  +{plan.benefits.length - 2} more benefits
+        <CardBody p={4}>
+          <VStack spacing={2} align="start">
+            <Heading size="md" color={highlightColor}>
+              {plan.name}
+            </Heading>
+            <Flex align="baseline">
+              <Text fontSize="2xl" fontWeight="bold">
+                ${plan.price}
+              </Text>
+              <Text fontSize="sm" color="gray.500" ml={1}>
+                /{metricDisplay()}
+              </Text>
+            </Flex>
+            <List spacing={1} w="full" mt={2}>
+              {plan.features?.slice(0, 2).map((feature, idx) => (
+                <ListItem key={idx} fontSize="sm">
+                  <ListIcon as={CheckIcon} color={highlightColor} />
+                  {feature}
+                </ListItem>
+              ))}
+              {plan.features && plan.features.length > 2 && (
+                <Text fontSize="xs" color="gray.500" ml={6}>
+                  +{plan.features.length - 2} more features
                 </Text>
-              </ListItem>
-            )}
-          </List>
-        )}
-      </VStack>
+              )}
+            </List>
+          </VStack>
+        </CardBody>
+      </Card>
     )
   }
 
+  const highlightColor = useColorModeValue("teal.500", "teal.300")
+
   const formatTimestamp = (timestamp: string) => {
-    if (!timestamp) return ""
-    const date = new Date(timestamp)
-    return date.toLocaleString()
+    try {
+      return new Date(timestamp).toLocaleString()
+    } catch (e) {
+      return "Unknown"
+    }
   }
 
-  // Dashboard content - to be blurred if not subscribed
   const DashboardContent = () => (
     <>
       <Flex justify="space-between" align="center" mb={4}>
@@ -330,7 +250,7 @@ function Dashboard() {
               <Button
                 size="sm"
                 leftIcon={<FiRefreshCw />}
-                onClick={fetchDashboardStats}
+                onClick={refreshDashboardStats}
                 isLoading={loadingStats}
                 minW={{ base: "80px", md: "auto" }}
                 display={{ base: "flex", md: "flex" }}
@@ -378,10 +298,10 @@ function Dashboard() {
               <Stat>
                 <Flex justify="space-between">
                   <Box>
-                    <StatLabel>Successful</StatLabel>
-                    <StatNumber>{stats.successful_applications}</StatNumber>
+                    <StatLabel>Success Rate</StatLabel>
+                    <StatNumber>{stats.success_rate}%</StatNumber>
                     <StatHelpText>
-                      Success Rate: {stats.success_rate}%
+                      {stats.successful_applications} successful
                     </StatHelpText>
                   </Box>
                   <Box>
@@ -404,13 +324,17 @@ function Dashboard() {
                 <Flex justify="space-between">
                   <Box>
                     <StatLabel>Failed</StatLabel>
-                    <StatNumber>{stats.failed_applications}</StatNumber>
+                    <StatNumber>{stats.failure_rate}%</StatNumber>
                     <StatHelpText>
-                      Failure Rate: {stats.failure_rate}%
+                      {stats.failed_applications} applications
                     </StatHelpText>
                   </Box>
                   <Box>
-                    <Icon as={FiAlertTriangle} boxSize={10} color="red.400" />
+                    <Icon
+                      as={FiAlertTriangle}
+                      boxSize={10}
+                      color="red.400"
+                    />
                   </Box>
                 </Flex>
               </Stat>
@@ -476,7 +400,7 @@ function Dashboard() {
           bg={useColorModeValue("gray.50", "gray.700")}
         >
           <Spinner size="sm" mr={2} />
-          <Text>Loading...</Text>
+          <Text>Verificando suas permissões...</Text>
         </Box>
       )}
     </>
