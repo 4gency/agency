@@ -405,7 +405,7 @@ function Dashboard() {
           bg={useColorModeValue("gray.50", "gray.700")}
         >
           <Spinner size="sm" mr={2} />
-          <Text>Verificando suas permissões...</Text>
+          <Text>Loading...</Text>
         </Box>
       )}
     </>
