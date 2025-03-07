@@ -1,3 +1,4 @@
+import { AddIcon } from "@chakra-ui/icons"
 import {
   Flex,
   FormControl,
@@ -9,8 +10,8 @@ import {
   TagCloseButton,
   TagLabel,
 } from "@chakra-ui/react"
-import { AddIcon } from "@chakra-ui/icons"
-import React, { useState } from "react"
+import type React from "react"
+import { useState } from "react"
 
 interface ArrayInputFieldProps {
   label: string
@@ -28,10 +29,10 @@ const ArrayInputField: React.FC<ArrayInputFieldProps> = ({
   items,
   onChange,
   placeholder = "Add new item",
-  onBlur
+  onBlur,
 }) => {
   const [inputValue, setInputValue] = useState("")
-  
+
   const handleAdd = () => {
     const trimmed = inputValue.trim()
     if (!trimmed) {
@@ -84,4 +85,4 @@ const ArrayInputField: React.FC<ArrayInputFieldProps> = ({
   )
 }
 
-export default ArrayInputField 
+export default ArrayInputField

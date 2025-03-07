@@ -1,8 +1,8 @@
+import { useNavigate } from "@tanstack/react-router"
 import { useEffect, useState } from "react"
 import { CheckoutService } from "../client/sdk.gen"
-import { useNavigate } from "@tanstack/react-router"
-import useCustomToast from "./useCustomToast"
 import { is404Error } from "../utils/errorUtils"
+import useCustomToast from "./useCustomToast"
 
 interface UseFailedCheckoutParams {
   authUser: any
@@ -10,10 +10,10 @@ interface UseFailedCheckoutParams {
   sessionId?: string
 }
 
-export function useProcessFailedCheckout({ 
-  authUser, 
-  isLoading, 
-  sessionId 
+export function useProcessFailedCheckout({
+  authUser,
+  isLoading,
+  sessionId,
 }: UseFailedCheckoutParams) {
   const [shouldShowCard, setShouldShowCard] = useState(false)
   const navigate = useNavigate()
@@ -42,7 +42,7 @@ export function useProcessFailedCheckout({
         setShouldShowCard(true)
       } catch (error: unknown) {
         console.error("Error processing failed checkout:", error)
-        
+
         // Use the utility function to check for 404 errors
         if (is404Error(error)) {
           console.log("404 error detected, redirecting to dashboard")
@@ -61,4 +61,4 @@ export function useProcessFailedCheckout({
   }, [authUser, isLoading, sessionId, navigate, showToast])
 
   return { shouldShowCard }
-} 
+}

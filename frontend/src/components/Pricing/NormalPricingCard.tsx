@@ -1,14 +1,14 @@
-import type React from "react"
+import { CheckIcon } from "@chakra-ui/icons"
 import {
   Box,
+  Button,
+  List,
+  ListIcon,
+  ListItem,
   Text,
   VStack,
-  List,
-  ListItem,
-  ListIcon,
-  Button,
 } from "@chakra-ui/react"
-import { CheckIcon } from "@chakra-ui/icons"
+import type React from "react"
 import { useNormalPricingCardTheme } from "./hooks/useNormalPricingCardTheme"
 
 interface NormalPricingCardProps {
@@ -50,10 +50,10 @@ const NormalPricingCard: React.FC<NormalPricingCardProps> = ({
   } = useNormalPricingCardTheme(isLandingPage)
 
   // Define the handler for click event
-  const handleClick = buttonEnabled && onButtonClick ? onButtonClick : undefined;
-  
+  const handleClick = buttonEnabled && onButtonClick ? onButtonClick : undefined
+
   // Check if button is in loading state
-  const isLoading = buttonEnabled && buttonText === "Loading...";
+  const isLoading = buttonEnabled && buttonText === "Loading..."
 
   return (
     <Box
@@ -75,35 +75,39 @@ const NormalPricingCard: React.FC<NormalPricingCardProps> = ({
       pointerEvents={disabled ? "none" : "auto"}
       transition="all 0.3s"
       mx="auto"
-      _hover={!disabled ? { transform: "translateY(-5px)", boxShadow: "md" } : {}}
+      _hover={
+        !disabled ? { transform: "translateY(-5px)", boxShadow: "md" } : {}
+      }
     >
       <VStack align="start" spacing={0.1} height="100%">
         <Text fontSize="2xl" fontWeight="bold" color={textColor}>
           {title}
         </Text>
-        
+
         {hasDiscount && priceWithoutDiscount !== undefined && (
-          <Text fontSize="md" color={discountColor} textDecoration="line-through">
+          <Text
+            fontSize="md"
+            color={discountColor}
+            textDecoration="line-through"
+          >
             ${priceWithoutDiscount.toFixed(2)}
           </Text>
         )}
-        
+
         <Text fontSize="3xl" fontWeight="bold" color={priceColor}>
           ${price.toFixed(2)}/{recurrence}
         </Text>
-        
+
         <List spacing={1} w="100%" mt={2} flex="1" overflow="auto" maxH="180px">
           {benefits.map((benefit, index) => (
             <ListItem key={index} display="flex" alignItems="flex-start" py={1}>
               <ListIcon as={CheckIcon} color={iconColor} boxSize={4} mt="5px" />
-              <Text color={textColor}>
-                {benefit}
-              </Text>
+              <Text color={textColor}>{benefit}</Text>
             </ListItem>
           ))}
         </List>
       </VStack>
-      
+
       {onButtonClick ? (
         <Button
           variant="primary"

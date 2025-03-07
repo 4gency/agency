@@ -17,11 +17,11 @@ export interface ApiError {
  */
 export function is404Error(error: unknown): boolean {
   const apiError = error as ApiError
-  
+
   return !!(
-    (apiError.response && apiError.response.status === 404) || 
-    apiError.status === 404 || 
-    (apiError.message && apiError.message.includes("404")) ||
-    (apiError.name && apiError.name.includes("NotFound"))
+    (apiError.response && apiError.response.status === 404) ||
+    apiError.status === 404 ||
+    apiError.message?.includes("404") ||
+    apiError.name?.includes("NotFound")
   )
-} 
+}

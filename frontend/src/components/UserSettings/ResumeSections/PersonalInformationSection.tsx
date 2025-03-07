@@ -6,9 +6,9 @@ import {
   GridItem,
   Input,
 } from "@chakra-ui/react"
-import { UseFormRegister, FieldErrors } from "react-hook-form"
+import type { FieldErrors, UseFormRegister } from "react-hook-form"
+import type { ResumeForm } from "../types"
 import SectionContainer from "./SectionContainer"
-import { ResumeForm } from "../types"
 
 interface PersonalInformationSectionProps {
   register: UseFormRegister<ResumeForm>
@@ -139,4 +139,4 @@ const PersonalInformationSection: React.FC<PersonalInformationSectionProps> = ({
   )
 }
 
-export default PersonalInformationSection 
+export default PersonalInformationSection

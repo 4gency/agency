@@ -1,3 +1,4 @@
+import { AddIcon, DeleteIcon } from "@chakra-ui/icons"
 import {
   Box,
   Button,
@@ -12,10 +13,15 @@ import {
   Textarea,
   useColorModeValue,
 } from "@chakra-ui/react"
-import { AddIcon, DeleteIcon } from "@chakra-ui/icons"
-import { Control, FieldErrors, UseFormRegister, useFieldArray, UseFormWatch } from "react-hook-form"
+import {
+  type Control,
+  type FieldErrors,
+  type UseFormRegister,
+  type UseFormWatch,
+  useFieldArray,
+} from "react-hook-form"
+import type { ResumeForm } from "../types"
 import SectionContainer from "./SectionContainer"
-import { ResumeForm } from "../types"
 
 interface ProjectsSectionProps {
   register: UseFormRegister<ResumeForm>
@@ -95,10 +101,7 @@ const ProjectsSection: React.FC<ProjectsSectionProps> = ({
 
           <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={4}>
             <GridItem colSpan={{ base: 1, md: 2 }}>
-              <FormControl
-                isInvalid={!!errors.projects?.[index]?.name}
-                mb={4}
-              >
+              <FormControl isInvalid={!!errors.projects?.[index]?.name} mb={4}>
                 <FormLabel>Project Name</FormLabel>
                 <Input
                   {...register(`projects.${index}.name` as const, {
@@ -192,4 +195,4 @@ const ProjectsSection: React.FC<ProjectsSectionProps> = ({
   )
 }
 
-export default ProjectsSection 
+export default ProjectsSection

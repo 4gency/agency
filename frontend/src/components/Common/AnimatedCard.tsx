@@ -1,15 +1,15 @@
-import { Card, CardProps } from "@chakra-ui/react"
-import { useState, useEffect } from "react"
+import { Card, type CardProps } from "@chakra-ui/react"
+import { useEffect, useState } from "react"
 
 interface AnimatedCardProps extends CardProps {
   children: React.ReactNode
   animationDelay?: number
 }
 
-export function AnimatedCard({ 
-  children, 
-  animationDelay = 200, 
-  ...props 
+export function AnimatedCard({
+  children,
+  animationDelay = 200,
+  ...props
 }: AnimatedCardProps) {
   const [animate, setAnimate] = useState(false)
 
@@ -28,4 +28,4 @@ export function AnimatedCard({
       {children}
     </Card>
   )
-} 
+}

@@ -1,14 +1,16 @@
-import { 
-  FormControl,
-} from "@chakra-ui/react"
-import { UseFormGetValues, UseFormWatch } from "react-hook-form"
-import SectionContainer from "./SectionContainer"
-import { ResumeForm } from "../types"
-import ArrayInputField from "./ArrayInputField"
+import { FormControl } from "@chakra-ui/react"
 import { useEffect } from "react"
+import type { UseFormGetValues, UseFormWatch } from "react-hook-form"
+import type { ResumeForm } from "../types"
+import ArrayInputField from "./ArrayInputField"
+import SectionContainer from "./SectionContainer"
 
 interface SkillsSectionProps {
-  setValue: (field: "skills", value: string[], options?: {shouldDirty?: boolean}) => void
+  setValue: (
+    field: "skills",
+    value: string[],
+    options?: { shouldDirty?: boolean },
+  ) => void
   getValues: UseFormGetValues<ResumeForm>
   watch?: UseFormWatch<ResumeForm>
 }
@@ -16,7 +18,7 @@ interface SkillsSectionProps {
 const SkillsSection: React.FC<SkillsSectionProps> = ({
   setValue,
   getValues,
-  watch
+  watch,
 }) => {
   // Garantir que skills sempre seja um array válido
   useEffect(() => {
@@ -29,7 +31,7 @@ const SkillsSection: React.FC<SkillsSectionProps> = ({
   // Obter skills do formulário utilizando watch se disponível, caso contrário usar getValues
   // Isso garante reatividade quando o hook watch está disponível
   const skills = watch ? watch("skills") : getValues("skills") || []
-  
+
   // Sempre garantir que temos um array válido para exibição
   const displaySkills = Array.isArray(skills) ? skills : []
 
@@ -48,4 +50,4 @@ const SkillsSection: React.FC<SkillsSectionProps> = ({
   )
 }
 
-export default SkillsSection 
+export default SkillsSection

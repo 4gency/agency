@@ -1,5 +1,5 @@
-import { Flex, Icon, FlexProps } from "@chakra-ui/react"
-import React from "react"
+import { Flex, type FlexProps, Icon } from "@chakra-ui/react"
+import type React from "react"
 
 interface CircleIconProps extends FlexProps {
   icon: React.ElementType
@@ -29,4 +29,4 @@ export function CircleIcon({
       <Icon as={icon} w={iconSize} h={iconSize} color={color} />
     </Flex>
   )
-} 
+}

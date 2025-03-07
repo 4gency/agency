@@ -1,12 +1,7 @@
-import {
-  Checkbox,
-  CheckboxGroup,
-  FormControl,
-  Stack,
-} from "@chakra-ui/react"
-import { UseFormRegister } from "react-hook-form"
+import { Checkbox, CheckboxGroup, FormControl, Stack } from "@chakra-ui/react"
+import type { UseFormRegister } from "react-hook-form"
+import type { ResumeForm } from "../types"
 import SectionContainer from "./SectionContainer"
-import { ResumeForm } from "../types"
 
 interface WorkPreferenceSectionProps {
   register: UseFormRegister<ResumeForm>
@@ -20,12 +15,8 @@ const WorkPreferenceSection: React.FC<WorkPreferenceSectionProps> = ({
       <FormControl>
         <CheckboxGroup colorScheme="teal">
           <Stack spacing={[1, 5]} direction={{ base: "column", md: "row" }}>
-            <Checkbox {...register("work_preference.remote")}>
-              Remote
-            </Checkbox>
-            <Checkbox {...register("work_preference.hybrid")}>
-              Hybrid
-            </Checkbox>
+            <Checkbox {...register("work_preference.remote")}>Remote</Checkbox>
+            <Checkbox {...register("work_preference.hybrid")}>Hybrid</Checkbox>
             <Checkbox {...register("work_preference.on_site")}>
               On-site
             </Checkbox>
@@ -39,4 +30,4 @@ const WorkPreferenceSection: React.FC<WorkPreferenceSectionProps> = ({
   )
 }
 
-export default WorkPreferenceSection 
+export default WorkPreferenceSection

@@ -25,7 +25,7 @@ import {
 } from "@chakra-ui/react"
 import { useMutation } from "@tanstack/react-query"
 import type React from "react"
-import { useEffect, useState, useLayoutEffect, useRef } from "react"
+import { useEffect, useLayoutEffect, useRef, useState } from "react"
 import { useForm } from "react-hook-form"
 import { type ApiError, type ConfigPublic, ConfigsService } from "../../client"
 
@@ -259,27 +259,33 @@ const ArrayInput: React.FC<ArrayInputProps> = ({
 const LoadingSkeleton = () => {
   return (
     <Box width="full">
-      <SkeletonText mt="4" noOfLines={1} spacing="4" skeletonHeight="10" width="200px" />
-      
+      <SkeletonText
+        mt="4"
+        noOfLines={1}
+        spacing="4"
+        skeletonHeight="10"
+        width="200px"
+      />
+
       <Skeleton height="40px" mt="8" width="150px" />
-      
+
       <Flex wrap="wrap" gap={2} mt="6">
         <Skeleton height="35px" width="100px" />
         <Skeleton height="35px" width="90px" />
         <Skeleton height="35px" width="120px" />
       </Flex>
-      
+
       <Skeleton height="40px" mt="8" width="150px" />
-      
+
       <Flex wrap="wrap" gap={2} mt="6">
         <Skeleton height="35px" width="100px" />
         <Skeleton height="35px" width="110px" />
         <Skeleton height="35px" width="90px" />
       </Flex>
-      
+
       <Skeleton height="140px" mt="8" />
       <Skeleton height="140px" mt="8" />
-      
+
       <Skeleton height="40px" mt="8" width="150px" />
     </Box>
   )
@@ -337,30 +343,32 @@ const JobPreferencesPage: React.FC = () => {
       // Forçar a restauração da posição do scroll após o React terminar de renderizar
       window.scrollTo({
         top: scrollPosition,
-        behavior: 'auto'
-      });
+        behavior: "auto",
+      })
     }
-  }, [isDataLoaded, scrollPosition]);
+  }, [isDataLoaded, scrollPosition])
 
   /** When a subscription is selected, fetch the config and populate the form. */
   useEffect(() => {
     if (selectedSubId) {
-      setIsDataLoaded(false);
-      
+      setIsDataLoaded(false)
+
       // Captura a altura atual do container antes de buscar os dados
       if (pageContainerRef.current) {
-        setContainerHeight(pageContainerRef.current.getBoundingClientRect().height);
+        setContainerHeight(
+          pageContainerRef.current.getBoundingClientRect().height,
+        )
       }
 
       // Store current scroll position before updating form
       const currentScrollPosition = window.scrollY
       setScrollPosition(currentScrollPosition)
-      
+
       ConfigsService.getConfig({ subscriptionId: selectedSubId })
         .then((config) => {
           // Transform API config -> form shape
           const transformed = transformToForm(config)
-          
+
           // Use reset with callback para garantir conclusão da atualização
           reset(transformed, {
             keepDirty: false,
@@ -371,30 +379,30 @@ const JobPreferencesPage: React.FC = () => {
             keepTouched: false,
             keepIsValid: false,
             keepSubmitCount: false,
-          });
-          
+          })
+
           // Usar múltiplos timeouts para garantir que o DOM seja atualizado completamente
           setTimeout(() => {
             window.scrollTo({
               top: currentScrollPosition,
-              behavior: 'auto'
-            });
-          }, 100);
-          
+              behavior: "auto",
+            })
+          }, 100)
+
           setTimeout(() => {
             window.scrollTo({
               top: currentScrollPosition,
-              behavior: 'auto'
-            });
-            setIsDataLoaded(true);
-            setContainerHeight(null); // Remover a altura fixa após o carregamento
-          }, 300);
+              behavior: "auto",
+            })
+            setIsDataLoaded(true)
+            setContainerHeight(null) // Remover a altura fixa após o carregamento
+          }, 300)
         })
         .catch((err: ApiError) => {
           const detail = (err.body as any)?.detail || err.message
           showToast("Error fetching preferences", String(detail), "error")
-          setIsDataLoaded(true);
-          setContainerHeight(null); // Remover a altura fixa em caso de erro
+          setIsDataLoaded(true)
+          setContainerHeight(null) // Remover a altura fixa em caso de erro
         })
     }
   }, [selectedSubId, reset, showToast])
@@ -469,12 +477,12 @@ const JobPreferencesPage: React.FC = () => {
   const hasSubscriptions = subscriptions && subscriptions.length > 0
 
   return (
-    <Container 
-      maxW={{ base: "full", md: "60%" }} 
-      ml={{ base: 0, md: 0 }} 
-      pb="100px" 
+    <Container
+      maxW={{ base: "full", md: "60%" }}
+      ml={{ base: 0, md: 0 }}
+      pb="100px"
       ref={pageContainerRef}
-      h={containerHeight ? `${containerHeight}px` : 'auto'}
+      h={containerHeight ? `${containerHeight}px` : "auto"}
       position="relative"
     >
       <Heading size="lg" textAlign={{ base: "center", md: "left" }} py={12}>
@@ -618,7 +626,10 @@ const JobPreferencesPage: React.FC = () => {
                   : useColorModeValue("gray.100", "gray.700"),
               }}
               onClick={() =>
-                setValue("apply_once_at_company", !watch("apply_once_at_company"))
+                setValue(
+                  "apply_once_at_company",
+                  !watch("apply_once_at_company"),
+                )
               }
             >
               {watch("apply_once_at_company")

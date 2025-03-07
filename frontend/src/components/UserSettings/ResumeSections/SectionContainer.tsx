@@ -1,6 +1,6 @@
-import { Box, Divider, Flex, Heading, HStack } from "@chakra-ui/react"
 import { InfoIcon } from "@chakra-ui/icons"
-import React from "react"
+import { Box, Divider, Flex, HStack, Heading } from "@chakra-ui/react"
+import type React from "react"
 
 interface SectionContainerProps {
   title: string
@@ -11,12 +11,18 @@ interface SectionContainerProps {
 /**
  * Componente reutilizável para padronizar o layout de cada seção do formulário de Resume
  */
-const SectionContainer: React.FC<SectionContainerProps> = ({ title, children, actionButton }) => {
+const SectionContainer: React.FC<SectionContainerProps> = ({
+  title,
+  children,
+  actionButton,
+}) => {
   return (
     <Box mb={8}>
       <Flex justify="space-between" align="center" mb={4}>
         <HStack spacing={2}>
-          <Heading size="md" color="#00766C">{title}</Heading>
+          <Heading size="md" color="#00766C">
+            {title}
+          </Heading>
           <InfoIcon color="gray.400" />
         </HStack>
         {actionButton}
@@ -27,4 +33,4 @@ const SectionContainer: React.FC<SectionContainerProps> = ({ title, children, ac
   )
 }
 
-export default SectionContainer 
+export default SectionContainer

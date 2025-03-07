@@ -1,16 +1,16 @@
-import type React from "react"
+import { CheckIcon } from "@chakra-ui/icons"
 import {
+  Badge,
   Box,
+  Button,
+  List,
+  ListIcon,
+  ListItem,
   Text,
   VStack,
-  List,
-  ListItem,
-  ListIcon,
-  Button,
-  Badge,
   useBreakpointValue,
 } from "@chakra-ui/react"
-import { CheckIcon } from "@chakra-ui/icons"
+import type React from "react"
 import { useBadgePricingCardTheme } from "./hooks/useBadgePricingCardTheme"
 
 interface BadgePricingCardProps {
@@ -53,31 +53,31 @@ const BadgePricingCard: React.FC<BadgePricingCardProps> = ({
     badgeColor,
   } = useBadgePricingCardTheme(isLandingPage)
 
-  const handleClick = buttonEnabled && onButtonClick ? onButtonClick : undefined;
+  const handleClick = buttonEnabled && onButtonClick ? onButtonClick : undefined
 
   // Check if button is in loading state
-  const isLoading = buttonEnabled && buttonText === "Loading...";
+  const isLoading = buttonEnabled && buttonText === "Loading..."
 
   // Responsividade extrema para a largura do card
-  const minWidth = useBreakpointValue({ 
-    base: "240px", 
-    xs: "260px", 
-    sm: "280px", 
-    md: "320px" 
-  });
-  
+  const minWidth = useBreakpointValue({
+    base: "240px",
+    xs: "260px",
+    sm: "280px",
+    md: "320px",
+  })
+
   // Padding responsivo para dispositivos muito pequenos
-  const horizontalPadding = useBreakpointValue({ 
-    base: 3, 
-    sm: 4, 
-    md: 6 
-  });
-  
+  const horizontalPadding = useBreakpointValue({
+    base: 3,
+    sm: 4,
+    md: 6,
+  })
+
   // Ajustar tamanho de fonte para dispositivos muito pequenos
-  const titleFontSize = useBreakpointValue({ base: "xl", sm: "2xl" });
-  const priceFontSize = useBreakpointValue({ base: "2xl", sm: "3xl" });
-  const benefitFontSize = useBreakpointValue({ base: "sm", sm: "md" });
-  const badgeFontSize = useBreakpointValue({ base: "xs", sm: "sm" });
+  const titleFontSize = useBreakpointValue({ base: "xl", sm: "2xl" })
+  const priceFontSize = useBreakpointValue({ base: "2xl", sm: "3xl" })
+  const benefitFontSize = useBreakpointValue({ base: "sm", sm: "md" })
+  const badgeFontSize = useBreakpointValue({ base: "xs", sm: "sm" })
 
   return (
     <Box
@@ -123,21 +123,30 @@ const BadgePricingCard: React.FC<BadgePricingCardProps> = ({
         <Text fontSize={titleFontSize} fontWeight="bold" color={highlightColor}>
           {title}
         </Text>
-        
+
         {hasDiscount && priceWithoutDiscount !== undefined && (
-          <Text fontSize={benefitFontSize} color={discountColor} textDecoration="line-through">
+          <Text
+            fontSize={benefitFontSize}
+            color={discountColor}
+            textDecoration="line-through"
+          >
             ${priceWithoutDiscount.toFixed(2)}
           </Text>
         )}
-        
+
         <Text fontSize={priceFontSize} fontWeight="bold" color={priceColor}>
           ${price.toFixed(2)}/{recurrence}
         </Text>
-        
+
         <List spacing={1} w="100%" mt={2} flex="1" overflow="auto" maxH="180px">
           {benefits.map((benefit, index) => (
             <ListItem key={index} display="flex" alignItems="flex-start" py={1}>
-              <ListIcon as={CheckIcon} color={highlightColor} boxSize={4} mt="5px" />
+              <ListIcon
+                as={CheckIcon}
+                color={highlightColor}
+                boxSize={4}
+                mt="5px"
+              />
               <Text color={textColor} fontSize={benefitFontSize}>
                 {benefit}
               </Text>
@@ -145,7 +154,7 @@ const BadgePricingCard: React.FC<BadgePricingCardProps> = ({
           ))}
         </List>
       </VStack>
-      
+
       {onButtonClick ? (
         <Button
           variant="primary"

@@ -24,14 +24,14 @@ interface DeleteProps {
   id?: string
 }
 
-const DeleteAlert = ({ 
-  title = "Delete Confirmation", 
+const DeleteAlert = ({
+  title = "Delete Confirmation",
   message = "Are you sure? You will not be able to undo this action.",
-  type, 
-  id, 
-  isOpen, 
+  type,
+  id,
+  isOpen,
   onClose,
-  onDelete
+  onDelete,
 }: DeleteProps) => {
   const queryClient = useQueryClient()
   const showToast = useCustomToast()
@@ -78,13 +78,13 @@ const DeleteAlert = ({
   const onSubmit = async () => {
     if (onDelete) {
       try {
-        await onDelete();
-        onClose();
+        await onDelete()
+        onClose()
       } catch (error) {
-        console.error("Error in custom delete function:", error);
+        console.error("Error in custom delete function:", error)
       }
     } else if (id && type) {
-      mutation.mutate();
+      mutation.mutate()
     }
   }
 

@@ -10,8 +10,8 @@ export const Route = createFileRoute("/_layout/settings/subscription/")({
 
 function SubscriptionIndexPage() {
   console.log("Renderizando página de índice de assinatura")
-  
+
   // Esta página agora apenas retorna um componente vazio
   // Ela existe apenas para satisfazer a estrutura de rotas
   return null
-} 
+}

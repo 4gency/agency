@@ -1,8 +1,8 @@
 import { useNavigate } from "@tanstack/react-router"
+import { useRef, useState } from "react"
 import { CheckoutService } from "../client"
-import useCustomToast from "./useCustomToast"
 import useAuth from "./useAuth"
-import { useState, useRef } from "react"
+import useCustomToast from "./useCustomToast"
 
 export const useCheckoutHandler = () => {
   const { user, isLoading: isAuthLoading } = useAuth()
@@ -21,7 +21,8 @@ export const useCheckoutHandler = () => {
   const isPlanLoading = (planId: string): boolean => !!loadingPlans[planId]
 
   // Check if any plan is in loading state
-  const isAnyPlanLoading = (): boolean => Object.values(loadingPlans).some(loading => loading)
+  const isAnyPlanLoading = (): boolean =>
+    Object.values(loadingPlans).some((loading) => loading)
 
   // Save selected plan ID for non-logged in users
   const saveSelectedPlan = (planId: string) => {
@@ -29,7 +30,7 @@ export const useCheckoutHandler = () => {
       // Store both the ID and a timestamp
       const planData = {
         id: planId,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       }
       localStorage.setItem("selected_sub_plan_id", JSON.stringify(planData))
     } catch (error) {
@@ -54,14 +55,14 @@ export const useCheckoutHandler = () => {
         // Try to parse as JSON (new format with timestamp)
         const planData = JSON.parse(storedPlan)
         planId = planData.id
-        
+
         // Check if the stored plan selection is too old (e.g., 24 hours)
         const ONE_DAY = 24 * 60 * 60 * 1000
         if (Date.now() - planData.timestamp > ONE_DAY) {
           showToast(
             "Subscription Selection Expired",
             "Your subscription selection has expired. Please select a plan again.",
-            "error"
+            "error",
           )
           return
         }
@@ -77,7 +78,7 @@ export const useCheckoutHandler = () => {
       showToast(
         "Checkout Error",
         "There was an error processing your subscription selection.",
-        "error"
+        "error",
       )
     }
   }
@@ -90,7 +91,7 @@ export const useCheckoutHandler = () => {
       console.log("Debouncing checkout attempt")
       return
     }
-    
+
     // Check if this plan is already loading
     if (isPlanLoading(planId)) {
       console.log(`Plan ${planId} checkout is already in progress`)
@@ -101,36 +102,38 @@ export const useCheckoutHandler = () => {
     if (planId in ongoingCheckouts.current) {
       return ongoingCheckouts.current[planId]
     }
-    
+
     // Set loading state and update timestamp
-    setLoadingPlans(prev => ({ ...prev, [planId]: true }))
+    setLoadingPlans((prev) => ({ ...prev, [planId]: true }))
     lastCheckoutAttempt.current = now
 
     // Create a new checkout promise
     const checkoutPromise = (async () => {
       try {
-        const checkoutSession = await CheckoutService.createStripeCheckoutSession({
-          subscriptionPlanId: planId
-        })
-        
+        const checkoutSession =
+          await CheckoutService.createStripeCheckoutSession({
+            subscriptionPlanId: planId,
+          })
+
         if (checkoutSession.session_url) {
           // Add an event for the "beforeunload" to handle closing the tab/window
           const handleBeforeUnload = () => {
             // Clear loading state if the page is unloaded
-            setLoadingPlans(prev => ({ ...prev, [planId]: false }))
+            setLoadingPlans((prev) => ({ ...prev, [planId]: false }))
           }
-          
-          window.addEventListener('beforeunload', handleBeforeUnload, { once: true })
-          
+
+          window.addEventListener("beforeunload", handleBeforeUnload, {
+            once: true,
+          })
+
           // Redirect to Stripe checkout
           window.location.href = checkoutSession.session_url
           return checkoutSession
-        } else {
-          throw new Error("No checkout URL returned")
         }
+        throw new Error("No checkout URL returned")
       } catch (error: any) {
         let errorMessage = "There was an error creating your checkout session."
-        
+
         // Provide more specific error messages
         if (error.status === 404) {
           errorMessage = "The subscription plan is no longer available."
@@ -139,19 +142,20 @@ export const useCheckoutHandler = () => {
         } else if (error.status >= 500) {
           errorMessage = "Server error. Please try again later."
         } else if (!navigator.onLine) {
-          errorMessage = "You appear to be offline. Please check your internet connection."
+          errorMessage =
+            "You appear to be offline. Please check your internet connection."
         }
-        
+
         console.error("Error creating checkout session:", error)
         showToast("Checkout Error", errorMessage, "error")
         throw error
       } finally {
         // Clear loading state and ongoing checkout reference
-        setLoadingPlans(prev => ({ ...prev, [planId]: false }))
+        setLoadingPlans((prev) => ({ ...prev, [planId]: false }))
         delete ongoingCheckouts.current[planId]
       }
     })()
-    
+
     // Store the promise for reuse if another click happens
     ongoingCheckouts.current[planId] = checkoutPromise
 
@@ -162,14 +166,14 @@ export const useCheckoutHandler = () => {
   const handleSubscribeClick = async (planId: string) => {
     // Prevent action if already loading
     if (isPlanLoading(planId)) return
-    
+
     // User is not logged in - save selection and redirect to signup
     if (!user && !isAuthLoading) {
       saveSelectedPlan(planId)
       navigate({ to: "/signup" })
       return
     }
-    
+
     // User is logged in - create checkout session and redirect
     if (user) {
       try {
@@ -185,6 +189,6 @@ export const useCheckoutHandler = () => {
     handleSubscribeClick,
     checkForSelectedPlan,
     isPlanLoading,
-    isAnyPlanLoading
+    isAnyPlanLoading,
   }
-} 
+}
