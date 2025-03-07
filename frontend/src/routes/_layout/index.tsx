@@ -41,9 +41,7 @@ import { FiUsers, FiActivity, FiBriefcase, FiAlertTriangle, FiLock } from "react
 import { CheckIcon } from "@chakra-ui/icons";
 
 import useAuth from "../../hooks/useAuth";
-import CredentialsManager from "../../components/BotManagement/CredentialsManager";
-import BotSessionManager from "../../components/BotManagement/BotSessionManager";
-import SessionDetails from "../../components/BotManagement/SessionDetails";
+import { CredentialsManager, BotSessionManager, SessionDetails } from "../../components/BotManagement";
 import useSubscriptions from "../../hooks/userSubscriptions";
 import { SubscriptionPlansService, type SubscriptionPlanPublic } from "../../client";
 
@@ -270,7 +268,7 @@ function Dashboard() {
 
         <TabPanels>
           <TabPanel px={0}>
-            <BotSessionManager />
+            <BotSessionManager onViewDetails={handleViewSessionDetails} />
           </TabPanel>
           <TabPanel px={0}>
             <CredentialsManager 
@@ -407,10 +405,18 @@ function Dashboard() {
           size="full"
         >
           <ModalOverlay />
-          <ModalContent>
-            <ModalHeader>Session Details</ModalHeader>
-            <ModalCloseButton />
-            <ModalBody pb={6}>
+          <ModalContent maxW={{ base: "100%", lg: "90%" }} maxH="90vh">
+            <ModalHeader 
+              display="flex" 
+              justifyContent="space-between" 
+              alignItems="center"
+              borderBottomWidth="1px"
+              pb={4}
+            >
+              <Text>Bot Session Details</Text>
+              <ModalCloseButton position="static" />
+            </ModalHeader>
+            <ModalBody pb={6} overflow="auto">
               <SessionDetails 
                 sessionId={selectedSessionId}
                 onClose={onSessionDetailsClose}

@@ -52,11 +52,15 @@ import {
   FiTrash2,
   FiChevronRight
 } from "react-icons/fi";
-import { BotsService, type SessionCreate, type BotSession, type BotSessionStatus, type BotStyleChoice, type CredentialsPublic, CredentialsService } from "../../client";
+import { BotsService, type SessionCreate, type BotSessionStatus, type BotStyleChoice, type CredentialsPublic, CredentialsService, type SessionPublic } from "../../client";
 import DeleteAlert from "../Common/DeleteAlert";
 
 type SessionStatusBadgeProps = {
   status: BotSessionStatus;
+};
+
+type BotSessionManagerProps = {
+  onViewDetails?: (sessionId: string) => void;
 };
 
 const SessionStatusBadge = ({ status }: SessionStatusBadgeProps) => {
@@ -104,8 +108,8 @@ const SessionStatusBadge = ({ status }: SessionStatusBadgeProps) => {
   return <Badge colorScheme={color}>{label}</Badge>;
 };
 
-const BotSessionManager = () => {
-  const [sessions, setSessions] = useState<BotSession[]>([]);
+const BotSessionManager = ({ onViewDetails }: BotSessionManagerProps) => {
+  const [sessions, setSessions] = useState<SessionPublic[]>([]);
   const [credentials, setCredentials] = useState<CredentialsPublic[]>([]);
   const [selectedCredentialId, setSelectedCredentialId] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
@@ -377,13 +381,20 @@ const BotSessionManager = () => {
   };
 
   // Calculate success rate
-  const calculateSuccessRate = (session: BotSession) => {
+  const calculateSuccessRate = (session: SessionPublic) => {
     if (!session.total_applied || session.total_applied === 0) return 0;
     return Math.round((session.total_success || 0) / session.total_applied * 100);
   };
 
+  // Handle view details
+  const handleViewDetails = (sessionId: string) => {
+    if (onViewDetails) {
+      onViewDetails(sessionId);
+    }
+  };
+
   // Render action buttons based on session status
-  const renderActionButtons = (session: BotSession) => {
+  const renderActionButtons = (session: SessionPublic) => {
     switch (session.status) {
       case "running":
         return (
@@ -527,7 +538,7 @@ const BotSessionManager = () => {
                   <HStack>
                     <SessionStatusBadge status={session.status!} />
                     <Text fontWeight="bold">
-                      {session.kubernetes_pod_name?.split('-').pop()}
+                      {session.kubernetes_pod_name?.split('-').pop() || "Session"}
                     </Text>
                   </HStack>
                   <HStack>
@@ -538,6 +549,7 @@ const BotSessionManager = () => {
                         icon={<FiChevronRight />}
                         size="sm"
                         variant="ghost"
+                        onClick={() => handleViewDetails(session.id!)}
                       />
                     </Tooltip>
                   </HStack>
