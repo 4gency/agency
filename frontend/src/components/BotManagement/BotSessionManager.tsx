@@ -47,12 +47,11 @@ import {
   FiPlus, 
   FiInfo, 
   FiActivity, 
-  FiList,
   FiAlertCircle,
   FiTrash2,
   FiChevronRight
 } from "react-icons/fi";
-import { BotsService, type SessionCreate, type BotSessionStatus, type BotStyleChoice, type CredentialsPublic, CredentialsService, type SessionPublic } from "../../client";
+import { BotsService, type SessionCreate, type BotSessionStatus, type CredentialsPublic, CredentialsService, type SessionPublic } from "../../client";
 import DeleteAlert from "../Common/DeleteAlert";
 
 type SessionStatusBadgeProps = {
@@ -111,15 +110,13 @@ const SessionStatusBadge = ({ status }: SessionStatusBadgeProps) => {
 const BotSessionManager = ({ onViewDetails }: BotSessionManagerProps) => {
   const [sessions, setSessions] = useState<SessionPublic[]>([]);
   const [credentials, setCredentials] = useState<CredentialsPublic[]>([]);
-  const [selectedCredentialId, setSelectedCredentialId] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingAction, setIsLoadingAction] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sessionToDelete, setSessionToDelete] = useState<string | null>(null);
   const [formData, setFormData] = useState<SessionCreate>({
     credentials_id: "",
-    applies_limit: 100,
-    style: "Modern Blue",
+    applies_limit: 200
   });
 
   const { isOpen: isCreateOpen, onOpen: onCreateOpen, onClose: onCreateClose } = useDisclosure();
@@ -167,7 +164,6 @@ const BotSessionManager = ({ onViewDetails }: BotSessionManagerProps) => {
           ...prev,
           credentials_id: response.items[0].id
         }));
-        setSelectedCredentialId(response.items[0].id);
       }
     } catch (err) {
       console.error("Error fetching credentials:", err);
@@ -189,15 +185,6 @@ const BotSessionManager = ({ onViewDetails }: BotSessionManagerProps) => {
     });
   };
 
-  // Handle credential selection
-  const handleCredentialSelect = (credentialId: string) => {
-    setSelectedCredentialId(credentialId);
-    setFormData({
-      ...formData,
-      credentials_id: credentialId,
-    });
-  };
-
   // Handle session creation
   const handleCreateSession = async () => {
     try {
@@ -214,8 +201,7 @@ const BotSessionManager = ({ onViewDetails }: BotSessionManagerProps) => {
       onCreateClose();
       setFormData({
         ...formData,
-        applies_limit: 100,
-        style: "Modern Blue",
+        applies_limit: 200,
       });
       fetchSessions();
     } catch (err) {
@@ -538,7 +524,7 @@ const BotSessionManager = ({ onViewDetails }: BotSessionManagerProps) => {
                   <HStack>
                     <SessionStatusBadge status={session.status!} />
                     <Text fontWeight="bold">
-                      {session.kubernetes_pod_name?.split('-').pop() || "Session"}
+                      {session.id?.substring(0, 8) || "Session"}
                     </Text>
                   </HStack>
                   <HStack>

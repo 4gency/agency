@@ -301,7 +301,7 @@ const CredentialsManager = ({ onCredentialSelect, selectedCredentialId }: Creden
                 <FormLabel>Email</FormLabel>
                 <Input
                   name="email"
-                  value={formData.email}
+                  value={formData.email || ""}
                   onChange={handleInputChange}
                   placeholder="example@linkedin.com"
                 />
@@ -345,7 +345,7 @@ const CredentialsManager = ({ onCredentialSelect, selectedCredentialId }: Creden
                 <FormLabel>Email</FormLabel>
                 <Input
                   name="email"
-                  value={formData.email}
+                  value={formData.email || ""}
                   onChange={handleInputChange}
                   placeholder="example@linkedin.com"
                 />

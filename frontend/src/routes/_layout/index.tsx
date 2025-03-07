@@ -388,7 +388,7 @@ function Dashboard() {
     // For 2 or more plans, display up to 2 plans in a grid
     return (
       <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4} width="full">
-        {subscriptionPlans.slice(0, 2).map((plan, index) => (
+        {subscriptionPlans.slice(0, 2).map((plan) => (
           <MiniPlanCard key={plan.id} plan={plan} />
         ))}
       </SimpleGrid>

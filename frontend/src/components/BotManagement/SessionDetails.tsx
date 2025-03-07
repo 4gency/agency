@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   Box,
   Button,
@@ -12,7 +12,6 @@ import {
   TabPanel,
   Card,
   CardBody,
-  Stack,
   Stat,
   StatLabel,
   StatNumber,
@@ -47,10 +46,6 @@ import {
   SimpleGrid,
 } from "@chakra-ui/react";
 import { 
-  FiAlertCircle, 
-  FiCheckCircle, 
-  FiClock, 
-  FiInfo,
   FiRefreshCw,
   FiExternalLink
 } from "react-icons/fi";
@@ -60,13 +55,11 @@ import {
   EventsService, 
   ActionsService, 
   AppliesService,
-  type BotSession, 
   type EventPublic, 
   type UserActionPublic,
   type ApplyPublic,
   type EventSummary,
   type ApplySummary,
-  type ActionResponse,
   type SessionPublic
 } from "../../client";
 
@@ -264,21 +257,10 @@ const SessionOverview = ({ session }: { session: SessionPublic }) => {
             <Text fontWeight="semibold">Session ID</Text>
             <Text fontSize="sm" mb={2}>{session.id}</Text>
             
-            <Text fontWeight="semibold">Pod Name</Text>
-            <Text fontSize="sm" mb={2}>{session.kubernetes_pod_name}</Text>
-            
             <Text fontWeight="semibold">Status</Text>
             <HStack mb={2}>
               <StatusBadge status={session.status} />
-              <Text fontSize="sm">{session.last_status_message}</Text>
             </HStack>
-            
-            {session.error_message && (
-              <>
-                <Text fontWeight="semibold" color="red.500">Error</Text>
-                <Text fontSize="sm" color="red.500" mb={2}>{session.error_message}</Text>
-              </>
-            )}
           </Box>
           
           <Box>
@@ -575,20 +557,24 @@ type SessionDetailsProps = {
 };
 
 const SessionDetails = ({ sessionId, onClose }: SessionDetailsProps) => {
+  // Session data
   const [session, setSession] = useState<SessionPublic | null>(null);
   const [events, setEvents] = useState<EventPublic[]>([]);
   const [eventSummary, setEventSummary] = useState<EventSummary | null>(null);
-  const [actions, setActions] = useState<UserActionPublic[]>([]);
   const [applies, setApplies] = useState<ApplyPublic[]>([]);
   const [applySummary, setApplySummary] = useState<ApplySummary | null>(null);
+  const [actions, setActions] = useState<UserActionPublic[]>([]);
+  
+  // Loading states
+  const [isLoadingEvents, setIsLoadingEvents] = useState(true);
+  const [isLoadingActions, setIsLoadingActions] = useState(true);
+  const [isLoadingApplies, setIsLoadingApplies] = useState(true);
+  
+  // Action response handling
   const [selectedAction, setSelectedAction] = useState<UserActionPublic | null>(null);
   const [actionResponse, setActionResponse] = useState<string>("");
   
   const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingSession, setIsLoadingSession] = useState(true);
-  const [isLoadingEvents, setIsLoadingEvents] = useState(true);
-  const [isLoadingActions, setIsLoadingActions] = useState(true);
-  const [isLoadingApplies, setIsLoadingApplies] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
@@ -644,7 +630,7 @@ const SessionDetails = ({ sessionId, onClose }: SessionDetailsProps) => {
 
   // Fetch session details
   const fetchSession = async () => {
-    setIsLoadingSession(true);
+    setIsLoading(true);
     try {
       const data = await BotsService.getBotSession({ sessionId });
       setSession(data);
@@ -658,7 +644,7 @@ const SessionDetails = ({ sessionId, onClose }: SessionDetailsProps) => {
         isClosable: true,
       });
     } finally {
-      setIsLoadingSession(false);
+      setIsLoading(false);
     }
   };
 
