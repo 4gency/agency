@@ -13,7 +13,7 @@ from app.services.apply import ApplyService
 class ApplyPublic(SQLModel):
     """Modelo para exibição pública de uma aplicação de emprego"""
 
-    id: UUID
+    id: int
     bot_session_id: UUID
     status: BotApplyStatus = BotApplyStatus.SUCCESS
     total_time: int = Field(default=0, description="Total time in seconds")

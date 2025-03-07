@@ -1,5 +1,6 @@
 from typing import Any
 from uuid import UUID
+from datetime import datetime
 
 from fastapi import APIRouter, HTTPException, status
 from sqlmodel import SQLModel
@@ -21,13 +22,13 @@ class UserActionPublic(SQLModel):
 
     id: UUID
     bot_session_id: UUID
-    type: UserActionType
-    message: str
-    details: dict[str, Any] | None = None
-    completed: bool
+    action_type: UserActionType
+    description: str
+    input_field: str | None = None
+    is_completed: bool
     user_input: str | None = None
-    created_at: str
-    completed_at: str | None = None
+    requested_at: datetime
+    completed_at: datetime | None = None
 
     class Config:
         from_attributes = True
