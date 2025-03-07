@@ -38,9 +38,7 @@ class MonitoringService:
                 )
             )
 
-            stalled_sessions = list(self.db.exec(query).all())
-
-            return stalled_sessions
+            return list(self.db.exec(query).all())
 
         except Exception as e:
             logger.error(f"Error checking for stalled sessions: {str(e)}")
@@ -64,9 +62,7 @@ class MonitoringService:
                 )
             )
 
-            potential_zombies = list(self.db.exec(query).all())
-
-            return potential_zombies
+            return list(self.db.exec(query).all())
 
         except Exception as e:
             logger.error(f"Error checking for zombie sessions: {str(e)}")
@@ -104,7 +100,7 @@ class MonitoringService:
             error_count = self.db.exec(error_query).one()
 
             # Construct health report
-            health_report = {
+            return {
                 "total_sessions": sum(status_counts.values()),
                 "status_counts": status_counts,
                 "recent_sessions": recent_count,
@@ -113,8 +109,6 @@ class MonitoringService:
                 "zombie_sessions": len(self.check_zombie_sessions()),
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             }
-
-            return health_report
 
         except Exception as e:
             logger.error(f"Error getting system health: {str(e)}")

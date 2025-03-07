@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 from typing import Any
 from uuid import UUID
@@ -6,6 +7,7 @@ from fastapi import APIRouter, HTTPException
 from sqlmodel import SQLModel
 
 from app.api.deps import CurrentUser, SessionDep
+from app.models.bot import BotEvent
 from app.models.core import ErrorMessage
 from app.services.event import EventService
 
@@ -42,6 +44,20 @@ class EventSummary(SQLModel):
 
 
 router = APIRouter()
+
+
+def process_event(event: BotEvent) -> dict[str, Any]:
+    """Process a single event, decoding JSON details if present."""
+    event_dict = event.__dict__.copy()
+
+    if event.details:
+        try:
+            event_dict["details"] = json.loads(event.details)
+        except json.JSONDecodeError:
+            # If not valid JSON, set details to None
+            event_dict["details"] = None
+
+    return event_dict
 
 
 @router.get(
@@ -82,24 +98,7 @@ def get_session_events(
         raise e
 
     # Processa os eventos antes de retornar
-    processed_events = []
-    for event in events:
-        # Converte details de string JSON para dicionário, se existir
-        if event.details:
-            import json
-
-            try:
-                event_dict = event.__dict__.copy()
-                event_dict["details"] = json.loads(event.details)
-                processed_events.append(event_dict)
-            except json.JSONDecodeError:
-                # Se não for um JSON válido, mantém como None
-                event_dict = event.__dict__.copy()
-                event_dict["details"] = None
-                processed_events.append(event_dict)
-        else:
-            # Converte o evento para dicionário antes de adicionar
-            processed_events.append(event.__dict__.copy())
+    processed_events = [process_event(event) for event in events]
 
     return {
         "total": total,
@@ -139,8 +138,7 @@ def get_session_events_summary(
     event_types: dict[str, int] = {}
     severities: dict[str, int] = {}
 
-    # Processa os eventos antes de retornar
-    processed_events = []
+    # Contar eventos por tipo e severidade
     for event in events:
         # Contar por tipo
         event_type = event.type
@@ -156,22 +154,8 @@ def get_session_events_summary(
         else:
             severities[severity] = 1
 
-        # Converte details de string JSON para dicionário, se existir
-        if event.details:
-            import json
-
-            try:
-                event_dict = event.__dict__.copy()
-                event_dict["details"] = json.loads(event.details)
-                processed_events.append(event_dict)
-            except json.JSONDecodeError:
-                # Se não for um JSON válido, mantém como None
-                event_dict = event.__dict__.copy()
-                event_dict["details"] = None
-                processed_events.append(event_dict)
-        else:
-            # Converte o evento para dicionário antes de adicionar
-            processed_events.append(event.__dict__.copy())
+    # Processa os eventos antes de retornar
+    processed_events = [process_event(event) for event in events]
 
     return {
         "total_events": total,

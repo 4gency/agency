@@ -407,3 +407,66 @@ def test_get_applies_summary_not_found(
 
     assert r.status_code == 404, f"Response: {r.text}"
     assert r.json() == {"detail": "Bot session not found"}
+
+
+def test_unauthorized_access_to_apply(
+    client: TestClient,
+    normal_subscriber_token_headers: dict[str, str],
+    normal_user_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    """Test accessing an apply belonging to another user."""
+    # Obtém o usuário com assinatura (criador da sessão)
+    subscriber = get_user_from_token_header(db, normal_subscriber_token_headers, client)
+
+    # Criar credenciais para teste
+    credentials = Credentials(
+        user_id=subscriber.id, email="test_auth@example.com", password="testpassword"
+    )
+    db.add(credentials)
+    db.commit()
+    db.refresh(credentials)
+
+    # Criar uma sessão para o usuário com assinatura
+    bot_session = BotSession(
+        user_id=subscriber.id,
+        credentials_id=credentials.id,
+        applies_limit=150,
+        status=BotSessionStatus.RUNNING,
+        created_at=datetime.now(timezone.utc),
+    )
+    db.add(bot_session)
+    db.commit()
+    db.refresh(bot_session)
+
+    # Criar uma aplicação para a sessão
+    apply = BotApply(
+        bot_session_id=bot_session.id,
+        status=BotApplyStatus.SUCCESS,
+        job_title="Software Developer",
+        company_name="TechCorp",
+        job_url="https://example.com/job1",
+        total_time=45,
+        created_at=datetime.now(timezone.utc),
+    )
+    db.add(apply)
+    db.commit()
+    db.refresh(apply)
+
+    # Tentar acessar a aplicação como outro usuário (sem direitos)
+    r = client.get(
+        f"{settings.API_V1_STR}/bots/sessions/{bot_session.id}/applies/{apply.id}",
+        headers=normal_user_token_headers,
+    )
+
+    # Deve retornar 403 Forbidden
+    assert r.status_code == 403, f"Response: {r.text}"
+    assert r.json() == {
+        "detail": "You don't have permission to access this application"
+    }
+
+    # Limpa os dados criados para o teste
+    db.delete(apply)
+    db.delete(bot_session)
+    db.delete(credentials)
+    db.commit()
