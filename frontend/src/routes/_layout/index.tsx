@@ -133,11 +133,7 @@ function Dashboard() {
   };
   
   // Subscription card styling
-  const cardBg = useColorModeValue('white', 'gray.800');
-  const cardBorder = useColorModeValue('gray.200', 'gray.700');
   const highlightColor = useColorModeValue('teal.500', 'teal.300');
-  const planBg = useColorModeValue('gray.50', 'gray.700');
-  const planBorder = useColorModeValue('gray.200', 'gray.600');
   const accentColor = useColorModeValue('teal.500', 'teal.300');
 
   // Mini plan card component for subscription overlay
@@ -170,25 +166,33 @@ function Dashboard() {
     return (
       <VStack 
         p={4} 
-        bg={planBg}
+        bg={useColorModeValue('rgba(255, 255, 255, 0.01)', 'rgba(45, 55, 72, 0.35)')}
+        backdropFilter="blur(25px)"
+        style={{ WebkitBackdropFilter: "blur(25px)" }}
         borderRadius="md" 
         borderWidth="1px" 
-        borderColor={planBorder}
+        borderColor={useColorModeValue('rgba(209, 213, 219, 0.15)', 'rgba(255, 255, 255, 0.1)')}
         align="flex-start"
         spacing={2}
         height="full"
+        boxShadow="md"
+        transition="all 0.2s"
+        _hover={{
+          transform: "translateY(-2px)",
+          boxShadow: "lg"
+        }}
       >
         {plan.has_badge && plan.badge_text && (
-          <Badge colorScheme="teal">{plan.badge_text}</Badge>
+          <Badge colorScheme="teal" fontWeight="bold">{plan.badge_text}</Badge>
         )}
-        <Text fontWeight="bold">{plan.name}</Text>
+        <Text fontWeight="bold" fontSize="lg" color={useColorModeValue('gray.800', 'white')}>{plan.name}</Text>
         <HStack>
-          <Text fontWeight="bold" fontSize="xl">{formattedPrice}</Text>
+          <Text fontWeight="bold" fontSize="xl" color={highlightColor}>{formattedPrice}</Text>
           {plan.metric_type && (
-            <Text fontSize="sm" color="gray.500">/ {plan.metric_type}</Text>
+            <Text fontSize="sm" color={useColorModeValue('gray.600', 'gray.300')}>/ {plan.metric_type}</Text>
           )}
         </HStack>
-        <Text fontSize="sm">{metricDisplay()}</Text>
+        <Text fontSize="sm" color={useColorModeValue('gray.700', 'gray.200')}>{metricDisplay()}</Text>
         
         {plan.benefits && plan.benefits.length > 0 && (
           <List spacing={1} mt={2} fontSize="sm" width="full">
@@ -196,7 +200,7 @@ function Dashboard() {
               <ListItem key={index}>
                 <Flex align="center">
                   <ListIcon as={CheckIcon} color={accentColor} />
-                  <Text noOfLines={1}>{benefit.name}</Text>
+                  <Text noOfLines={1} color={useColorModeValue('gray.700', 'gray.200')}>{benefit.name}</Text>
                 </Flex>
               </ListItem>
             ))}
@@ -425,9 +429,9 @@ function Dashboard() {
           <Box position="relative">
             {/* Blurred dashboard in background */}
             <Box 
-              filter="blur(6px)" 
+              filter="blur(5px)" 
               pointerEvents="none" 
-              opacity={0.7}
+              opacity={0.6}
               position="relative"
               zIndex={1}
             >
@@ -445,21 +449,30 @@ function Dashboard() {
               maxWidth="90vw"
             >
               <Card 
-                bg={cardBg} 
-                borderColor={cardBorder} 
+                bg={useColorModeValue('rgba(255, 255, 255, 0.01)', 'rgba(26, 32, 44, 0.2)')}
+                backdropFilter="blur(25px)"
+                borderColor={useColorModeValue('rgba(209, 213, 219, 0.15)', 'rgba(255, 255, 255, 0.1)')}
                 borderWidth="1px" 
                 borderRadius="xl" 
-                boxShadow="lg" 
+                boxShadow="xl" 
                 overflow="hidden"
+                style={{ WebkitBackdropFilter: "blur(25px)" }}
               >
                 <Box bg="teal.500" h="8px" w="full" />
-                <CardBody p={8}>
+                <CardBody p={8} bg={useColorModeValue('rgba(255, 255, 255, 0.05)', 'rgba(26, 32, 44, 0.3)')}>
                   <VStack spacing={6} align="center">
                     <Icon as={FiLock} boxSize={16} color={highlightColor} />
                     
                     <VStack spacing={2}>
-                      <Heading size="lg" textAlign="center">Unlock Bot Features</Heading>
-                      <Text textAlign="center" fontSize="md" color="gray.500">
+                      <Heading size="lg" textAlign="center" color={useColorModeValue('gray.800', 'white')}>
+                        Unlock Bot Features
+                      </Heading>
+                      <Text 
+                        textAlign="center" 
+                        fontSize="md" 
+                        fontWeight="medium"
+                        color={useColorModeValue('gray.800', 'gray.100')}
+                      >
                         To access the automated job application bot and all dashboard features, 
                         you need an active subscription plan.
                       </Text>
@@ -470,7 +483,7 @@ function Dashboard() {
                     </Box>
                     
                     <Button 
-                      colorScheme="teal" 
+                      variant="primary"
                       size="lg"
                       width={{ base: "full", md: "auto" }}
                       onClick={() => window.location.href = "/pricing"}
