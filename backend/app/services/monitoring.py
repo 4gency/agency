@@ -170,6 +170,58 @@ class MonitoringService:
             self.db.rollback()
             return False
 
+    def get_user_dashboard_stats(self, user_id: UUID) -> dict[str, Any]:
+        """Get statistics for a user's dashboard."""
+        try:
+            # Get all sessions for the user
+            query = select(BotSession).where(BotSession.user_id == user_id)
+            sessions = self.db.exec(query).all()
+
+            # Calculate total applications
+            total_applications = sum(s.total_applied or 0 for s in sessions)
+            successful_applications = sum(s.total_success or 0 for s in sessions)
+            failed_applications = sum(s.total_failed or 0 for s in sessions)
+
+            # Calculate pending applications (total - success - failed)
+            pending_applications = (
+                total_applications - successful_applications - failed_applications
+            )
+
+            # Calculate success and failure rates
+            success_rate = (
+                (successful_applications / total_applications * 100)
+                if total_applications > 0
+                else 0
+            )
+            failure_rate = (
+                (failed_applications / total_applications * 100)
+                if total_applications > 0
+                else 0
+            )
+
+            # Compile statistics
+            return {
+                "total_applications": total_applications,
+                "successful_applications": successful_applications,
+                "success_rate": round(success_rate, 1),
+                "failed_applications": failed_applications,
+                "failure_rate": round(failure_rate, 1),
+                "pending_applications": pending_applications,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
+        except Exception as e:
+            logger.error(f"Error getting user dashboard stats: {str(e)}")
+            return {
+                "total_applications": 0,
+                "successful_applications": 0,
+                "success_rate": 0.0,
+                "failed_applications": 0,
+                "failure_rate": 0.0,
+                "pending_applications": 0,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "error": str(e),
+            }
+
     def cleanup_completed_sessions(self, older_than_days: int = 30) -> int:
         """Archive or clean up old completed sessions"""
         try:

@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException
 from sqlmodel import SQLModel
 
 from app.api.deps import (
@@ -10,9 +10,10 @@ from app.api.deps import (
     CurrentUser,
     SessionDep,
 )
-from app.models.bot import BotSessionStatus, BotStyleChoice
+from app.models.bot import BotSessionStatus, BotStyleChoice, UserDashboardStats
 from app.models.core import ErrorMessage, Message
 from app.services.bot import BotService
+from app.services.monitoring import MonitoringService
 
 
 # Modelos para as rotas
@@ -250,10 +251,10 @@ def pause_bot_session(
     },
 )
 def resume_bot_session(
-    *, session: SessionDep, user: CurrentSubscriber, session_id: UUID
+    *, session: SessionDep, user: CurrentUser, session_id: UUID
 ) -> Any:
     """
-    Resume a bot session.
+    Resume a paused bot session.
     """
     bot_service = BotService(session)
 
@@ -287,9 +288,34 @@ def delete_bot_session(
     except HTTPException as e:
         raise e
 
-    if not result:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Bot session not found"
-        )
+    return {
+        "message": "Session deleted successfully"
+        if result
+        else "Failed to delete session"
+    }
 
-    return {"message": "Bot session deleted successfully"}
+
+@router.get(
+    "/dashboard/stats",
+    response_model=UserDashboardStats,
+    responses={
+        401: {"model": ErrorMessage, "description": "Authentication error"},
+        403: {"model": ErrorMessage, "description": "Permission error"},
+    },
+)
+def get_user_dashboard_stats(*, session: SessionDep, user: CurrentUser) -> Any:
+    """
+    Get user dashboard statistics.
+
+    Returns aggregated statistics across all user's bot sessions, including:
+    - Total applications
+    - Successful applications
+    - Success rate
+    - Failed applications
+    - Failure rate
+    - Pending applications
+    """
+    monitoring_service = MonitoringService(session)
+    stats = monitoring_service.get_user_dashboard_stats(user_id=user.id)
+
+    return UserDashboardStats(**stats)

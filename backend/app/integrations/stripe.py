@@ -686,6 +686,10 @@ def process_invoice_payment_succeeded(
     amount_paid = stripe_invoice.amount_paid
     currency = stripe_invoice.currency
 
+    user.is_subscriber = True
+    session.add(user)
+    session.flush()
+
     # Cria ou atualiza a Subscription
     if not subscription:
         subscription = Subscription(

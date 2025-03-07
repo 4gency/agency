@@ -391,7 +391,7 @@ def test_delete_bot_session(
     )
 
     assert r.status_code == 200, f"Response: {r.text}"
-    assert r.json() == {"message": "Bot session deleted successfully"}
+    assert r.json() == {"message": "Session deleted successfully"}
 
     # Verificar se foi excluído do banco de dados
     deleted_session = db.get(BotSession, session_id)
