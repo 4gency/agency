@@ -685,7 +685,7 @@ def process_invoice_payment_succeeded(
     stripe_subscription_id = stripe_subscription.id
     amount_paid = stripe_invoice.amount_paid
     currency = stripe_invoice.currency
-    
+
     user.is_subscriber = True
     session.add(user)
     session.flush()

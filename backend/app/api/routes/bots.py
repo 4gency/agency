@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException
 from sqlmodel import SQLModel
 
 from app.api.deps import (
@@ -288,7 +288,11 @@ def delete_bot_session(
     except HTTPException as e:
         raise e
 
-    return {"message": "Session deleted successfully" if result else "Failed to delete session"}
+    return {
+        "message": "Session deleted successfully"
+        if result
+        else "Failed to delete session"
+    }
 
 
 @router.get(
@@ -302,7 +306,7 @@ def delete_bot_session(
 def get_user_dashboard_stats(*, session: SessionDep, user: CurrentUser) -> Any:
     """
     Get user dashboard statistics.
-    
+
     Returns aggregated statistics across all user's bot sessions, including:
     - Total applications
     - Successful applications
@@ -313,5 +317,5 @@ def get_user_dashboard_stats(*, session: SessionDep, user: CurrentUser) -> Any:
     """
     monitoring_service = MonitoringService(session)
     stats = monitoring_service.get_user_dashboard_stats(user_id=user.id)
-    
+
     return UserDashboardStats(**stats)
