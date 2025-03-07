@@ -59,6 +59,7 @@ import {
 } from "../../components/BotManagement"
 import useAuth from "../../hooks/useAuth"
 import useDashboardStats from "../../hooks/useDashboardStats"
+import useSubscriptionPlans from "../../hooks/useSubscriptionPlans"
 
 export const Route = createFileRoute("/_layout/")({
   component: Dashboard,
@@ -81,10 +82,6 @@ function Dashboard() {
   const [selectedCredentialId, setSelectedCredentialId] = useState<
     string | null
   >(null)
-  const [subscriptionPlans, setSubscriptionPlans] = useState<
-    SubscriptionPlanPublic[]
-  >([])
-  const [loadingPlans, setLoadingPlans] = useState<boolean>(false)
   const [credentialsUpdated, setCredentialsUpdated] = useState<number>(0)
   
   // Estado para controlar a visibilidade do overlay
@@ -109,7 +106,6 @@ function Dashboard() {
       if (!isSubscriber) {
         // Se não for assinante, mostra o overlay e carrega os planos
         setShowSubscriptionOverlay(true)
-        fetchSubscriptionPlans()
         // Não carrega componentes pesados para não-assinantes
         setCanLoadHeavyComponents(false)
       } else {
@@ -120,21 +116,11 @@ function Dashboard() {
     }
   }, [isLoadingUser, currentUser, isSubscriber])
 
-  const fetchSubscriptionPlans = async () => {
-    setLoadingPlans(true)
-    try {
-      const response = await SubscriptionPlansService.readSubscriptionPlans({
-        onlyActive: true,
-      })
-      if (response.plans) {
-        setSubscriptionPlans(response.plans)
-      }
-    } catch (error) {
-      console.error("Error fetching subscription plans:", error)
-    } finally {
-      setLoadingPlans(false)
-    }
-  }
+  // Usando o hook de planos de assinatura (com cache e compartilhamento)
+  const { 
+    plans: subscriptionPlans, 
+    isLoading: loadingPlans 
+  } = useSubscriptionPlans(true) // true para mostrar apenas planos ativos
 
   // Use real stats from API if available, otherwise use empty values
   const stats = dashboardStats

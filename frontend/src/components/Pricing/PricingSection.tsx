@@ -13,7 +13,7 @@ import {
   useColorModeValue,
 } from "@chakra-ui/react"
 import type React from "react"
-import { useEffect, useRef, useState } from "react"
+import { useRef, useState } from "react"
 import Slider from "react-slick"
 import {
   type SubscriptionPlanPublic,
@@ -23,6 +23,7 @@ import {
 import { useCheckoutHandler } from "../../hooks/useCheckoutHandler"
 import BadgePricingCard from "./BadgePricingCard"
 import NormalPricingCard from "./NormalPricingCard"
+import useSubscriptionPlans from "../../hooks/useSubscriptionPlans"
 
 import "slick-carousel/slick/slick-theme.css"
 // Importações necessárias para o CSS do Slick
@@ -69,9 +70,12 @@ const CarouselArrow = ({
 const PricingSection: React.FC<PricingSectionProps> = ({
   isLandingPage = false,
 }) => {
-  const [plans, setPlans] = useState<SubscriptionPlanPublic[]>([])
-  const [loading, setLoading] = useState<boolean>(true)
-  const [error, setError] = useState<string>("")
+  const { 
+    plans, 
+    isLoading, 
+    isError, 
+    error: plansError 
+  } = useSubscriptionPlans(false)
   const sliderRef = useRef<Slider>(null)
   const [currentSlide, setCurrentSlide] = useState(0)
   const { handleSubscribeClick, isPlanLoading } = useCheckoutHandler()
@@ -86,22 +90,6 @@ const PricingSection: React.FC<PricingSectionProps> = ({
   // Número de slides a mostrar baseado no breakpoint
   const slidesToShow = useBreakpointValue({ base: 1, md: 2, lg: 3 }) || 1
   const showArrows = useBreakpointValue({ base: false, md: true }) || false
-
-  useEffect(() => {
-    SubscriptionPlansService.readSubscriptionPlans({ onlyActive: false })
-      .then((response: SubscriptionPlansPublic) => {
-        if (response.plans) {
-          setPlans(response.plans)
-        }
-      })
-      .catch((err: any) => {
-        console.error("Error fetching subscription plans", err)
-        setError("Failed to load subscription plans")
-      })
-      .finally(() => {
-        setLoading(false)
-      })
-  }, [])
 
   // Determine se devemos mostrar os botões prev/next
   const showPrevButton = currentSlide > 0
@@ -152,19 +140,19 @@ const PricingSection: React.FC<PricingSectionProps> = ({
     ],
   }
 
-  if (loading) {
+  if (isLoading) {
     return (
       <Center py={20} bg={isLandingPage ? "gray.50" : undefined}>
-        <Spinner size="xl" color="ui.main" thickness="4px" />
+        <Spinner size="xl" color="teal.500" />
       </Center>
     )
   }
 
-  if (error) {
+  if (isError) {
     return (
       <Center py={20} bg={isLandingPage ? "gray.50" : undefined}>
         <Text color="red.500" fontSize="lg">
-          {error}
+          Erro ao carregar planos. Por favor, tente novamente.
         </Text>
       </Center>
     )
