@@ -60,6 +60,7 @@ type SessionStatusBadgeProps = {
 
 type BotSessionManagerProps = {
   onViewDetails?: (sessionId: string) => void;
+  credentialsUpdated?: number;
 };
 
 const SessionStatusBadge = ({ status }: SessionStatusBadgeProps) => {
@@ -107,7 +108,7 @@ const SessionStatusBadge = ({ status }: SessionStatusBadgeProps) => {
   return <Badge colorScheme={color}>{label}</Badge>;
 };
 
-const BotSessionManager = ({ onViewDetails }: BotSessionManagerProps) => {
+const BotSessionManager = ({ onViewDetails, credentialsUpdated = 0 }: BotSessionManagerProps) => {
   const [sessions, setSessions] = useState<SessionPublic[]>([]);
   const [credentials, setCredentials] = useState<CredentialsPublic[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -129,6 +130,13 @@ const BotSessionManager = ({ onViewDetails }: BotSessionManagerProps) => {
     fetchSessions();
     fetchCredentials();
   }, []);
+
+  // React to credentials updates
+  useEffect(() => {
+    if (credentialsUpdated > 0) {
+      fetchCredentials();
+    }
+  }, [credentialsUpdated]);
 
   // Fetch sessions from API
   const fetchSessions = async () => {
@@ -484,7 +492,7 @@ const BotSessionManager = ({ onViewDetails }: BotSessionManagerProps) => {
         <Heading size="md">Bot Sessions</Heading>
         <Button 
           leftIcon={<FiPlus />} 
-          colorScheme="teal"
+          variant="primary"
           onClick={onCreateOpen}
           isDisabled={credentials.length === 0}
         >

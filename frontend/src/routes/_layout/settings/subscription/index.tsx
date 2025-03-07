@@ -14,4 +14,4 @@ function SubscriptionIndexPage() {
   // Esta página agora apenas retorna um componente vazio
   // Ela existe apenas para satisfazer a estrutura de rotas
   return null
-} 
+}

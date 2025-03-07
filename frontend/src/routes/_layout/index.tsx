@@ -59,6 +59,7 @@ function Dashboard() {
   const [loadingPlans, setLoadingPlans] = useState<boolean>(true);
   const [dashboardStats, setDashboardStats] = useState<UserDashboardStats | null>(null);
   const [loadingStats, setLoadingStats] = useState<boolean>(true);
+  const [credentialsUpdated, setCredentialsUpdated] = useState<number>(0);
   
   const { 
     isOpen: isSessionDetailsOpen, 
@@ -124,6 +125,11 @@ function Dashboard() {
 
   const handleCredentialSelect = (credentialId: string) => {
     setSelectedCredentialId(credentialId);
+  };
+
+  // Function to call when credentials are updated
+  const handleCredentialsUpdate = () => {
+    setCredentialsUpdated(prev => prev + 1);
   };
   
   // Subscription card styling
@@ -225,7 +231,7 @@ function Dashboard() {
           ) : (
             <>
               <Tooltip label={`Last updated: ${formatTimestamp(stats.timestamp)}`}>
-                <Text fontSize="xs" color="gray.500">
+                <Text fontSize="xs" color="gray.500" display={{ base: "none", md: "block" }}>
                   Last updated: {formatTimestamp(stats.timestamp)}
                 </Text>
               </Tooltip>
@@ -234,8 +240,12 @@ function Dashboard() {
                 leftIcon={<FiRefreshCw />} 
                 onClick={fetchDashboardStats} 
                 isLoading={loadingStats}
+                minW={{ base: "80px", md: "auto" }}
+                display={{ base: "flex", md: "flex" }}
+                variant="primary"
               >
-                Refresh
+                <Text display={{ base: "none", md: "block" }}>Refresh</Text>
+                <Text display={{ base: "block", md: "none" }}>Sync</Text>
               </Button>
             </>
           )}
@@ -345,12 +355,16 @@ function Dashboard() {
 
         <TabPanels>
           <TabPanel px={0}>
-            <BotSessionManager onViewDetails={handleViewSessionDetails} />
+            <BotSessionManager 
+              onViewDetails={handleViewSessionDetails} 
+              credentialsUpdated={credentialsUpdated}
+            />
           </TabPanel>
           <TabPanel px={0}>
             <CredentialsManager 
               onCredentialSelect={handleCredentialSelect}
               selectedCredentialId={selectedCredentialId || undefined}
+              onCredentialsUpdate={handleCredentialsUpdate}
             />
           </TabPanel>
         </TabPanels>

@@ -33,9 +33,14 @@ import DeleteAlert from "../Common/DeleteAlert";
 export type CredentialsManagerProps = {
   onCredentialSelect?: (credentialId: string) => void;
   selectedCredentialId?: string;
+  onCredentialsUpdate?: () => void;
 };
 
-const CredentialsManager = ({ onCredentialSelect, selectedCredentialId }: CredentialsManagerProps) => {
+const CredentialsManager = ({ 
+  onCredentialSelect, 
+  selectedCredentialId,
+  onCredentialsUpdate 
+}: CredentialsManagerProps) => {
   const [credentials, setCredentials] = useState<CredentialsPublic[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -113,7 +118,12 @@ const CredentialsManager = ({ onCredentialSelect, selectedCredentialId }: Creden
       });
       onCreateClose();
       setFormData({ email: "", password: "" });
-      fetchCredentials();
+      await fetchCredentials();
+      
+      // Notify parent component that credentials have been updated
+      if (onCredentialsUpdate) {
+        onCredentialsUpdate();
+      }
     } catch (err) {
       console.error("Error creating credential:", err);
       toast({
@@ -128,21 +138,12 @@ const CredentialsManager = ({ onCredentialSelect, selectedCredentialId }: Creden
 
   // Handle credential update
   const handleUpdateCredential = async () => {
-    if (!credentialToEdit) return;
-    
-    // Only include password if provided
-    const updateData: CredentialsUpdate = {
-      email: formData.email,
-    };
-    
-    if (formData.password) {
-      updateData.password = formData.password;
-    }
-    
     try {
+      if (!credentialToEdit) return;
+      
       await CredentialsService.updateCredentials({
         credentialsId: credentialToEdit.id,
-        requestBody: updateData,
+        requestBody: formData as CredentialsUpdate,
       });
       toast({
         title: "Success",
@@ -152,9 +153,13 @@ const CredentialsManager = ({ onCredentialSelect, selectedCredentialId }: Creden
         isClosable: true,
       });
       onEditClose();
-      setCredentialToEdit(null);
       setFormData({ email: "", password: "" });
-      fetchCredentials();
+      await fetchCredentials();
+      
+      // Notify parent component that credentials have been updated
+      if (onCredentialsUpdate) {
+        onCredentialsUpdate();
+      }
     } catch (err) {
       console.error("Error updating credential:", err);
       toast({
@@ -175,9 +180,9 @@ const CredentialsManager = ({ onCredentialSelect, selectedCredentialId }: Creden
 
   // Handle credential deletion
   const handleDeleteCredential = async () => {
-    if (!credentialToDelete) return;
-    
     try {
+      if (!credentialToDelete) return;
+      
       await CredentialsService.deleteCredentials({
         credentialsId: credentialToDelete,
       });
@@ -190,7 +195,12 @@ const CredentialsManager = ({ onCredentialSelect, selectedCredentialId }: Creden
       });
       onDeleteClose();
       setCredentialToDelete(null);
-      fetchCredentials();
+      await fetchCredentials();
+      
+      // Notify parent component that credentials have been updated
+      if (onCredentialsUpdate) {
+        onCredentialsUpdate();
+      }
     } catch (err) {
       console.error("Error deleting credential:", err);
       toast({
@@ -219,7 +229,7 @@ const CredentialsManager = ({ onCredentialSelect, selectedCredentialId }: Creden
     <Box>
       <Flex justifyContent="space-between" alignItems="center" mb={4}>
         <Heading size="md">LinkedIn Credentials</Heading>
-        <Button leftIcon={<FiPlus />} colorScheme="teal" onClick={onCreateOpen}>
+        <Button leftIcon={<FiPlus />} variant="primary" onClick={onCreateOpen}>
           Add Credential
         </Button>
       </Flex>
@@ -357,7 +367,7 @@ const CredentialsManager = ({ onCredentialSelect, selectedCredentialId }: Creden
                   type="password"
                   value={formData.password || ""}
                   onChange={handleInputChange}
-                  placeholder="Leave blank to keep current password"
+                  placeholder="Optional"
                 />
                 <Text fontSize="sm" color="gray.500" mt={1}>
                   Leave blank to keep your current password

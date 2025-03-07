@@ -53,19 +53,19 @@ const Subscriptions = () => {
     // Se for o erro 404, mostra a mensagem amigável
     if (isNotFoundError) {
       return (
-        <Box>
-          <Heading size="md" my={4}>
+        <Container maxW="full">
+          <Heading size="sm" py={4}>
             My Subscriptions
           </Heading>
           <Text>No subscriptions found.</Text>
-        </Box>
+        </Container>
       );
     }
     
     // Para outros erros, mostra a mensagem de erro genérica
     return (
       <Container maxW="full">
-        <Heading size="md" my={4}>
+        <Heading size="sm" py={4}>
           My Subscriptions
         </Heading>
         <Text color="red.500">Unable to load subscriptions. Please try again later.</Text>
@@ -74,8 +74,8 @@ const Subscriptions = () => {
   }
 
   return (
-    <Box>
-      <Heading size="md" my={4}>
+    <Container maxW="full">
+      <Heading size="sm" py={4}>
         My Subscriptions
       </Heading>
 
@@ -122,7 +122,7 @@ const Subscriptions = () => {
       ) : (
         <Text>No subscriptions found.</Text>
       )}
-    </Box>
+    </Container>
   )
 }
 
