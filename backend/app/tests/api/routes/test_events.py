@@ -3,70 +3,105 @@ import uuid
 from datetime import datetime, timezone
 
 from fastapi.testclient import TestClient
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from app.core.config import settings
 from app.models.bot import BotEvent, BotSession, BotSessionStatus, Credentials
+from app.models.core import User
+from app.tests.utils.utils import random_email, random_lower_string
+
+
+def get_user_from_token_header(db: Session, headers: dict[str, str]) -> User:
+    """Extrai o usuário do banco a partir do token de autenticação."""
+    # Obtém o email do usuário a partir do tipo de header fornecido
+    if "Authorization" not in headers:
+        raise ValueError("Não há token de autorização nos headers")
+    
+    # Olha para o email do usuário nos testes
+    if settings.EMAIL_TEST_USER_SUBSCRIBER in headers.get("Authorization", ""):
+        user = db.exec(select(User).where(User.email == settings.EMAIL_TEST_USER_SUBSCRIBER)).first()
+    elif settings.EMAIL_TEST_USER in headers.get("Authorization", ""):
+        user = db.exec(select(User).where(User.email == settings.EMAIL_TEST_USER)).first()
+    elif settings.FIRST_SUPERUSER in headers.get("Authorization", ""):
+        user = db.exec(select(User).where(User.email == settings.FIRST_SUPERUSER)).first()
+    else:
+        # Tenta encontrar algum usuário válido
+        users = db.exec(select(User)).all()
+        for user_candidate in users:
+            if user_candidate.email in headers.get("Authorization", ""):
+                user = user_candidate
+                break
+        else:
+            # Se não encontrar nada, tenta usar o primeiro usuário disponível
+            user = db.exec(select(User).limit(1)).first()
+    
+    if not user:
+        raise ValueError("Usuário não encontrado para o token fornecido")
+    
+    return user
 
 
 def test_get_session_events(
     client: TestClient, normal_subscriber_token_headers: dict[str, str], db: Session
 ) -> None:
     """Test getting events for a bot session."""
+    # Obtém o usuário a partir do token
+    user = get_user_from_token_header(db, normal_subscriber_token_headers)
+    
     # Criar credenciais para teste
     credentials = Credentials(
-        user_id=uuid.uuid4(),  # Será substituído pelo ID real do usuário
+        user_id=user.id,  # Usando o ID do usuário real
         email="test_events@example.com",
-        password="testpassword",
+        password="testpassword"
     )
     db.add(credentials)
     db.commit()
     db.refresh(credentials)
-
+    
     # Criar uma sessão para o usuário
     bot_session = BotSession(
-        user_id=uuid.uuid4(),  # Será substituído pelo ID real do usuário
+        user_id=user.id,  # Usando o ID do usuário real
         credentials_id=credentials.id,
         applies_limit=150,
         status=BotSessionStatus.RUNNING,
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(timezone.utc)
     )
     db.add(bot_session)
     db.commit()
     db.refresh(bot_session)
-
+    
     # Criar alguns eventos para a sessão
     event1 = BotEvent(
         bot_session_id=bot_session.id,
         type="system",
         message="Bot session started",
         severity="info",
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(timezone.utc)
     )
     db.add(event1)
-
+    
     event2 = BotEvent(
         bot_session_id=bot_session.id,
         type="error",
         message="Connection error",
         severity="error",
         details=json.dumps({"error_code": "E1001"}),
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(timezone.utc)
     )
     db.add(event2)
     db.commit()
-
+    
     r = client.get(
         f"{settings.API_V1_STR}/bots/sessions/{bot_session.id}/events",
         headers=normal_subscriber_token_headers,
     )
-
-    assert r.status_code == 200
+    
+    assert r.status_code == 200, f"Response: {r.text}"
     events_data = r.json()
     assert "total" in events_data
     assert "items" in events_data
     assert len(events_data["items"]) >= 2
-
+    
     # Limpa os dados criados para o teste
     db.delete(event1)
     db.delete(event2)
@@ -79,64 +114,67 @@ def test_get_session_events_with_filter(
     client: TestClient, normal_subscriber_token_headers: dict[str, str], db: Session
 ) -> None:
     """Test getting events for a bot session with type filter."""
+    # Obtém o usuário a partir do token
+    user = get_user_from_token_header(db, normal_subscriber_token_headers)
+    
     # Criar credenciais para teste
     credentials = Credentials(
-        user_id=uuid.uuid4(),  # Será substituído pelo ID real do usuário
+        user_id=user.id,  # Usando o ID do usuário real
         email="test_events_filter@example.com",
-        password="testpassword",
+        password="testpassword"
     )
     db.add(credentials)
     db.commit()
     db.refresh(credentials)
-
+    
     # Criar uma sessão para o usuário
     bot_session = BotSession(
-        user_id=uuid.uuid4(),  # Será substituído pelo ID real do usuário
+        user_id=user.id,  # Usando o ID do usuário real
         credentials_id=credentials.id,
         applies_limit=150,
         status=BotSessionStatus.RUNNING,
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(timezone.utc)
     )
     db.add(bot_session)
     db.commit()
     db.refresh(bot_session)
-
+    
     # Criar alguns eventos para a sessão
     event1 = BotEvent(
         bot_session_id=bot_session.id,
         type="system",
         message="Bot session started",
         severity="info",
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(timezone.utc)
     )
     db.add(event1)
-
+    
     event2 = BotEvent(
         bot_session_id=bot_session.id,
         type="error",
         message="Connection error",
         severity="error",
         details=json.dumps({"error_code": "E1001"}),
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(timezone.utc)
     )
     db.add(event2)
     db.commit()
-
+    
     # Filtrar por tipo de evento
     r = client.get(
         f"{settings.API_V1_STR}/bots/sessions/{bot_session.id}/events?event_type=error",
         headers=normal_subscriber_token_headers,
     )
-
-    assert r.status_code == 200
+    
+    assert r.status_code == 200, f"Response: {r.text}"
     events_data = r.json()
     assert "total" in events_data
     assert "items" in events_data
-
+    
     # Deve retornar apenas eventos do tipo error
     for event in events_data["items"]:
         assert event["type"] == "error"
-
+    
     # Limpa os dados criados para o teste
     db.delete(event1)
     db.delete(event2)
@@ -154,8 +192,8 @@ def test_get_session_events_not_found(
         f"{settings.API_V1_STR}/bots/sessions/{non_existent_id}/events",
         headers=normal_subscriber_token_headers,
     )
-
-    assert r.status_code == 404
+    
+    assert r.status_code == 404, f"Response: {r.text}"
     assert r.json() == {"detail": "Bot session not found"}
 
 
@@ -163,72 +201,81 @@ def test_get_session_events_summary(
     client: TestClient, normal_subscriber_token_headers: dict[str, str], db: Session
 ) -> None:
     """Test getting a summary of events for a bot session."""
+    # Obtém o usuário a partir do token
+    user = get_user_from_token_header(db, normal_subscriber_token_headers)
+    
     # Criar credenciais para teste
     credentials = Credentials(
-        user_id=uuid.uuid4(),  # Será substituído pelo ID real do usuário
+        user_id=user.id,  # Usando o ID do usuário real
         email="test_events_summary@example.com",
-        password="testpassword",
+        password="testpassword"
     )
     db.add(credentials)
     db.commit()
     db.refresh(credentials)
-
+    
     # Criar uma sessão para o usuário
     bot_session = BotSession(
-        user_id=uuid.uuid4(),  # Será substituído pelo ID real do usuário
+        user_id=user.id,  # Usando o ID do usuário real
         credentials_id=credentials.id,
         applies_limit=150,
         status=BotSessionStatus.RUNNING,
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(timezone.utc)
     )
     db.add(bot_session)
     db.commit()
     db.refresh(bot_session)
-
+    
     # Criar vários eventos para a sessão
+    events_to_clean = []
+    
     for i in range(5):
         event = BotEvent(
             bot_session_id=bot_session.id,
             type="system",
             message=f"System event {i}",
             severity="info",
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(timezone.utc)
         )
         db.add(event)
-
+        events_to_clean.append(event)
+    
     for i in range(3):
         event = BotEvent(
             bot_session_id=bot_session.id,
             type="error",
             message=f"Error event {i}",
             severity="error",
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(timezone.utc)
         )
         db.add(event)
+        events_to_clean.append(event)
     db.commit()
-
+    
     r = client.get(
         f"{settings.API_V1_STR}/bots/sessions/{bot_session.id}/events/summary",
         headers=normal_subscriber_token_headers,
     )
-
-    assert r.status_code == 200
+    
+    assert r.status_code == 200, f"Response: {r.text}"
     summary = r.json()
     assert "total_events" in summary
     assert "by_type" in summary
     assert "by_severity" in summary
     assert "latest_events" in summary
-
+    
     assert summary["by_type"]["system"] == 5
     assert summary["by_type"]["error"] == 3
     assert summary["by_severity"]["info"] == 5
     assert summary["by_severity"]["error"] == 3
     assert len(summary["latest_events"]) <= 10  # Retorna até 10 eventos mais recentes
-
+    
     # Limpa os dados criados para o teste
     # Primeiro remove eventos
-    db.exec(f"DELETE FROM bot_events WHERE bot_session_id = '{bot_session.id}'")
+    for event in events_to_clean:
+        db.delete(event)
     db.commit()
+    
     # Depois remove a sessão e credenciais
     db.delete(bot_session)
     db.delete(credentials)
@@ -244,6 +291,6 @@ def test_get_session_events_summary_not_found(
         f"{settings.API_V1_STR}/bots/sessions/{non_existent_id}/events/summary",
         headers=normal_subscriber_token_headers,
     )
-
-    assert r.status_code == 404
+    
+    assert r.status_code == 404, f"Response: {r.text}"
     assert r.json() == {"detail": "Bot session not found"}

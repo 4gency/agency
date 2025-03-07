@@ -117,7 +117,7 @@ def test_get_existing_user_permissions_error(
         f"{settings.API_V1_STR}/users/{uuid.uuid4()}",
         headers=normal_user_token_headers,
     )
-    assert r.status_code == 403
+    assert r.status_code == 403, f"Response: {r.text}"
     assert r.json() == {"detail": "The user doesn't have enough privileges"}
 
 
@@ -136,7 +136,7 @@ def test_create_user_existing_username(
         json=data,
     )
     created_user = r.json()
-    assert r.status_code == 400
+    assert r.status_code == 400, f"Response: {r.text}"
     assert "_id" not in created_user
 
 
@@ -151,7 +151,7 @@ def test_create_user_by_normal_user(
         headers=normal_user_token_headers,
         json=data,
     )
-    assert r.status_code == 403
+    assert r.status_code == 403, f"Response: {r.text}"
 
 
 def test_retrieve_users(
@@ -187,7 +187,7 @@ def test_update_user_me(
         headers=normal_user_token_headers,
         json=data,
     )
-    assert r.status_code == 200
+    assert r.status_code == 200, f"Response: {r.text}"
     updated_user = r.json()
     assert updated_user["email"] == email
     assert updated_user["full_name"] == full_name
@@ -212,7 +212,7 @@ def test_update_password_me(
         headers=superuser_token_headers,
         json=data,
     )
-    assert r.status_code == 200
+    assert r.status_code == 200, f"Response: {r.text}"
     updated_user = r.json()
     assert updated_user["message"] == "Password updated successfully"
 
@@ -234,7 +234,7 @@ def test_update_password_me(
     )
     db.refresh(user_db)
 
-    assert r.status_code == 200
+    assert r.status_code == 200, f"Response: {r.text}"
     assert verify_password(settings.FIRST_SUPERUSER_PASSWORD, user_db.hashed_password)
 
 
@@ -248,7 +248,7 @@ def test_update_password_me_incorrect_password(
         headers=superuser_token_headers,
         json=data,
     )
-    assert r.status_code == 400
+    assert r.status_code == 400, f"Response: {r.text}"
     updated_user = r.json()
     assert updated_user["detail"] == "Incorrect password"
 
@@ -267,7 +267,7 @@ def test_update_user_me_email_exists(
         headers=normal_user_token_headers,
         json=data,
     )
-    assert r.status_code == 409
+    assert r.status_code == 409, f"Response: {r.text}"
     assert r.json()["detail"] == "User with this email already exists"
 
 
@@ -283,7 +283,7 @@ def test_update_password_me_same_password_error(
         headers=superuser_token_headers,
         json=data,
     )
-    assert r.status_code == 400
+    assert r.status_code == 400, f"Response: {r.text}"
     updated_user = r.json()
     assert (
         updated_user["detail"] == "New password cannot be the same as the current one"
@@ -299,7 +299,7 @@ def test_register_user(client: TestClient, db: Session) -> None:
         f"{settings.API_V1_STR}/users/signup",
         json=data,
     )
-    assert r.status_code == 200
+    assert r.status_code == 200, f"Response: {r.text}"
     created_user = r.json()
     assert created_user["email"] == username
     assert created_user["full_name"] == full_name
@@ -324,7 +324,7 @@ def test_register_user_already_exists_error(client: TestClient) -> None:
         f"{settings.API_V1_STR}/users/signup",
         json=data,
     )
-    assert r.status_code == 400
+    assert r.status_code == 400, f"Response: {r.text}"
     assert r.json()["detail"] == "The user with this email already exists in the system"
 
 
@@ -342,7 +342,7 @@ def test_update_user(
         headers=superuser_token_headers,
         json=data,
     )
-    assert r.status_code == 200
+    assert r.status_code == 200, f"Response: {r.text}"
     updated_user = r.json()
 
     assert updated_user["full_name"] == "Updated_full_name"
@@ -363,7 +363,7 @@ def test_update_user_not_exists(
         headers=superuser_token_headers,
         json=data,
     )
-    assert r.status_code == 404
+    assert r.status_code == 404, f"Response: {r.text}"
     assert r.json()["detail"] == "The user with this id does not exist in the system"
 
 
@@ -386,7 +386,7 @@ def test_update_user_email_exists(
         headers=superuser_token_headers,
         json=data,
     )
-    assert r.status_code == 409
+    assert r.status_code == 409, f"Response: {r.text}"
     assert r.json()["detail"] == "User with this email already exists"
 
 
@@ -402,7 +402,7 @@ def test_delete_user_super_user(
         f"{settings.API_V1_STR}/users/{user_id}",
         headers=superuser_token_headers,
     )
-    assert r.status_code == 200
+    assert r.status_code == 200, f"Response: {r.text}"
     deleted_user = r.json()
     assert deleted_user["message"] == "User deleted successfully"
     result = db.exec(select(User).where(User.id == user_id)).first()
@@ -416,7 +416,7 @@ def test_delete_user_not_found(
         f"{settings.API_V1_STR}/users/{uuid.uuid4()}",
         headers=superuser_token_headers,
     )
-    assert r.status_code == 404
+    assert r.status_code == 404, f"Response: {r.text}"
     assert r.json()["detail"] == "User not found"
 
 
@@ -431,7 +431,7 @@ def test_delete_user_current_super_user_error(
         f"{settings.API_V1_STR}/users/{user_id}",
         headers=superuser_token_headers,
     )
-    assert r.status_code == 403
+    assert r.status_code == 403, f"Response: {r.text}"
     assert r.json()["detail"] == "Super users are not allowed to delete themselves"
 
 
@@ -447,7 +447,7 @@ def test_delete_user_without_privileges(
         f"{settings.API_V1_STR}/users/{user.id}",
         headers=normal_user_token_headers,
     )
-    assert r.status_code == 403
+    assert r.status_code == 403, f"Response: {r.text}"
     assert r.json()["detail"] == "The user doesn't have enough privileges"
 
 
@@ -515,7 +515,7 @@ def test_payments_user(
         f"{settings.API_V1_STR}/users/{user.id}/payments",
         headers=superuser_token_headers,
     )
-    assert r.status_code == 200
+    assert r.status_code == 200, f"Response: {r.text}"
     payments = r.json()
     assert payments
     assert payments["count"] == 1
@@ -597,7 +597,7 @@ def test_payments_me(
         f"{settings.API_V1_STR}/users/me/payments",
         headers=superuser_token_headers,
     )
-    assert r.status_code == 200
+    assert r.status_code == 200, f"Response: {r.text}"
     payments = r.json()
     assert payments
     assert payments["data"]

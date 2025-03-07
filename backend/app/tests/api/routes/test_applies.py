@@ -70,7 +70,7 @@ def test_get_session_applies(
         headers=normal_subscriber_token_headers,
     )
 
-    assert r.status_code == 200
+    assert r.status_code == 200, f"Response: {r.text}"
     applies_data = r.json()
     assert "total" in applies_data
     assert "items" in applies_data
@@ -141,7 +141,7 @@ def test_get_session_applies_with_filter(
         headers=normal_subscriber_token_headers,
     )
 
-    assert r.status_code == 200
+    assert r.status_code == 200, f"Response: {r.text}"
     applies_data = r.json()
     assert "total" in applies_data
     assert "items" in applies_data
@@ -168,7 +168,7 @@ def test_get_session_applies_not_found(
         headers=normal_subscriber_token_headers,
     )
 
-    assert r.status_code == 404
+    assert r.status_code == 404, f"Response: {r.text}"
     assert r.json() == {"detail": "Bot session not found"}
 
 
@@ -217,7 +217,7 @@ def test_get_apply_details(
         headers=normal_subscriber_token_headers,
     )
 
-    assert r.status_code == 200
+    assert r.status_code == 200, f"Response: {r.text}"
     apply_data = r.json()
     assert apply_data["id"] == apply.id
     assert apply_data["job_title"] == "Software Developer"
@@ -264,7 +264,7 @@ def test_get_apply_details_not_found(
         headers=normal_subscriber_token_headers,
     )
 
-    assert r.status_code == 404
+    assert r.status_code == 404, f"Response: {r.text}"
     assert r.json() == {"detail": "Application not found"}
 
     # Limpa os dados criados para o teste
@@ -337,7 +337,7 @@ def test_get_applies_summary(
         headers=normal_subscriber_token_headers,
     )
 
-    assert r.status_code == 200
+    assert r.status_code == 200, f"Response: {r.text}"
     summary = r.json()
     assert "total_applies" in summary
     assert "by_status" in summary
@@ -376,5 +376,5 @@ def test_get_applies_summary_not_found(
         headers=normal_subscriber_token_headers,
     )
 
-    assert r.status_code == 404
+    assert r.status_code == 404, f"Response: {r.text}"
     assert r.json() == {"detail": "Bot session not found"}
