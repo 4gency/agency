@@ -60,15 +60,14 @@ import {
   SessionDetails,
 } from "../../components/BotManagement"
 import useAuth from "../../hooks/useAuth"
-import useSubscriptions from "../../hooks/userSubscriptions"
 
 export const Route = createFileRoute("/_layout/")({
   component: Dashboard,
 })
 
 function Dashboard() {
-  const { user: currentUser } = useAuth()
-  const { data: subscriptions } = useSubscriptions()
+  const { user: currentUser, isLoading: isLoadingUser } = useAuth()
+  
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(
     null,
   )
@@ -78,11 +77,17 @@ function Dashboard() {
   const [subscriptionPlans, setSubscriptionPlans] = useState<
     SubscriptionPlanPublic[]
   >([])
-  const [loadingPlans, setLoadingPlans] = useState<boolean>(true)
+  const [loadingPlans, setLoadingPlans] = useState<boolean>(false)
   const [dashboardStats, setDashboardStats] =
     useState<UserDashboardStats | null>(null)
-  const [loadingStats, setLoadingStats] = useState<boolean>(true)
+  const [loadingStats, setLoadingStats] = useState<boolean>(false)
   const [credentialsUpdated, setCredentialsUpdated] = useState<number>(0)
+  
+  // Estado para controlar a visibilidade do overlay
+  const [showSubscriptionOverlay, setShowSubscriptionOverlay] = useState<boolean>(false)
+  
+  // Estado para controlar quando é seguro carregar componentes pesados
+  const [canLoadHeavyComponents, setCanLoadHeavyComponents] = useState<boolean>(false)
 
   const {
     isOpen: isSessionDetailsOpen,
@@ -90,21 +95,44 @@ function Dashboard() {
     onClose: onSessionDetailsClose,
   } = useDisclosure()
 
-  const isSubscriber = subscriptions && subscriptions.length > 0
-
-  // Fetch subscription plans on component mount
+  const isSubscriber = currentUser?.is_subscriber || false
+  
+  // Apenas verificamos o status de assinatura baseado nas informações do usuário atual
+  // Não carregamos nada até sabermos se o usuário é assinante
   useEffect(() => {
-    if (!isSubscriber) {
-      fetchSubscriptionPlans()
+    if (!isLoadingUser && currentUser) {
+      if (!isSubscriber) {
+        // Se não for assinante, mostra o overlay e carrega os planos
+        setShowSubscriptionOverlay(true)
+        fetchSubscriptionPlans()
+        // Não carrega componentes pesados para não-assinantes
+        setCanLoadHeavyComponents(false)
+        
+        // Define estatísticas vazias/genéricas para não-assinantes
+        setDashboardStats({
+          total_applications: 0,
+          successful_applications: 0,
+          success_rate: 0,
+          failed_applications: 0,
+          failure_rate: 0,
+          pending_applications: 0,
+          timestamp: new Date().toISOString()
+        })
+      } else {
+        // Se for assinante, mantém o overlay oculto e permite carregar componentes pesados
+        setShowSubscriptionOverlay(false)
+        setCanLoadHeavyComponents(true)
+        
+        // Só carrega as estatísticas do dashboard para assinantes
+        fetchDashboardStats()
+      }
     }
-  }, [isSubscriber])
-
-  // Fetch dashboard statistics
-  useEffect(() => {
-    fetchDashboardStats()
-  }, [])
+  }, [isLoadingUser, currentUser, isSubscriber])
 
   const fetchDashboardStats = async () => {
+    // Verificação adicional de segurança - só busca dados se for assinante
+    if (!isSubscriber) return;
+    
     setLoadingStats(true)
     try {
       const stats = await BotsService.getUserDashboardStats()
@@ -279,9 +307,10 @@ function Dashboard() {
   // Dashboard content - to be blurred if not subscribed
   const DashboardContent = () => (
     <>
-      {/* Stats Overview Section */}
       <Flex justify="space-between" align="center" mb={4}>
-        <Heading size="md">Your Application Stats</Heading>
+        <Text fontWeight="bold" fontSize="xl">
+          Dashboard Overview
+        </Text>
         <HStack>
           {loadingStats ? (
             <Spinner size="sm" color="teal.500" />
@@ -413,29 +442,43 @@ function Dashboard() {
         </Card>
       </SimpleGrid>
 
-      {/* Main Bot Management Tabs */}
-      <Tabs variant="enclosed" colorScheme="teal" mb={4}>
-        <TabList>
-          <Tab>Bot Sessions</Tab>
-          <Tab>Credentials</Tab>
-        </TabList>
+      {/* Main Bot Management Tabs - Carregados apenas se o usuário for assinante */}
+      {canLoadHeavyComponents ? (
+        <Tabs variant="enclosed" colorScheme="teal" mb={4}>
+          <TabList>
+            <Tab>Bot Sessions</Tab>
+            <Tab>Credentials</Tab>
+          </TabList>
 
-        <TabPanels>
-          <TabPanel px={0}>
-            <BotSessionManager
-              onViewDetails={handleViewSessionDetails}
-              credentialsUpdated={credentialsUpdated}
-            />
-          </TabPanel>
-          <TabPanel px={0}>
-            <CredentialsManager
-              onCredentialSelect={handleCredentialSelect}
-              selectedCredentialId={selectedCredentialId || undefined}
-              onCredentialsUpdate={handleCredentialsUpdate}
-            />
-          </TabPanel>
-        </TabPanels>
-      </Tabs>
+          <TabPanels>
+            <TabPanel px={0}>
+              <BotSessionManager
+                onViewDetails={handleViewSessionDetails}
+                credentialsUpdated={credentialsUpdated}
+              />
+            </TabPanel>
+            <TabPanel px={0}>
+              <CredentialsManager
+                onCredentialSelect={handleCredentialSelect}
+                selectedCredentialId={selectedCredentialId || undefined}
+                onCredentialsUpdate={handleCredentialsUpdate}
+              />
+            </TabPanel>
+          </TabPanels>
+        </Tabs>
+      ) : (
+        /* Placeholder para quando os componentes pesados não estiverem carregados */
+        <Box 
+          p={4} 
+          textAlign="center" 
+          borderWidth="1px" 
+          borderRadius="md" 
+          bg={useColorModeValue("gray.50", "gray.700")}
+        >
+          <Spinner size="sm" mr={2} />
+          <Text>Loading...</Text>
+        </Box>
+      )}
     </>
   )
 
@@ -488,20 +531,20 @@ function Dashboard() {
           </Box>
         </Flex>
 
-        {!isSubscriber ? (
-          <Box position="relative">
-            {/* Blurred dashboard in background */}
-            <Box
-              filter="blur(5px)"
-              pointerEvents="none"
-              opacity={0.6}
-              position="relative"
-              zIndex={1}
-            >
-              <DashboardContent />
-            </Box>
+        {/* Começamos mostrando o dashboard, e apenas se não for um assinante mostramos o overlay */}
+        <Box position="relative">
+          {/* O dashboard é sempre renderizado */}
+          <Box 
+            filter={showSubscriptionOverlay ? "blur(5px)" : "none"}
+            pointerEvents={showSubscriptionOverlay ? "none" : "auto"}
+            opacity={showSubscriptionOverlay ? 0.6 : 1}
+            transition="all 0.3s ease"
+          >
+            <DashboardContent />
+          </Box>
 
-            {/* Subscription CTA overlay */}
+          {/* Overlay de assinatura apenas se for mostrado */}
+          {showSubscriptionOverlay && (
             <Box
               position="absolute"
               top="50%"
@@ -575,10 +618,8 @@ function Dashboard() {
                 </CardBody>
               </Card>
             </Box>
-          </Box>
-        ) : (
-          <DashboardContent />
-        )}
+          )}
+        </Box>
       </Box>
 
       {/* Session Details Modal */}
