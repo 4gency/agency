@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { type SubscriptionPlanPublic, SubscriptionPlansService } from "../client"
+import { SubscriptionPlansService } from "../client"
 
-// Chaves para o cache no React Query
+// Chave para o cache no React Query
 export const getSubscriptionPlansCacheKey = (onlyActive: boolean) => 
   ["subscriptionPlans", { onlyActive }]
 

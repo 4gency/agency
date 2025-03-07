@@ -1,6 +1,4 @@
-import { CheckIcon } from "@chakra-ui/icons"
 import {
-  Badge,
   Box,
   Button,
   Card,
@@ -47,10 +45,10 @@ import {
   FiRefreshCw,
   FiUsers,
 } from "react-icons/fi"
+import { CheckIcon } from "@chakra-ui/icons"
 
 import {
   type SubscriptionPlanPublic,
-  SubscriptionPlansService,
 } from "../../client"
 import {
   BotSessionManager,
@@ -368,8 +366,8 @@ function Dashboard() {
           <TabPanels>
             <TabPanel px={0}>
               <BotSessionManager
-                onViewDetails={handleViewSessionDetails}
-                credentialsUpdated={credentialsUpdated}
+                onViewSessionDetails={handleViewSessionDetails}
+                onCredentialsUpdate={credentialsUpdated > 0 ? () => {} : undefined}
               />
             </TabPanel>
             <TabPanel px={0}>

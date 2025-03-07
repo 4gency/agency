@@ -1,14 +1,9 @@
 import {
-  Box,
   Center,
   Spinner,
   Text,
   VStack,
 } from "@chakra-ui/react"
-import { useState } from "react"
-import {
-  type SubscriptionPlanPublic,
-} from "../../../../client"
 import BadgePricingCard from "../../../Pricing/BadgePricingCard"
 import NormalPricingCard from "../../../Pricing/NormalPricingCard"
 import useSubscriptionPlans from "../../../../hooks/useSubscriptionPlans"
@@ -17,8 +12,7 @@ export const PricingContainer = () => {
   const { 
     plans, 
     isLoading, 
-    isError,
-    error: plansError
+    isError
   } = useSubscriptionPlans(true)
   
   if (isLoading) {

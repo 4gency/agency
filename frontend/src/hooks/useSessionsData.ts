@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { type BotSession, BotsService } from "../client"
+import { BotsService } from "../client"
 
 // Chave para o cache no React Query
 export const sessionsCacheKey = ["botSessions"] 

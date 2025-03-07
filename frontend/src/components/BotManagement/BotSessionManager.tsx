@@ -4,17 +4,15 @@ import {
   Button,
   Card,
   CardBody,
-  CardFooter,
   CardHeader,
-  Center,
   Divider,
   Flex,
   FormControl,
   FormLabel,
   Grid,
   GridItem,
-  HStack,
   Heading,
+  HStack,
   Icon,
   IconButton,
   Modal,
@@ -37,9 +35,9 @@ import {
   Stack,
   Text,
   Tooltip,
-  VStack,
   useDisclosure,
   useToast,
+  VStack,
 } from "@chakra-ui/react"
 import { useEffect, useState } from "react"
 import {
@@ -50,19 +48,10 @@ import {
   FiPause,
   FiPlay,
   FiPlus,
-  FiRefreshCw,
   FiStopCircle,
   FiTrash2,
 } from "react-icons/fi"
-import {
-  type BotSessionStatus,
-  type BotStyleChoice,
-  BotsService,
-  type CredentialsPublic,
-  CredentialsService,
-  type SessionCreate,
-  type SessionPublic,
-} from "../../client"
+import { BotsService, type SessionPublic } from "../../client"
 import DeleteAlert from "../Common/DeleteAlert"
 import useSessionsData from "../../hooks/useSessionsData"
 import useCredentialsData from "../../hooks/useCredentialsData"
@@ -71,13 +60,9 @@ type SessionStatusBadgeProps = {
   status: string
 }
 
-type SessionProgressProps = {
-  session: SessionPublic
-}
-
 export type BotSessionManagerProps = {
-  onViewDetails: (sessionId: string) => void
-  credentialsUpdated?: number
+  onViewSessionDetails?: (sessionId: string) => void
+  onCredentialsUpdate?: () => void
 }
 
 // Define a simplified type for the create session form
@@ -133,15 +118,13 @@ const SessionStatusBadge = ({ status }: SessionStatusBadgeProps) => {
 }
 
 const BotSessionManager = ({
-  onViewDetails,
-  credentialsUpdated = 0,
+  onViewSessionDetails,
+  onCredentialsUpdate,
 }: BotSessionManagerProps) => {
-  const { 
-    sessions, 
-    isLoading: isLoadingSessions, 
-    isError: isSessionsError, 
-    error: sessionsError, 
-    refetchSessions 
+  const {
+    sessions,
+    isLoading: isSessionsLoading,
+    refetchSessions,
   } = useSessionsData()
   const { 
     credentials, 
@@ -175,24 +158,10 @@ const BotSessionManager = ({
 
   // React to credentials updates
   useEffect(() => {
-    if (credentialsUpdated > 0) {
+    if (onCredentialsUpdate) {
       refetchCredentials()
     }
-  }, [credentialsUpdated, refetchCredentials])
-
-  const getCredentialName = (credentialsId: string) => {
-    const credential = credentials.find((c) => c.id === credentialsId)
-    return credential ? credential.email : "Unknown"
-  }
-
-  // Handle input changes for create form
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]:
-        e.target.type === "number" ? Number(e.target.value) : e.target.value,
-    })
-  }
+  }, [onCredentialsUpdate, refetchCredentials])
 
   // Handle select changes for create form
   const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -358,8 +327,8 @@ const BotSessionManager = ({
 
   // Handle view details
   const handleViewDetails = (sessionId: string) => {
-    if (onViewDetails) {
-      onViewDetails(sessionId)
+    if (onViewSessionDetails) {
+      onViewSessionDetails(sessionId)
     }
   }
 
@@ -474,12 +443,10 @@ const BotSessionManager = ({
         </Button>
       </Flex>
 
-      {isLoadingSessions ? (
+      {isSessionsLoading ? (
         <Flex justifyContent="center" py={8}>
           <Spinner size="lg" />
         </Flex>
-      ) : sessionsError ? (
-        <Text color="red.500">Erro ao carregar sessões do bot</Text>
       ) : sessions.length === 0 ? (
         <Card>
           <CardBody>

@@ -4,19 +4,13 @@ import {
   Button,
   Card,
   CardBody,
-  Center,
-  Divider,
   Flex,
   FormControl,
   FormLabel,
-  Grid,
-  GridItem,
-  HStack,
   Heading,
+  HStack,
   IconButton,
   Input,
-  InputGroup,
-  InputRightElement,
   Modal,
   ModalBody,
   ModalCloseButton,
@@ -27,13 +21,12 @@ import {
   Spinner,
   Stack,
   Text,
-  Tooltip,
-  VStack,
   useDisclosure,
   useToast,
+  VStack,
 } from "@chakra-ui/react"
-import { useEffect, useState } from "react"
-import { FiEdit, FiEye, FiEyeOff, FiPlus, FiTrash2 } from "react-icons/fi"
+import { useState } from "react"
+import { FiEdit, FiPlus, FiTrash2 } from "react-icons/fi"
 import {
   type CredentialsCreate,
   type CredentialsPublic,
@@ -72,8 +65,6 @@ const CredentialsManager = ({
     email: "",
     password: "",
   })
-  const [showPassword, setShowPassword] = useState(false)
-  const [isLoadingAction, setIsLoadingAction] = useState(false)
 
   const {
     isOpen: isCreateOpen,

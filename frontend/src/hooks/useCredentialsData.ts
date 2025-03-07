@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { type GetUserCredentialsResponse, CredentialsService } from "../client"
+import { CredentialsService } from "../client"
 
 // Chave para o cache no React Query
 export const credentialsCacheKey = ["userCredentials"] 

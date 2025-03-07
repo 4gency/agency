@@ -1,6 +1,6 @@
-import { ChevronLeftIcon, ChevronRightIcon } from "@chakra-ui/icons"
 import {
-  Badge,
+  useBreakpointValue,
+  useColorModeValue,
   Box,
   Center,
   Container,
@@ -9,26 +9,21 @@ import {
   Spinner,
   Text,
   VStack,
-  useBreakpointValue,
-  useColorModeValue,
+  Badge,
 } from "@chakra-ui/react"
 import type React from "react"
 import { useRef, useState } from "react"
 import Slider from "react-slick"
-import {
-  type SubscriptionPlanPublic,
-  type SubscriptionPlansPublic,
-  SubscriptionPlansService,
-} from "../../client"
-import { useCheckoutHandler } from "../../hooks/useCheckoutHandler"
-import BadgePricingCard from "./BadgePricingCard"
-import NormalPricingCard from "./NormalPricingCard"
 import useSubscriptionPlans from "../../hooks/useSubscriptionPlans"
+import { useCheckoutHandler } from "../../hooks/useCheckoutHandler"
 
 import "slick-carousel/slick/slick-theme.css"
-// Importações necessárias para o CSS do Slick
 import "slick-carousel/slick/slick.css"
 import "./PricingCarouselStyles.css"
+
+import { FiArrowLeft, FiArrowRight } from "react-icons/fi"
+import BadgePricingCard from "./BadgePricingCard"
+import NormalPricingCard from "./NormalPricingCard"
 
 interface PricingSectionProps {
   isLandingPage?: boolean
@@ -45,7 +40,7 @@ const CarouselArrow = ({
   return (
     <IconButton
       aria-label={`${direction} arrow`}
-      icon={direction === "left" ? <ChevronLeftIcon /> : <ChevronRightIcon />}
+      icon={direction === "left" ? <FiArrowLeft /> : <FiArrowRight />}
       onClick={onClick}
       position="absolute"
       top="50%"
@@ -73,8 +68,7 @@ const PricingSection: React.FC<PricingSectionProps> = ({
   const { 
     plans, 
     isLoading, 
-    isError, 
-    error: plansError 
+    isError 
   } = useSubscriptionPlans(false)
   const sliderRef = useRef<Slider>(null)
   const [currentSlide, setCurrentSlide] = useState(0)
@@ -243,38 +237,40 @@ const PricingSection: React.FC<PricingSectionProps> = ({
                   benefits,
                 } = plan
 
-                // Check loading state for this specific plan
-                const isPlanCurrentlyLoading = isPlanLoading(id)
-
+                // Props comuns para os dois tipos de card
                 const commonProps = {
                   title: name,
                   price: price,
+                  recurrence: metric_type,
                   benefits: benefits ? benefits.map((b) => b.name) : [],
-                  buttonText: isPlanCurrentlyLoading
-                    ? "Loading..."
-                    : button_text,
-                  buttonEnabled: button_enabled && !isPlanCurrentlyLoading,
+                  buttonText: isPlanLoading(id) ? "Loading..." : button_text,
+                  buttonEnabled: button_enabled && !isPlanLoading(id),
                   buttonLink: "",
-                  disabled: !is_active,
                   hasDiscount: has_discount,
                   priceWithoutDiscount: price_without_discount,
-                  recurrence: metric_type,
                   isLandingPage: isLandingPage,
                   onButtonClick: () => handleSubscribeClick(id),
                 }
 
-                return (
-                  <Box key={id} px={2} py={2}>
-                    {has_badge ? (
+                if (has_badge) {
+                  return (
+                    <div key={id} style={{ width: "100%", padding: "10px" }}>
                       <BadgePricingCard
                         {...commonProps}
                         badgeText={badge_text}
                       />
-                    ) : (
-                      <NormalPricingCard {...commonProps} />
-                    )}
-                  </Box>
-                )
+                    </div>
+                  )
+                } else {
+                  return (
+                    <div key={id} style={{ width: "100%", padding: "10px" }}>
+                      <NormalPricingCard
+                        {...commonProps}
+                        disabled={!is_active}
+                      />
+                    </div>
+                  )
+                }
               })}
             </Slider>
           </Box>
