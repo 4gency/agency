@@ -1,6 +1,7 @@
 import base64
 import hashlib
 from datetime import datetime, timedelta, timezone
+from functools import lru_cache
 from typing import Any
 
 import jwt
@@ -30,6 +31,7 @@ def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
 
 
+@lru_cache
 def _get_fernet() -> Fernet:
     key = hashlib.sha256(settings.SECRET_KEY.encode()).digest()
     key = base64.urlsafe_b64encode(key)
