@@ -695,6 +695,19 @@ export type UserCreate = {
 }
 
 /**
+ * Estatísticas do usuário para o dashboard.
+ */
+export type UserDashboardStats = {
+  total_applications: number
+  successful_applications: number
+  success_rate: number
+  failed_applications: number
+  failure_rate: number
+  pending_applications: number
+  timestamp: string
+}
+
+/**
  * Modelo de usuário para retorno via API.
  */
 export type UserPublic = {
@@ -846,6 +859,8 @@ export type ResumeBotSessionData = {
 }
 
 export type ResumeBotSessionResponse = SessionPublic
+
+export type GetUserDashboardStatsResponse = UserDashboardStats
 
 export type StripeSuccessData = {
   sessionId: string
