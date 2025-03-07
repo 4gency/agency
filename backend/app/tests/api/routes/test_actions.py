@@ -65,7 +65,7 @@ def test_get_session_actions(
     db.commit()
 
     r = client.get(
-        f"{settings.API_V1_STR}/bots/sessions/{bot_session.id}/actions",
+        f"{settings.API_V1_STR}/bots/sessions/{bot_session.id}/actions?include_completed=true",
         headers=normal_subscriber_token_headers,
     )
 

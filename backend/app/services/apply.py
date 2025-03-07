@@ -125,30 +125,25 @@ class ApplyService:
 
         # Apply status filter
         if status:
-            status_conditions = []
-            for s in status:
-                try:
-                    status_conditions.append(
-                        BotApply.status == BotApplyStatus[s.upper()]
-                    )
-                except (KeyError, ValueError):
-                    # Skip invalid status values instead of comparing strings
-                    logger.warning(f"Invalid apply status value: {s}")
-                    continue
-
-            if status_conditions:
+            # Converte todos os status para minúsculas para comparação case-insensitive
+            status_lower = [s.lower() for s in status if s]
+            
+            # Verifica se há filtros válidos
+            if status_lower:
+                # Filtra apenas os status na lista usando or_
+                status_conditions = [BotApply.status == s for s in status_lower]
                 query = query.where(or_(*status_conditions))
 
-        # Get total count
-        all_applies = self.db.exec(query).all()
-        total = len(all_applies)
+        # Execute a query para obter o total de itens filtrados
+        filtered_applies = self.db.exec(query).all()
+        total_filtered = len(filtered_applies)
 
         # Apply pagination and ordering
-        query = query.offset(skip).limit(limit).order_by(BotApply.created_at.desc())  # type: ignore
+        query = query.order_by(BotApply.created_at.desc()).offset(skip).limit(limit)  # type: ignore
 
         applies = self.db.exec(query).all() or []
 
-        return cast(list[BotApply], applies), total
+        return cast(list[BotApply], applies), total_filtered
 
     def get_user_applies(
         self,
@@ -196,6 +191,74 @@ class ApplyService:
         applies = self.db.exec(query).all() or []
 
         return cast(list[BotApply], applies), total
+
+    def get_applies_summary(
+        self, session_id: UUID, user: User
+    ) -> tuple[int, dict[str, int], dict[str, int], int, list[BotApply]]:
+        """
+        Get a summary of job applications for a specific bot session.
+        
+        Returns:
+            - total_applies: Total number of applications
+            - status_counts: Dictionary with counts by status
+            - company_counts: Dictionary with counts by company
+            - total_time: Total time spent on applications in seconds
+            - latest_applies: List of the most recent applications
+        """
+        # First verify permission to access this session
+        session = self.db.exec(
+            select(BotSession).where(BotSession.id == session_id)
+        ).first()
+
+        if not session:
+            raise HTTPException(
+                status_code=http_status.HTTP_404_NOT_FOUND,
+                detail="Bot session not found",
+            )
+
+        if session.user_id != user.id and not user.is_superuser:
+            raise HTTPException(
+                status_code=http_status.HTTP_403_FORBIDDEN,
+                detail="You don't have permission to access this session",
+            )
+
+        # Get all applies for this session
+        applies = self.db.exec(
+            select(BotApply)
+            .where(BotApply.bot_session_id == session_id)
+            .order_by(BotApply.created_at.desc())  # type: ignore
+        ).all()
+
+        # Process applies to create summary data
+        status_counts: dict[str, int] = {
+            "success": 0,
+            "failed": 0
+        }
+        company_counts: dict[str, int] = {}
+        total_time = 0
+
+        for apply in applies:
+            # Count by status - garantindo que use as chaves corretas
+            # Converte para o valor do enum sem o prefixo da classe
+            if apply.status == BotApplyStatus.SUCCESS:
+                status_counts["success"] += 1
+            elif apply.status == BotApplyStatus.FAILED:
+                status_counts["failed"] += 1
+
+            # Count by company
+            if apply.company_name:
+                if apply.company_name in company_counts:
+                    company_counts[apply.company_name] += 1
+                else:
+                    company_counts[apply.company_name] = 1
+
+            # Sum total time
+            total_time += apply.total_time if apply.total_time else 0
+
+        # Get the latest applies (limiting to 5)
+        latest_applies = applies[:5] if applies else []
+
+        return len(applies), status_counts, company_counts, total_time, cast(list[BotApply], latest_applies)
 
     def update_apply_status(
         self, apply_id: int, status: BotApplyStatus, failed_reason: str | None = None

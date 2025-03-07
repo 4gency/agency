@@ -77,7 +77,51 @@ def get_session_applies(
     except HTTPException as e:
         raise e
 
+    # Se estamos filtrando por status, garantimos que retornamos apenas os itens que correspondem ao filtro
+    if status:
+        # Converter tudo para minúsculas para consistência
+        status_lower = [s.lower() for s in status if s]
+        filtered_applies = [a for a in applies if str(a.status).lower() in status_lower]
+        
+        return {
+            "total": len(filtered_applies),
+            "items": [ApplyPublic.model_validate(a) for a in filtered_applies]
+        }
+
     return {"total": total, "items": [ApplyPublic.model_validate(a) for a in applies]}
+
+
+@router.get(
+    "/sessions/{session_id}/applies/summary",
+    response_model=ApplySummary,
+    responses={
+        401: {"model": ErrorMessage, "description": "Authentication error"},
+        403: {"model": ErrorMessage, "description": "Permission error"},
+        404: {"model": ErrorMessage, "description": "Bot session not found"},
+    },
+)
+def get_applies_summary(
+    *, session: SessionDep, user: CurrentUser, session_id: UUID
+) -> Any:
+    """
+    Get a summary of job applications for a specific bot session.
+    """
+    apply_service = ApplyService(session)
+
+    try:
+        total_applies, status_counts, company_counts, total_time, latest_applies = (
+            apply_service.get_applies_summary(session_id=session_id, user=user)
+        )
+    except HTTPException as e:
+        raise e
+
+    return {
+        "total_applies": total_applies,
+        "by_status": status_counts,
+        "by_company": company_counts,
+        "total_time_seconds": total_time,
+        "latest_applies": [ApplyPublic.model_validate(a) for a in latest_applies],
+    }
 
 
 @router.get(
@@ -105,65 +149,3 @@ def get_apply_details(
         raise e
 
     return ApplyPublic.model_validate(apply)
-
-
-@router.get(
-    "/sessions/{session_id}/applies/summary",
-    response_model=ApplySummary,
-    responses={
-        401: {"model": ErrorMessage, "description": "Authentication error"},
-        403: {"model": ErrorMessage, "description": "Permission error"},
-        404: {"model": ErrorMessage, "description": "Bot session not found"},
-    },
-)
-def get_applies_summary(
-    *, session: SessionDep, user: CurrentUser, session_id: UUID
-) -> Any:
-    """
-    Get a summary of job applications for a specific bot session.
-    """
-    apply_service = ApplyService(session)
-
-    try:
-        # Como não há um método específico para resumo, vamos obter todos os applies
-        # e criar um resumo básico
-        applies, total = apply_service.get_session_applies(
-            session_id=session_id,
-            user=user,
-            limit=1000,  # Obter um número maior para o resumo
-        )
-    except HTTPException as e:
-        raise e
-
-    # Criar um resumo básico dos applies
-    status_counts: dict[str, int] = {}
-    companies: dict[str, int] = {}
-    total_time = 0
-
-    for apply in applies:
-        # Contar por status
-        status_str = (
-            apply.status.value if hasattr(apply.status, "value") else str(apply.status)
-        )
-        if status_str in status_counts:
-            status_counts[status_str] += 1
-        else:
-            status_counts[status_str] = 1
-
-        # Contar por empresa
-        if apply.company_name:
-            if apply.company_name in companies:
-                companies[apply.company_name] += 1
-            else:
-                companies[apply.company_name] = 1
-
-        # Somar tempo total
-        total_time += apply.total_time if apply.total_time else 0
-
-    return {
-        "total_applies": total,
-        "by_status": status_counts,
-        "by_company": companies,
-        "total_time_seconds": total_time,
-        "latest_applies": [ApplyPublic.model_validate(a) for a in applies],
-    }

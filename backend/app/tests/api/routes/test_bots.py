@@ -47,14 +47,6 @@ def test_create_bot_session(
     assert session_in_db is not None
     assert session_in_db.status == BotSessionStatus.STARTING
 
-    # Limpa a sessão criada para o teste
-    db.delete(session_in_db)
-    db.commit()
-
-    # Limpa as credenciais criadas para o teste
-    db.delete(credentials)
-    db.commit()
-
 
 def test_create_bot_session_not_subscriber(
     client: TestClient, normal_user_token_headers: dict[str, str], db: Session
@@ -231,11 +223,6 @@ def test_start_bot_session(
     # Verificar se foi atualizado no banco de dados
     db.refresh(bot_session)
     assert bot_session.status == BotSessionStatus.RUNNING
-
-    # Limpa os dados criados para o teste
-    db.delete(bot_session)
-    db.delete(credentials)
-    db.commit()
 
 
 def test_stop_bot_session(
