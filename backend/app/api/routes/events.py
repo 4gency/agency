@@ -100,7 +100,8 @@ def get_session_events(
                 event_dict["details"] = None
                 processed_events.append(event_dict)
         else:
-            processed_events.append(event)
+            # Converte o evento para dicionário antes de adicionar
+            processed_events.append(event.__dict__.copy())
 
     return {
         "total": total,
@@ -171,7 +172,8 @@ def get_session_events_summary(
                 event_dict["details"] = None
                 processed_events.append(event_dict)
         else:
-            processed_events.append(event)
+            # Converte o evento para dicionário antes de adicionar
+            processed_events.append(event.__dict__.copy())
 
     return {
         "total_events": total,

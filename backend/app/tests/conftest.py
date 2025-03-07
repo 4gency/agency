@@ -16,7 +16,7 @@ from app.tests.utils.utils import get_superuser_token_headers
 
 
 @contextmanager
-def get_test_db():
+def get_test_db() -> Generator[Session, None, None]:
     """Fornece uma sessão isolada de teste que faz rollback ao final"""
     connection = engine.connect()
     transaction = connection.begin()
@@ -38,10 +38,10 @@ def db() -> Generator[Session, None, None]:
 
 
 @pytest.fixture(scope="function")
-def client(db) -> Generator[TestClient, None, None]:
+def client(db: Session) -> Generator[TestClient, None, None]:
     """TestClient que usa a sessão de DB de teste"""
 
-    def override_get_db():
+    def override_get_db() -> Generator[Session, None, None]:
         try:
             yield db
         finally:

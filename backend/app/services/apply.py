@@ -4,7 +4,9 @@ from uuid import UUID
 
 from fastapi import HTTPException
 from fastapi import status as http_status
-from sqlmodel import Session, func, or_, select
+from sqlalchemy import String, desc
+from sqlalchemy import cast as sa_cast
+from sqlmodel import Session, col, func, or_, select
 
 from app.models.bot import BotApply, BotApplyStatus, BotSession
 from app.models.core import User
@@ -129,7 +131,10 @@ class ApplyService:
             status_lower = [s.lower() for s in status if s]
             if status_lower:
                 # Cria condições de filtro para cada status na lista
-                status_conditions = [BotApply.status == s for s in status_lower]
+                # Convertendo os valores de enumeração para string antes de comparar
+                status_conditions = [
+                    sa_cast(BotApply.status, String).lower() == s for s in status_lower
+                ]
                 # Combina as condições com OR
                 query = query.where(or_(*status_conditions))
 
@@ -139,8 +144,8 @@ class ApplyService:
 
         # Adiciona ordenação e paginação
         paginated_query = (
-            query.order_by(BotApply.created_at.desc()).offset(skip).limit(limit)
-        )  # type: ignore
+            query.order_by(desc(col(BotApply.created_at))).offset(skip).limit(limit)
+        )
 
         # Executa a consulta
         applies = self.db.exec(paginated_query).all() or []
@@ -166,7 +171,7 @@ class ApplyService:
             return [], 0
 
         # Build query for applications from these sessions
-        query = select(BotApply).where(BotApply.bot_session_id.in_(session_ids))  # type: ignore
+        query = select(BotApply).where(col(BotApply.bot_session_id).in_(session_ids))
 
         # Apply status filter
         if status:
@@ -188,7 +193,7 @@ class ApplyService:
         total = len(all_applies)
 
         # Apply pagination and ordering
-        query = query.offset(skip).limit(limit).order_by(BotApply.created_at.desc())  # type: ignore
+        query = query.offset(skip).limit(limit).order_by(desc(col(BotApply.created_at)))
 
         applies = self.db.exec(query).all() or []
 
@@ -228,7 +233,7 @@ class ApplyService:
         applies = self.db.exec(
             select(BotApply)
             .where(BotApply.bot_session_id == session_id)
-            .order_by(BotApply.created_at.desc())  # type: ignore
+            .order_by(desc(col(BotApply.created_at)))
         ).all()
 
         # Process applies to create summary data
