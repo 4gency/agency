@@ -76,7 +76,7 @@ def test_get_session_applies(
     applies_data = r.json()
     assert "total" in applies_data
     assert "items" in applies_data
-    assert len(applies_data["items"]) >= 2
+    assert len(applies_data["items"]) == 2
 
     # Limpa os dados criados para o teste
     db.delete(apply1)
