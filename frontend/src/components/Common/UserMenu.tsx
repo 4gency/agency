@@ -25,11 +25,11 @@ const UserMenu = () => {
     window.location.href = "/settings";
   }
   
-  // Alterna o tema sem fechar o menu
+  // Alterna o tema e fecha o menu
   const handleToggleColorMode = (e: React.MouseEvent) => {
-    // Impede o comportamento padrão que fecharia o menu
-    e.stopPropagation();
     toggleColorMode();
+    // Não precisamos mais impedir o comportamento padrão
+    // para permitir que o menu feche após o clique
   }
 
   return (
@@ -67,7 +67,7 @@ const UserMenu = () => {
               closeOnSelect={true}
               bg="transparent"
               borderRadius="md"
-              mb={1}
+              mb={2}
               color={useColorModeValue('gray.800', 'white')}
               fontWeight="medium"
               _hover={{
@@ -80,15 +80,19 @@ const UserMenu = () => {
             <MenuItem
               icon={colorMode === 'dark' ? <FiSun fontSize="18px" /> : <FiMoon fontSize="18px" />}
               onClick={handleToggleColorMode}
-              closeOnSelect={false}
+              closeOnSelect={true}
               bg="transparent"
               borderRadius="md"
-              mb={1}
+              mb={2}
               color={useColorModeValue('gray.800', 'white')}
               fontWeight="medium"
               _hover={{
                 bg: useColorModeValue('rgba(255, 255, 255, 0.4)', 'rgba(45, 55, 72, 0.4)'),
                 boxShadow: "sm"
+              }}
+              _active={{
+                bg: 'transparent', 
+                boxShadow: 'none'
               }}
             >
               {colorMode === 'dark' ? 'Light mode' : 'Dark mode'}

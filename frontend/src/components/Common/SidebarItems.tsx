@@ -25,8 +25,9 @@ interface SidebarItemsProps {
 
 const SidebarItems = ({ onClose }: SidebarItemsProps) => {
   const queryClient = useQueryClient()
-  const textColor = useColorModeValue("ui.main", "ui.light")
-  const bgActive = useColorModeValue("#E2E8F0", "#4A5568")
+  const textColor = useColorModeValue("gray.800", "white")
+  const bgActive = useColorModeValue("rgba(255, 255, 255, 0.7)", "rgba(66, 75, 95, 0.5)")
+  const hoverBg = useColorModeValue("rgba(255, 255, 255, 0.5)", "rgba(45, 55, 72, 0.4)")
   const currentUser = queryClient.getQueryData<UserPublic>(["currentUser"])
   const { data: subscriptions } = useSubscriptions()
   const navigate = useNavigate()
@@ -90,7 +91,11 @@ const SidebarItems = ({ onClose }: SidebarItemsProps) => {
           cursor="pointer"
           onClick={() => handleClick(path)}
           bg={isSettingsActive ? bgActive : undefined}
-          borderRadius={isSettingsActive ? "12px" : undefined}
+          borderRadius="md"
+          mb={2}
+          fontWeight="medium"
+          _hover={{ bg: hoverBg }}
+          transition="all 0.2s"
         >
           <Icon as={icon} alignSelf="center" />
           <Text ml={2}>{title}</Text>
@@ -107,10 +112,16 @@ const SidebarItems = ({ onClose }: SidebarItemsProps) => {
         p={2}
         key={title}
         color={textColor}
+        borderRadius="md"
+        mb={2}
+        fontWeight="medium"
+        transition="all 0.2s"
+        _hover={{ bg: hoverBg }}
         activeProps={{
           style: {
             background: bgActive,
-            borderRadius: "12px",
+            borderRadius: "8px",
+            boxShadow: "sm",
           },
         }}
         onClick={onClose}
@@ -122,9 +133,9 @@ const SidebarItems = ({ onClose }: SidebarItemsProps) => {
   });
 
   return (
-    <>
-      <Box>{listItems}</Box>
-    </>
+    <Box mb={4}>
+      {listItems}
+    </Box>
   )
 }
 
