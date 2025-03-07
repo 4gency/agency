@@ -1,5 +1,5 @@
 from fastapi.testclient import TestClient
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from app.core.config import settings
 from app.models import crud
@@ -69,3 +69,15 @@ def authentication_subscriber_token_from_email(
         user = crud.update_user(session=db, db_user=user, user_in=user_in_update)
 
     return user_authentication_headers(client=client, email=email, password=password)
+
+def get_user_from_token_header(db: Session, headers: dict[str, str], client: TestClient) -> User:
+    """Extrai o usuário do banco a partir do token de autenticação."""
+    r = client.get(f"{settings.API_V1_STR}/users/me", headers=headers)
+    current_user = r.json()
+    statement = select(User).where(User.email == current_user["email"])
+    user = db.exec(statement).first()
+
+    assert user is not None
+    assert user.id
+    
+    return user

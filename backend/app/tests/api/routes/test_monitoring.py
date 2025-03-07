@@ -1,6 +1,7 @@
 import uuid
 from datetime import datetime, timedelta, timezone
 
+from app.tests.utils.user import get_user_from_token_header
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
@@ -11,38 +12,6 @@ from app.models.bot import (
     Credentials,
     KubernetesPodStatus,
 )
-from app.models.core import User
-from app.tests.utils.utils import random_email, random_lower_string
-
-
-def get_user_from_token_header(db: Session, headers: dict[str, str]) -> User:
-    """Extrai o usuário do banco a partir do token de autenticação."""
-    # Obtém o email do usuário a partir do tipo de header fornecido
-    if "Authorization" not in headers:
-        raise ValueError("Não há token de autorização nos headers")
-    
-    # Olha para o email do usuário nos testes
-    if settings.EMAIL_TEST_USER_SUBSCRIBER in headers.get("Authorization", ""):
-        user = db.exec(select(User).where(User.email == settings.EMAIL_TEST_USER_SUBSCRIBER)).first()
-    elif settings.EMAIL_TEST_USER in headers.get("Authorization", ""):
-        user = db.exec(select(User).where(User.email == settings.EMAIL_TEST_USER)).first()
-    elif settings.FIRST_SUPERUSER in headers.get("Authorization", ""):
-        user = db.exec(select(User).where(User.email == settings.FIRST_SUPERUSER)).first()
-    else:
-        # Tenta encontrar algum usuário válido
-        users = db.exec(select(User)).all()
-        for user_candidate in users:
-            if user_candidate.email in headers.get("Authorization", ""):
-                user = user_candidate
-                break
-        else:
-            # Se não encontrar nada, tenta usar o primeiro usuário disponível
-            user = db.exec(select(User).limit(1)).first()
-    
-    if not user:
-        raise ValueError("Usuário não encontrado para o token fornecido")
-    
-    return user
 
 
 def test_get_all_active_sessions(
@@ -50,11 +19,11 @@ def test_get_all_active_sessions(
 ) -> None:
     """Test getting all active bot sessions (admin only)."""
     # Obtém o usuário a partir do token
-    user = get_user_from_token_header(db, superuser_token_headers)
+    user = get_user_from_token_header(db, superuser_token_headers, client)
     
     # Criar credenciais para teste
     credentials = Credentials(
-        user_id=user.id,  # Usando o ID do usuário real
+        user_id=user.id,  
         email="test_monitoring@example.com",
         password="testpassword"
     )
@@ -64,7 +33,7 @@ def test_get_all_active_sessions(
     
     # Criar algumas sessões
     session1 = BotSession(
-        user_id=user.id,  # Usando o ID do usuário real
+        user_id=user.id,  
         credentials_id=credentials.id,
         applies_limit=150,
         status=BotSessionStatus.RUNNING,
@@ -74,7 +43,7 @@ def test_get_all_active_sessions(
     db.add(session1)
     
     session2 = BotSession(
-        user_id=user.id,  # Usando o ID do usuário real
+        user_id=user.id,  
         credentials_id=credentials.id,
         applies_limit=200,
         status=BotSessionStatus.RUNNING,
@@ -106,11 +75,11 @@ def test_get_sessions_status_summary(
 ) -> None:
     """Test getting sessions status summary (admin only)."""
     # Obtém o usuário a partir do token
-    user = get_user_from_token_header(db, superuser_token_headers)
+    user = get_user_from_token_header(db, superuser_token_headers, client)
     
     # Criar credenciais para teste
     credentials = Credentials(
-        user_id=user.id,  # Usando o ID do usuário real
+        user_id=user.id,  
         email="test_monitoring_summary@example.com",
         password="testpassword"
     )
@@ -120,7 +89,7 @@ def test_get_sessions_status_summary(
     
     # Criar algumas sessões em diferentes estados
     session1 = BotSession(
-        user_id=user.id,  # Usando o ID do usuário real
+        user_id=user.id,  
         credentials_id=credentials.id,
         applies_limit=150,
         status=BotSessionStatus.RUNNING,
@@ -129,7 +98,7 @@ def test_get_sessions_status_summary(
     db.add(session1)
     
     session2 = BotSession(
-        user_id=user.id,  # Usando o ID do usuário real
+        user_id=user.id,  
         credentials_id=credentials.id,
         applies_limit=200,
         status=BotSessionStatus.FAILED,
@@ -139,7 +108,7 @@ def test_get_sessions_status_summary(
     db.add(session2)
     
     session3 = BotSession(
-        user_id=user.id,  # Usando o ID do usuário real
+        user_id=user.id,  
         credentials_id=credentials.id,
         applies_limit=200,
         status=BotSessionStatus.COMPLETED,
@@ -178,11 +147,11 @@ def test_get_kubernetes_pods(
 ) -> None:
     """Test getting Kubernetes pods status (admin only)."""
     # Obtém o usuário a partir do token
-    user = get_user_from_token_header(db, superuser_token_headers)
+    user = get_user_from_token_header(db, superuser_token_headers, client)
     
     # Criar credenciais para teste
     credentials = Credentials(
-        user_id=user.id,  # Usando o ID do usuário real
+        user_id=user.id,  
         email="test_monitoring_pods@example.com",
         password="testpassword"
     )
@@ -192,7 +161,7 @@ def test_get_kubernetes_pods(
     
     # Criar algumas sessões com informações de pod
     session1 = BotSession(
-        user_id=user.id,  # Usando o ID do usuário real
+        user_id=user.id,  
         credentials_id=credentials.id,
         applies_limit=150,
         status=BotSessionStatus.RUNNING,
@@ -203,7 +172,7 @@ def test_get_kubernetes_pods(
     db.add(session1)
     
     session2 = BotSession(
-        user_id=user.id,  # Usando o ID do usuário real
+        user_id=user.id,  
         credentials_id=credentials.id,
         applies_limit=200,
         status=BotSessionStatus.FAILED,
@@ -236,11 +205,11 @@ def test_force_stop_session(
 ) -> None:
     """Test force stopping a bot session (admin only)."""
     # Obtém o usuário a partir do token
-    user = get_user_from_token_header(db, superuser_token_headers)
+    user = get_user_from_token_header(db, superuser_token_headers, client)
     
     # Criar credenciais para teste
     credentials = Credentials(
-        user_id=user.id,  # Usando o ID do usuário real
+        user_id=user.id,  
         email="test_monitoring_stop@example.com",
         password="testpassword"
     )
@@ -250,7 +219,7 @@ def test_force_stop_session(
     
     # Criar uma sessão para forçar a parada
     session = BotSession(
-        user_id=user.id,  # Usando o ID do usuário real
+        user_id=user.id,  
         credentials_id=credentials.id,
         applies_limit=150,
         status=BotSessionStatus.RUNNING,

@@ -1,6 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
+from app.tests.utils.user import get_user_from_token_header
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
@@ -10,46 +11,16 @@ from app.models.core import User
 from app.tests.utils.utils import random_email, random_lower_string
 
 
-def get_user_from_token_header(db: Session, headers: dict[str, str]) -> User:
-    """Extrai o usuário do banco a partir do token de autenticação."""
-    # Obtém o email do usuário a partir do tipo de header fornecido
-    if "Authorization" not in headers:
-        raise ValueError("Não há token de autorização nos headers")
-    
-    # Olha para o email do usuário nos testes
-    if settings.EMAIL_TEST_USER_SUBSCRIBER in headers.get("Authorization", ""):
-        user = db.exec(select(User).where(User.email == settings.EMAIL_TEST_USER_SUBSCRIBER)).first()
-    elif settings.EMAIL_TEST_USER in headers.get("Authorization", ""):
-        user = db.exec(select(User).where(User.email == settings.EMAIL_TEST_USER)).first()
-    elif settings.FIRST_SUPERUSER in headers.get("Authorization", ""):
-        user = db.exec(select(User).where(User.email == settings.FIRST_SUPERUSER)).first()
-    else:
-        # Tenta encontrar algum usuário válido
-        users = db.exec(select(User)).all()
-        for user_candidate in users:
-            if user_candidate.email in headers.get("Authorization", ""):
-                user = user_candidate
-                break
-        else:
-            # Se não encontrar nada, tenta usar o primeiro usuário disponível
-            user = db.exec(select(User).limit(1)).first()
-    
-    if not user:
-        raise ValueError("Usuário não encontrado para o token fornecido")
-    
-    return user
-
-
 def test_create_bot_session(
     client: TestClient, normal_subscriber_token_headers: dict[str, str], db: Session
 ) -> None:
     """Test creating a bot session as a subscriber."""
     # Primeiro, obtém o usuário a partir do token
-    user = get_user_from_token_header(db, normal_subscriber_token_headers)
+    user = get_user_from_token_header(db, normal_subscriber_token_headers, client)
     
     # Cria uma credencial para o usuário correto
     credentials = Credentials(
-        user_id=user.id,  # Usando o ID do usuário real
+        user_id=user.id,  
         email="test_cred@example.com",
         password="testpassword"
     )
@@ -94,11 +65,11 @@ def test_create_bot_session_not_subscriber(
 ) -> None:
     """Test that non-subscribers can't create a bot session."""
     # Obtém o usuário a partir do token
-    user = get_user_from_token_header(db, normal_user_token_headers)
+    user = get_user_from_token_header(db, normal_user_token_headers, client)
     
     # Cria uma credencial para o usuário correto
     credentials = Credentials(
-        user_id=user.id,  # Usando o ID do usuário real
+        user_id=user.id,  
         email="test_cred2@example.com",
         password="testpassword"
     )
@@ -131,11 +102,11 @@ def test_get_bot_sessions(
 ) -> None:
     """Test getting all bot sessions for the current user."""
     # Obtém o usuário a partir do token
-    user = get_user_from_token_header(db, normal_subscriber_token_headers)
+    user = get_user_from_token_header(db, normal_subscriber_token_headers, client)
     
     # Criar credenciais para teste
     credentials = Credentials(
-        user_id=user.id,  # Usando o ID do usuário real
+        user_id=user.id,  
         email="test_cred3@example.com",
         password="testpassword"
     )
@@ -145,7 +116,7 @@ def test_get_bot_sessions(
     
     # Criar uma sessão para o usuário
     bot_session = BotSession(
-        user_id=user.id,  # Usando o ID do usuário real
+        user_id=user.id,  
         credentials_id=credentials.id,
         applies_limit=150,
         status=BotSessionStatus.RUNNING,
@@ -176,11 +147,11 @@ def test_get_bot_session_by_id(
 ) -> None:
     """Test getting a specific bot session by ID."""
     # Obtém o usuário a partir do token
-    user = get_user_from_token_header(db, normal_subscriber_token_headers)
+    user = get_user_from_token_header(db, normal_subscriber_token_headers, client)
     
     # Criar credenciais para teste
     credentials = Credentials(
-        user_id=user.id,  # Usando o ID do usuário real
+        user_id=user.id,  
         email="test_cred4@example.com",
         password="testpassword"
     )
@@ -190,7 +161,7 @@ def test_get_bot_session_by_id(
     
     # Criar uma sessão para o usuário
     bot_session = BotSession(
-        user_id=user.id,  # Usando o ID do usuário real
+        user_id=user.id,  
         credentials_id=credentials.id,
         applies_limit=200,
         status=BotSessionStatus.RUNNING,
@@ -235,11 +206,11 @@ def test_start_bot_session(
 ) -> None:
     """Test starting a bot session."""
     # Obtém o usuário a partir do token
-    user = get_user_from_token_header(db, normal_subscriber_token_headers)
+    user = get_user_from_token_header(db, normal_subscriber_token_headers, client)
     
     # Criar credenciais para teste
     credentials = Credentials(
-        user_id=user.id,  # Usando o ID do usuário real
+        user_id=user.id,  
         email="test_cred5@example.com",
         password="testpassword"
     )
@@ -249,7 +220,7 @@ def test_start_bot_session(
     
     # Criar uma sessão para o usuário
     bot_session = BotSession(
-        user_id=user.id,  # Usando o ID do usuário real
+        user_id=user.id,  
         credentials_id=credentials.id,
         applies_limit=200,
         status=BotSessionStatus.STARTING,
@@ -284,11 +255,11 @@ def test_stop_bot_session(
 ) -> None:
     """Test stopping a bot session."""
     # Obtém o usuário a partir do token
-    user = get_user_from_token_header(db, normal_subscriber_token_headers)
+    user = get_user_from_token_header(db, normal_subscriber_token_headers, client)
     
     # Criar credenciais para teste
     credentials = Credentials(
-        user_id=user.id,  # Usando o ID do usuário real
+        user_id=user.id,  
         email="test_cred6@example.com",
         password="testpassword"
     )
@@ -298,7 +269,7 @@ def test_stop_bot_session(
     
     # Criar uma sessão para o usuário
     bot_session = BotSession(
-        user_id=user.id,  # Usando o ID do usuário real
+        user_id=user.id,  
         credentials_id=credentials.id,
         applies_limit=200,
         status=BotSessionStatus.RUNNING,
@@ -333,11 +304,11 @@ def test_pause_bot_session(
 ) -> None:
     """Test pausing a bot session."""
     # Obtém o usuário a partir do token
-    user = get_user_from_token_header(db, normal_subscriber_token_headers)
+    user = get_user_from_token_header(db, normal_subscriber_token_headers, client)
     
     # Criar credenciais para teste
     credentials = Credentials(
-        user_id=user.id,  # Usando o ID do usuário real
+        user_id=user.id,  
         email="test_cred7@example.com",
         password="testpassword"
     )
@@ -347,7 +318,7 @@ def test_pause_bot_session(
     
     # Criar uma sessão para o usuário
     bot_session = BotSession(
-        user_id=user.id,  # Usando o ID do usuário real
+        user_id=user.id,  
         credentials_id=credentials.id,
         applies_limit=200,
         status=BotSessionStatus.RUNNING,
@@ -382,11 +353,11 @@ def test_resume_bot_session(
 ) -> None:
     """Test resuming a bot session."""
     # Obtém o usuário a partir do token
-    user = get_user_from_token_header(db, normal_subscriber_token_headers)
+    user = get_user_from_token_header(db, normal_subscriber_token_headers, client)
     
     # Criar credenciais para teste
     credentials = Credentials(
-        user_id=user.id,  # Usando o ID do usuário real
+        user_id=user.id,  
         email="test_cred8@example.com",
         password="testpassword"
     )
@@ -396,7 +367,7 @@ def test_resume_bot_session(
     
     # Criar uma sessão para o usuário
     bot_session = BotSession(
-        user_id=user.id,  # Usando o ID do usuário real
+        user_id=user.id,  
         credentials_id=credentials.id,
         applies_limit=200,
         status=BotSessionStatus.PAUSED,
@@ -431,11 +402,11 @@ def test_delete_bot_session(
 ) -> None:
     """Test deleting a bot session."""
     # Obtém o usuário a partir do token
-    user = get_user_from_token_header(db, normal_subscriber_token_headers)
+    user = get_user_from_token_header(db, normal_subscriber_token_headers, client)
     
     # Criar credenciais para teste
     credentials = Credentials(
-        user_id=user.id,  # Usando o ID do usuário real
+        user_id=user.id,  
         email="test_cred9@example.com",
         password="testpassword"
     )
@@ -445,7 +416,7 @@ def test_delete_bot_session(
     
     # Criar uma sessão para o usuário
     bot_session = BotSession(
-        user_id=user.id,  # Usando o ID do usuário real
+        user_id=user.id,  
         credentials_id=credentials.id,
         applies_limit=200,
         status=BotSessionStatus.STOPPED,

@@ -1,5 +1,6 @@
 import uuid
 
+from app.tests.utils.user import get_user_from_token_header
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
@@ -7,36 +8,6 @@ from app.core.config import settings
 from app.models.bot import Credentials
 from app.models.core import User
 from app.tests.utils.utils import random_email, random_lower_string
-
-
-def get_user_from_token_header(db: Session, headers: dict[str, str]) -> User:
-    """Extrai o usuário do banco a partir do token de autenticação."""
-    # Obtém o email do usuário a partir do tipo de header fornecido
-    if "Authorization" not in headers:
-        raise ValueError("Não há token de autorização nos headers")
-    
-    # Olha para o email do usuário nos testes
-    if settings.EMAIL_TEST_USER_SUBSCRIBER in headers.get("Authorization", ""):
-        user = db.exec(select(User).where(User.email == settings.EMAIL_TEST_USER_SUBSCRIBER)).first()
-    elif settings.EMAIL_TEST_USER in headers.get("Authorization", ""):
-        user = db.exec(select(User).where(User.email == settings.EMAIL_TEST_USER)).first()
-    elif settings.FIRST_SUPERUSER in headers.get("Authorization", ""):
-        user = db.exec(select(User).where(User.email == settings.FIRST_SUPERUSER)).first()
-    else:
-        # Tenta encontrar algum usuário válido
-        users = db.exec(select(User)).all()
-        for user_candidate in users:
-            if user_candidate.email in headers.get("Authorization", ""):
-                user = user_candidate
-                break
-        else:
-            # Se não encontrar nada, tenta usar o primeiro usuário disponível
-            user = db.exec(select(User).limit(1)).first()
-    
-    if not user:
-        raise ValueError("Usuário não encontrado para o token fornecido")
-    
-    return user
 
 
 def test_get_user_credentials(
@@ -60,7 +31,7 @@ def test_create_credentials(
 ) -> None:
     """Test creating new credentials."""
     # Obtém o usuário a partir do token
-    user = get_user_from_token_header(db, normal_user_token_headers)
+    user = get_user_from_token_header(db, normal_user_token_headers, client)
     
     email = random_email()
     password = random_lower_string()
@@ -98,11 +69,11 @@ def test_update_credentials(
 ) -> None:
     """Test updating credentials."""
     # Obtém o usuário a partir do token
-    user = get_user_from_token_header(db, normal_user_token_headers)
+    user = get_user_from_token_header(db, normal_user_token_headers, client)
     
     # Criar credenciais para atualizar
     credentials = Credentials(
-        user_id=user.id,  # Usando o ID do usuário real
+        user_id=user.id,  
         email="update_test@example.com",
         password="original_password"
     )
@@ -164,11 +135,11 @@ def test_delete_credentials(
 ) -> None:
     """Test deleting credentials."""
     # Obtém o usuário a partir do token
-    user = get_user_from_token_header(db, normal_user_token_headers)
+    user = get_user_from_token_header(db, normal_user_token_headers, client)
     
     # Criar credenciais para excluir
     credentials = Credentials(
-        user_id=user.id,  # Usando o ID do usuário real
+        user_id=user.id,  
         email="delete_test@example.com",
         password="delete_password"
     )
