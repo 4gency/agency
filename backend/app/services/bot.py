@@ -23,6 +23,13 @@ class BotService:
         """Initialize with database session"""
         self.db = db
 
+    def save_session(self, session: BotSession) -> BotSession:
+        """Helper method to save a session, commit changes and refresh the object"""
+        self.db.add(session)
+        self.db.commit()
+        self.db.refresh(session)
+        return session
+
     # ======================================================
     # BOT SESSION MANAGEMENT
     # ======================================================
@@ -44,9 +51,7 @@ class BotService:
             style=style,
         )
 
-        self.db.add(session)
-        self.db.commit()
-        self.db.refresh(session)
+        session = self.save_session(session)
 
         # Add creation event
         session.create()
@@ -130,11 +135,7 @@ class BotService:
             session.last_heartbeat_at = datetime.now(timezone.utc)
 
             # Save changes
-            self.db.add(session)
-            self.db.commit()
-            self.db.refresh(session)
-
-            return session
+            return self.save_session(session)
 
         except Exception as e:
             logger.exception(f"Error starting bot session: {str(e)}")
@@ -142,12 +143,8 @@ class BotService:
             # Update session on failure
             session.status = BotSessionStatus.FAILED
             session.error_message = f"Failed to start: {str(e)}"
-
-            # Add error event
             session.add_event("error", f"Failed to start: {str(e)}", "error")
-
-            self.db.add(session)
-            self.db.commit()
+            self.save_session(session)
 
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -175,18 +172,14 @@ class BotService:
             session.stop()
 
             # Save changes
-            self.db.add(session)
-            self.db.commit()
-            self.db.refresh(session)
-
-            return session
+            return self.save_session(session)
 
         except Exception as e:
             logger.exception(f"Error stopping bot session: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Error stopping bot session: {str(e)}",
-            )
+            ) from e
 
     def pause_bot_session(self, session_id: UUID, user: User) -> BotSession:
         """Pause a bot session"""
@@ -205,18 +198,14 @@ class BotService:
             session.pause()
 
             # Save changes
-            self.db.add(session)
-            self.db.commit()
-            self.db.refresh(session)
-
-            return session
+            return self.save_session(session)
 
         except Exception as e:
             logger.exception(f"Error pausing bot session: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Error pausing bot session: {str(e)}",
-            )
+            ) from e
 
     def resume_bot_session(self, session_id: UUID, user: User) -> BotSession:
         """Resume a paused bot session"""
@@ -235,18 +224,14 @@ class BotService:
             session.resume()
 
             # Save changes
-            self.db.add(session)
-            self.db.commit()
-            self.db.refresh(session)
-
-            return session
+            return self.save_session(session)
 
         except Exception as e:
             logger.exception(f"Error resuming bot session: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Error resuming bot session: {str(e)}",
-            )
+            ) from e
 
     def update_heartbeat(self, session_id: UUID) -> bool:
         """Update session heartbeat to show it's still alive"""

@@ -257,7 +257,7 @@ class ApplyService:
                     company_counts[apply.company_name] = 1
 
             # Sum total time
-            total_time += apply.total_time if apply.total_time else 0
+            total_time += apply.total_time or 0
 
         # Get the latest applies (limiting to 5)
         latest_applies = applies[:5] if applies else []

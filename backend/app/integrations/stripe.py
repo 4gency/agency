@@ -385,7 +385,7 @@ def create_checkout_subscription_session(
     if not subscription_plan.stripe_price_id:
         setup_plan_in_stripe(session, subscription_plan)
         if not subscription_plan.stripe_price_id:
-            raise Exception("Stripe Price ID cannot be set")
+            raise NotFound("Stripe Price ID cannot be set")
 
     # Cria checkout session
     checkout_session = stripe.checkout.Session.create(
@@ -559,7 +559,7 @@ def handle_checkout_session(session: Session, event: stripe.Event) -> None:
                 "CheckoutSession não encontrado para session_id: %s",
                 checkout_session_id,
             )
-            raise Exception("CheckoutSession not found.")
+            raise NotFound("CheckoutSession not found.")
 
         if payment_status == "paid":
             if checkout.status != "complete":
@@ -757,21 +757,25 @@ def handle_invoice_payment_succeeded_in_checkout_callback(
         )
         if not stripe_checkout_session:
             logger.error("CheckoutSession não encontrado na Stripe.")
-            raise Exception("CheckoutSession not found.")
+            raise NotFound("CheckoutSession not found.")
 
         stripe_invoice: stripe.Invoice = stripe.Invoice.retrieve(
             str(stripe_checkout_session.invoice)
         )
         if not stripe_invoice:
-            logger.error("Invoice não encontrado na Stripe.")
-            raise Exception("Invoice not found.")
+            logger.error(
+                "Invoice não encontrado para invoice_id: %s", stripe_invoice.id
+            )
+            raise NotFound("Invoice not found.")
 
         stripe_subscription: stripe.Subscription = stripe.Subscription.retrieve(
             str(stripe_invoice.subscription)
         )
         if not stripe_subscription:
-            logger.error("Subscription não encontrado na Stripe.")
-            raise Exception("Subscription not found.")
+            logger.error(
+                "Subscription não encontrada para invoice_id: %s", stripe_invoice.id
+            )
+            raise NotFound("Subscription not found.")
 
         subscription = session.exec(
             select(Subscription).where(
@@ -815,7 +819,7 @@ def handle_invoice_payment_succeeded(session: Session, event: stripe.Event) -> N
 
         if not all([stripe_subscription, stripe_plan]):
             logger.error("Subscription ou Plan não encontrados na Stripe.")
-            raise Exception("Subscription or Plan not found.")
+            raise NotFound("Subscription or Plan not found.")
 
         # Busca o usuário no banco de dados
         user = session.exec(
@@ -826,7 +830,7 @@ def handle_invoice_payment_succeeded(session: Session, event: stripe.Event) -> N
                 "User não encontrado para stripe_customer_id: %s",
                 stripe_invoice.customer,
             )
-            raise Exception("User not found.")
+            raise NotFound("User not found.")
 
         # Busca o SubscriptionPlan associado
         plan = session.exec(
@@ -839,7 +843,7 @@ def handle_invoice_payment_succeeded(session: Session, event: stripe.Event) -> N
                 "SubscriptionPlan não encontrada para plan_id: %s",
                 stripe_plan.product,
             )
-            raise Exception("SubscriptionPlan not found.")
+            raise NotFound("SubscriptionPlan not found.")
 
         # Busca a Subscription existente, se houver
         subscription = session.exec(
@@ -891,7 +895,7 @@ def handle_checkout_session_expired(session: Session, event: stripe.Event) -> No
                 "CheckoutSession não encontrado para session_id: %s",
                 checkout_session_id,
             )
-            raise Exception("CheckoutSession not found.")
+            raise NotFound("CheckoutSession not found.")
 
         if checkout.status != "complete":
             checkout.status = "expired"
@@ -928,7 +932,7 @@ def handle_checkout_session_async_payment_failed(
                 "CheckoutSession não encontrado para session_id: %s",
                 checkout_session_id,
             )
-            raise Exception("CheckoutSession not found.")
+            raise NotFound("CheckoutSession not found.")
 
         if checkout.status != "complete":
             checkout.status = "failed"
@@ -962,7 +966,7 @@ def handle_charge_dispute_created(session: Session, event: stripe.Event) -> None
                 "Payment não encontrado para transaction_id: %s",
                 payment_intent_id,
             )
-            raise Exception("Payment not found.")
+            raise NotFound("Payment not found.")
 
         subscription = session.exec(
             select(Subscription).where(Subscription.id == payment.subscription_id)
@@ -972,7 +976,7 @@ def handle_charge_dispute_created(session: Session, event: stripe.Event) -> None
                 "Subscription não encontrada para payment_id: %s",
                 payment.id,
             )
-            raise Exception("Subscription not found.")
+            raise NotFound("Subscription not found.")
 
         if subscription.is_active:
             subscription.is_active = False
@@ -983,7 +987,7 @@ def handle_charge_dispute_created(session: Session, event: stripe.Event) -> None
         user = session.exec(select(User).where(User.id == payment.user_id)).first()
 
         if not user:
-            raise Exception("User not found")
+            raise NotFound("User not found")
 
         user.is_active = False
         session.add(user)

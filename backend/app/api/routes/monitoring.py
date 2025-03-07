@@ -91,9 +91,7 @@ def get_sessions_status_summary(
     Get sessions status summary (admin only).
     """
     monitoring_service = MonitoringService(session)
-    summary = monitoring_service.get_system_health()
-
-    return summary
+    return monitoring_service.get_system_health()
 
 
 @router.get(

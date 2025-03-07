@@ -230,10 +230,10 @@ class MonitoringService:
             # Calculate statistics
             total_sessions = len(sessions)
             completed_sessions = sum(
-                1 for s in sessions if s.status == BotSessionStatus.COMPLETED
+                bool(s.status == BotSessionStatus.COMPLETED) for s in sessions
             )
             failed_sessions = sum(
-                1 for s in sessions if s.status == BotSessionStatus.FAILED
+                bool(s.status == BotSessionStatus.FAILED) for s in sessions
             )
 
             total_applies = sum(s.total_applied for s in sessions)

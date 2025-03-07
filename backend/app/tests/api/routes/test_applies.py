@@ -77,6 +77,7 @@ def test_get_session_applies(
     assert "total" in applies_data
     assert "items" in applies_data
     assert len(applies_data["items"]) == 2
+    assert applies_data["total"] == 2
 
     # Limpa os dados criados para o teste
     db.delete(apply1)

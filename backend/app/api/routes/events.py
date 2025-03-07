@@ -69,9 +69,7 @@ def get_session_events(
 
     try:
         # Converte event_type de string única para lista se necessário
-        event_type_list = None
-        if event_type:
-            event_type_list = [event_type]
+        event_type_list = [event_type] if event_type else None
 
         events, total = event_service.get_session_events(
             session_id=session_id,

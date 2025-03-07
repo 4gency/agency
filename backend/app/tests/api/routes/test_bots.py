@@ -46,6 +46,10 @@ def test_create_bot_session(
     session_in_db = db.get(BotSession, uuid.UUID(created_session["id"]))
     assert session_in_db is not None
     assert session_in_db.status == BotSessionStatus.STARTING
+    assert session_in_db.applies_limit == 100
+    assert session_in_db.style == BotStyleChoice.DEFAULT
+    assert session_in_db.user_id == user.id
+    assert session_in_db.credentials_id == credentials.id
 
 
 def test_create_bot_session_not_subscriber(

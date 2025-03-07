@@ -17,6 +17,14 @@ class CredentialsService:
         """Initialize with database session"""
         self.db = db
 
+    def _safe_decrypt(self, encrypted: str) -> str:
+        """Helper method to safely decrypt a password, handling exceptions"""
+        try:
+            return decrypt_password(encrypted)
+        except Exception as e:
+            logger.error(f"Error decrypting password: {str(e)}")
+            return ""
+
     def get_credentials_by_id(self, credentials_id: UUID) -> CredentialsInternal | None:
         """Get credentials by ID"""
         credentials = self.db.exec(
@@ -29,10 +37,7 @@ class CredentialsService:
         credentials_internal = CredentialsInternal.model_validate(credentials)
 
         if credentials.password:
-            try:
-                credentials_internal.password = decrypt_password(credentials.password)
-            except Exception as e:
-                logger.error(f"Error decrypting password: {str(e)}")
+            credentials_internal.password = self._safe_decrypt(credentials.password)
 
         return credentials_internal
 
@@ -135,10 +140,7 @@ class CredentialsService:
 
         # Return with decrypted password
         internal = CredentialsInternal.model_validate(credentials)
-        try:
-            internal.password = decrypt_password(credentials.password)
-        except Exception as e:
-            logger.error(f"Error decrypting password: {str(e)}")
+        internal.password = self._safe_decrypt(credentials.password)
 
         return internal
 

@@ -1,4 +1,6 @@
-from typing import Any
+import functools
+from collections.abc import Callable
+from typing import Any, TypeVar
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, status
@@ -8,6 +10,25 @@ from sqlmodel import SQLModel
 from app.api.deps import CurrentUser, SessionDep
 from app.models.core import ErrorMessage, Message
 from app.services.credentials import CredentialsService
+
+# Tipo genérico para a função decorada
+T = TypeVar("T")
+
+
+# Decorador para tratamento padronizado de exceções
+def handle_service_exceptions(func: Callable[..., T]) -> Callable[..., T]:
+    @functools.wraps(func)
+    def wrapper(*args: Any, **kwargs: Any) -> T:
+        try:
+            return func(*args, **kwargs)
+        except HTTPException as e:
+            raise e
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
+            ) from e
+
+    return wrapper
 
 
 # Modelos para as rotas
@@ -68,6 +89,7 @@ def get_user_credentials(*, session: SessionDep, user: CurrentUser) -> Any:
         400: {"model": ErrorMessage, "description": "Validation error"},
     },
 )
+@handle_service_exceptions
 def create_credentials(
     *, session: SessionDep, user: CurrentUser, credentials_in: CredentialsCreate
 ) -> Any:
@@ -75,15 +97,11 @@ def create_credentials(
     Create new LinkedIn credentials.
     """
     credentials_service = CredentialsService(session)
-
-    try:
-        credentials = credentials_service.create_credentials(
-            user_id=user.id,
-            email=credentials_in.email,
-            password=credentials_in.password,
-        )
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    credentials = credentials_service.create_credentials(
+        user_id=user.id,
+        email=credentials_in.email,
+        password=credentials_in.password,
+    )
 
     return CredentialsPublic(
         id=credentials.id,
@@ -100,6 +118,7 @@ def create_credentials(
         404: {"model": ErrorMessage, "description": "Credentials not found"},
     },
 )
+@handle_service_exceptions
 def update_credentials(
     *,
     session: SessionDep,
@@ -111,18 +130,12 @@ def update_credentials(
     Update LinkedIn credentials.
     """
     credentials_service = CredentialsService(session)
-
-    try:
-        credentials = credentials_service.update_credentials(
-            credentials_id=credentials_id,
-            user_id=user.id,
-            email=credentials_in.email,
-            password=credentials_in.password,
-        )
-    except HTTPException as e:
-        raise e
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    credentials = credentials_service.update_credentials(
+        credentials_id=credentials_id,
+        user_id=user.id,
+        email=credentials_in.email,
+        password=credentials_in.password,
+    )
 
     return CredentialsPublic(
         id=credentials.id,
@@ -139,6 +152,7 @@ def update_credentials(
         404: {"model": ErrorMessage, "description": "Credentials not found"},
     },
 )
+@handle_service_exceptions
 def delete_credentials(
     *, session: SessionDep, user: CurrentUser, credentials_id: UUID
 ) -> Any:
