@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Box, 
   Container, 
@@ -29,15 +29,23 @@ import {
   VStack,
   useColorModeValue,
   Badge,
+  List,
+  ListItem,
+  ListIcon,
+  HStack,
+  Center,
+  Spinner,
 } from "@chakra-ui/react";
 import { createFileRoute } from "@tanstack/react-router";
 import { FiUsers, FiActivity, FiBriefcase, FiAlertTriangle, FiLock } from "react-icons/fi";
+import { CheckIcon } from "@chakra-ui/icons";
 
 import useAuth from "../../hooks/useAuth";
 import CredentialsManager from "../../components/BotManagement/CredentialsManager";
 import BotSessionManager from "../../components/BotManagement/BotSessionManager";
 import SessionDetails from "../../components/BotManagement/SessionDetails";
 import useSubscriptions from "../../hooks/userSubscriptions";
+import { SubscriptionPlansService, type SubscriptionPlanPublic } from "../../client";
 
 export const Route = createFileRoute("/_layout/")({
   component: Dashboard,
@@ -48,6 +56,8 @@ function Dashboard() {
   const { data: subscriptions } = useSubscriptions();
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [selectedCredentialId, setSelectedCredentialId] = useState<string | null>(null);
+  const [subscriptionPlans, setSubscriptionPlans] = useState<SubscriptionPlanPublic[]>([]);
+  const [loadingPlans, setLoadingPlans] = useState<boolean>(true);
   
   const { 
     isOpen: isSessionDetailsOpen, 
@@ -56,6 +66,27 @@ function Dashboard() {
   } = useDisclosure();
 
   const isSubscriber = subscriptions && subscriptions.length > 0;
+
+  // Fetch subscription plans on component mount
+  useEffect(() => {
+    if (!isSubscriber) {
+      fetchSubscriptionPlans();
+    }
+  }, [isSubscriber]);
+
+  const fetchSubscriptionPlans = async () => {
+    setLoadingPlans(true);
+    try {
+      const response = await SubscriptionPlansService.readSubscriptionPlans({ onlyActive: true });
+      if (response.plans) {
+        setSubscriptionPlans(response.plans);
+      }
+    } catch (error) {
+      console.error("Error fetching subscription plans:", error);
+    } finally {
+      setLoadingPlans(false);
+    }
+  };
 
   // Mock stats for demo
   const stats = {
@@ -81,6 +112,80 @@ function Dashboard() {
   const highlightColor = useColorModeValue('teal.500', 'teal.300');
   const planBg = useColorModeValue('gray.50', 'gray.700');
   const planBorder = useColorModeValue('gray.200', 'gray.600');
+  const accentColor = useColorModeValue('teal.500', 'teal.300');
+
+  // Mini plan card component for subscription overlay
+  const MiniPlanCard = ({ plan }: { plan: SubscriptionPlanPublic }) => {
+    // Format the price correctly (assuming price is in cents)
+    const formattedPrice = new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: plan.currency || 'USD',
+      minimumFractionDigits: 0,
+    }).format(plan.price / 100);
+
+    // Determine metric display
+    const metricDisplay = () => {
+      switch (plan.metric_type) {
+        case "applies":
+          return `${plan.metric_value} Applications`;
+        case "day":
+          return `${plan.metric_value} Days`;
+        case "week":
+          return `${plan.metric_value} Weeks`;
+        case "month":
+          return `${plan.metric_value} Months`;
+        case "year":
+          return `${plan.metric_value} Years`;
+        default:
+          return "Unlimited";
+      }
+    };
+
+    return (
+      <VStack 
+        p={4} 
+        bg={planBg}
+        borderRadius="md" 
+        borderWidth="1px" 
+        borderColor={planBorder}
+        align="flex-start"
+        spacing={2}
+        height="full"
+      >
+        {plan.has_badge && plan.badge_text && (
+          <Badge colorScheme="teal">{plan.badge_text}</Badge>
+        )}
+        <Text fontWeight="bold">{plan.name}</Text>
+        <HStack>
+          <Text fontWeight="bold" fontSize="xl">{formattedPrice}</Text>
+          {plan.metric_type && (
+            <Text fontSize="sm" color="gray.500">/ {plan.metric_type}</Text>
+          )}
+        </HStack>
+        <Text fontSize="sm">{metricDisplay()}</Text>
+        
+        {plan.benefits && plan.benefits.length > 0 && (
+          <List spacing={1} mt={2} fontSize="sm" width="full">
+            {plan.benefits.slice(0, 2).map((benefit, index) => (
+              <ListItem key={index}>
+                <Flex align="center">
+                  <ListIcon as={CheckIcon} color={accentColor} />
+                  <Text noOfLines={1}>{benefit.name}</Text>
+                </Flex>
+              </ListItem>
+            ))}
+            {plan.benefits.length > 2 && (
+              <ListItem>
+                <Text ml={6} fontSize="xs" color="gray.500">
+                  +{plan.benefits.length - 2} more benefits
+                </Text>
+              </ListItem>
+            )}
+          </List>
+        )}
+      </VStack>
+    );
+  };
 
   // Dashboard content - to be blurred if not subscribed
   const DashboardContent = () => (
@@ -178,6 +283,43 @@ function Dashboard() {
     </>
   );
 
+  // Render subscription plans based on count
+  const renderPlans = () => {
+    if (loadingPlans) {
+      return (
+        <Center p={6}>
+          <Spinner size="xl" color="teal.500" />
+        </Center>
+      );
+    }
+
+    if (subscriptionPlans.length === 0) {
+      return (
+        <Box p={4} textAlign="center">
+          <Text>No subscription plans available at the moment.</Text>
+        </Box>
+      );
+    }
+
+    if (subscriptionPlans.length === 1) {
+      // For a single plan, display it centered
+      return (
+        <Box width="full" px={4}>
+          <MiniPlanCard plan={subscriptionPlans[0]} />
+        </Box>
+      );
+    }
+
+    // For 2 or more plans, display up to 2 plans in a grid
+    return (
+      <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4} width="full">
+        {subscriptionPlans.slice(0, 2).map((plan, index) => (
+          <MiniPlanCard key={plan.id} plan={plan} />
+        ))}
+      </SimpleGrid>
+    );
+  };
+
   return (
     <Container maxW="full">
       <Box pt={12} px={4}>
@@ -210,7 +352,7 @@ function Dashboard() {
               left="50%" 
               transform="translate(-50%, -50%)" 
               zIndex={2} 
-              width={{ base: "90%", md: "500px" }}
+              width={{ base: "90%", md: "550px" }}
               maxWidth="90vw"
             >
               <Card 
@@ -235,35 +377,7 @@ function Dashboard() {
                     </VStack>
                     
                     <Box w="full" pt={4}>
-                      <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4} width="full">
-                        <VStack 
-                          p={4} 
-                          bg={planBg}
-                          borderRadius="md" 
-                          borderWidth="1px" 
-                          borderColor={planBorder}
-                          align="flex-start"
-                          spacing={2}
-                        >
-                          <Badge colorScheme="teal">Basic Plan</Badge>
-                          <Text fontWeight="bold">100 Applications</Text>
-                          <Text fontSize="sm">Perfect for casual job seekers</Text>
-                        </VStack>
-                        
-                        <VStack 
-                          p={4} 
-                          bg={planBg}
-                          borderRadius="md" 
-                          borderWidth="1px" 
-                          borderColor={planBorder}
-                          align="flex-start"
-                          spacing={2}
-                        >
-                          <Badge colorScheme="purple">Pro Plan</Badge>
-                          <Text fontWeight="bold">Unlimited Applications</Text>
-                          <Text fontSize="sm">Ideal for active job seekers</Text>
-                        </VStack>
-                      </SimpleGrid>
+                      {renderPlans()}
                     </Box>
                     
                     <Button 
@@ -271,8 +385,9 @@ function Dashboard() {
                       size="lg"
                       width={{ base: "full", md: "auto" }}
                       onClick={() => window.location.href = "/pricing"}
+                      isLoading={loadingPlans}
                     >
-                      View Pricing Plans
+                      View All Plans
                     </Button>
                   </VStack>
                 </CardBody>
