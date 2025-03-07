@@ -77,17 +77,6 @@ def get_session_applies(
     except HTTPException as e:
         raise e
 
-    # Se estamos filtrando por status, garantimos que retornamos apenas os itens que correspondem ao filtro
-    if status:
-        # Converter tudo para minúsculas para consistência
-        status_lower = [s.lower() for s in status if s]
-        filtered_applies = [a for a in applies if str(a.status).lower() in status_lower]
-        
-        return {
-            "total": len(filtered_applies),
-            "items": [ApplyPublic.model_validate(a) for a in filtered_applies]
-        }
-
     return {"total": total, "items": [ApplyPublic.model_validate(a) for a in applies]}
 
 

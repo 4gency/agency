@@ -4,7 +4,7 @@ from uuid import UUID
 
 from fastapi import HTTPException
 from fastapi import status as http_status
-from sqlmodel import Session, or_, select
+from sqlmodel import Session, or_, select, func
 
 from app.models.bot import BotApply, BotApplyStatus, BotSession
 from app.models.core import User
@@ -123,27 +123,29 @@ class ApplyService:
         # Build query
         query = select(BotApply).where(BotApply.bot_session_id == session_id)
 
-        # Apply status filter
-        if status:
-            # Converte todos os status para minúsculas para comparação case-insensitive
+        # Apply status filter - garantindo filtragem eficiente no banco de dados
+        if status and len(status) > 0:
+            # Normalize status para lowercase
             status_lower = [s.lower() for s in status if s]
-            
-            # Verifica se há filtros válidos
             if status_lower:
-                # Filtra apenas os status na lista usando or_
+                # Cria condições de filtro para cada status na lista
                 status_conditions = [BotApply.status == s for s in status_lower]
+                # Combina as condições com OR
                 query = query.where(or_(*status_conditions))
 
-        # Execute a query para obter o total de itens filtrados
-        filtered_applies = self.db.exec(query).all()
-        total_filtered = len(filtered_applies)
+        # Primeiro obtém o total com os filtros aplicados (sem paginação)
+        filtered_count_query = select(func.count()).select_from(
+            query.subquery()
+        )
+        total = self.db.exec(filtered_count_query).one() or 0
+        
+        # Adiciona ordenação e paginação
+        paginated_query = query.order_by(BotApply.created_at.desc()).offset(skip).limit(limit)  # type: ignore
+        
+        # Executa a consulta
+        applies = self.db.exec(paginated_query).all() or []
 
-        # Apply pagination and ordering
-        query = query.order_by(BotApply.created_at.desc()).offset(skip).limit(limit)  # type: ignore
-
-        applies = self.db.exec(query).all() or []
-
-        return cast(list[BotApply], applies), total_filtered
+        return cast(list[BotApply], applies), total
 
     def get_user_applies(
         self,
