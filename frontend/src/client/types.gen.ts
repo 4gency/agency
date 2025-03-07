@@ -5,6 +5,60 @@ export type Achievement = {
   description?: string
 }
 
+/**
+ * Modelo para resposta de ação do usuário
+ */
+export type ActionResponse = {
+  user_input: string
+}
+
+/**
+ * Modelo para resposta de sessões ativas
+ */
+export type ActiveSessionsResponse = {
+  total: number
+  items: Array<BotSession>
+}
+
+/**
+ * Modelo para resposta de listagem de aplicações
+ */
+export type AppliesResponse = {
+  total: number
+  items: Array<ApplyPublic>
+}
+
+/**
+ * Modelo para exibição pública de uma aplicação de emprego
+ */
+export type ApplyPublic = {
+  id: number
+  bot_session_id: string
+  status?: BotApplyStatus
+  /**
+   * Total time in seconds
+   */
+  total_time?: number
+  job_title?: string | null
+  job_url?: string | null
+  company_name?: string | null
+}
+
+/**
+ * Modelo para resumo de aplicações
+ */
+export type ApplySummary = {
+  total_applies: number
+  by_status: {
+    [key: string]: number
+  }
+  by_company: {
+    [key: string]: number
+  }
+  total_time_seconds: number
+  latest_applies: Array<ApplyPublic>
+}
+
 export type Availability = {
   notice_period?: string
 }
@@ -18,11 +72,71 @@ export type Body_login_login_access_token = {
   client_secret?: string | null
 }
 
+/**
+ * Status possíveis para uma aplicação.
+ */
+export type BotApplyStatus = "success" | "failed"
+
+/**
+ * Sessão do bot.
+ */
+export type BotSession = {
+  id?: string
+  user_id: string
+  credentials_id: string
+  applies_limit?: number
+  style?: BotStyleChoice
+  api_key?: string
+  status?: BotSessionStatus
+  kubernetes_pod_name?: string
+  kubernetes_namespace?: string
+  kubernetes_pod_status?: KubernetesPodStatus | null
+  kubernetes_pod_ip?: string | null
+  total_applied?: number
+  total_success?: number
+  total_failed?: number
+  created_at?: string
+  started_at?: string | null
+  finished_at?: string | null
+  resumed_at?: string | null
+  paused_at?: string | null
+  total_paused_time?: number
+  last_heartbeat_at?: string | null
+  last_status_message?: string | null
+  error_message?: string | null
+}
+
+/**
+ * Estados possíveis para uma sessão do bot.
+ */
+export type BotSessionStatus =
+  | "starting"
+  | "running"
+  | "paused"
+  | "stopping"
+  | "stopped"
+  | "failed"
+  | "completed"
+  | "waiting"
+
+/**
+ * Estilos visuais disponíveis para o bot.
+ */
+export type BotStyleChoice =
+  | "Cloyola Grey"
+  | "Modern Blue"
+  | "Modern Grey"
+  | "Default"
+  | "Clean Blue"
+
 export type Certification = {
   name?: string
   description?: string
 }
 
+/**
+ * Modelo de sessão de checkout para retorno via API.
+ */
 export type CheckoutSessionPublic = {
   id: string
   session_id: string
@@ -30,6 +144,9 @@ export type CheckoutSessionPublic = {
   expires_at: string
 }
 
+/**
+ * Modelo para atualização de sessões de checkout via API.
+ */
 export type CheckoutSessionUpdate = {
   payment_gateway?: string | null
   session_id?: string | null
@@ -59,6 +176,36 @@ export type ConfigPublic = {
   location_blacklist?: Array<string>
 }
 
+/**
+ * Modelo para criação de credenciais
+ */
+export type CredentialsCreate = {
+  email: string
+  password: string
+}
+
+/**
+ * Modelo para exibição pública de credenciais
+ */
+export type CredentialsPublic = {
+  id: string
+  email: string
+  password: string
+}
+
+export type CredentialsResponse = {
+  total: number
+  items: Array<CredentialsPublic>
+}
+
+/**
+ * Modelo para atualização de credenciais
+ */
+export type CredentialsUpdate = {
+  email?: string | null
+  password?: string | null
+}
+
 export type Date = {
   all_time?: boolean
   month?: boolean
@@ -76,8 +223,48 @@ export type EducationDetails = {
   exam?: Array<string>
 }
 
+/**
+ * Modelo para mensagens de erro.
+ */
 export type ErrorMessage = {
   detail: string
+}
+
+/**
+ * Modelo para exibição pública de um evento
+ */
+export type EventPublic = {
+  id: string
+  bot_session_id: string
+  type: string
+  message: string
+  severity?: string
+  details?: {
+    [key: string]: unknown
+  } | null
+  created_at: string
+}
+
+/**
+ * Modelo para resposta de listagem de eventos
+ */
+export type EventsResponse = {
+  total: number
+  items: Array<EventPublic>
+}
+
+/**
+ * Modelo para resumo de eventos
+ */
+export type EventSummary = {
+  total_events: number
+  by_type: {
+    [key: string]: number
+  }
+  by_severity: {
+    [key: string]: number
+  }
+  latest_events: Array<EventPublic>
 }
 
 export type ExperienceDetail = {
@@ -113,6 +300,25 @@ export type JobTypes = {
   volunteer?: boolean
 }
 
+/**
+ * Modelo para resposta de pods Kubernetes
+ */
+export type KubernetesPodsResponse = {
+  total: number
+  items: Array<PodInfo>
+}
+
+/**
+ * Estados possíveis para um pod no Kubernetes.
+ */
+export type KubernetesPodStatus =
+  | "pending"
+  | "running"
+  | "succeeded"
+  | "failed"
+  | "unknown"
+  | "terminating"
+
 export type Language = {
   language?: string
   proficiency?: string
@@ -137,15 +343,24 @@ export type LegalAuthorization = {
   requires_uk_sponsorship?: boolean
 }
 
+/**
+ * Modelo genérico para mensagens de resposta.
+ */
 export type Message = {
   message: string
 }
 
+/**
+ * Modelo para redefinição de senha.
+ */
 export type NewPassword = {
   token: string
   new_password: string
 }
 
+/**
+ * Modelo de pagamento para retorno via API.
+ */
 export type PaymentPublic = {
   id: string
   subscription_id: string
@@ -158,11 +373,17 @@ export type PaymentPublic = {
   transaction_id: string
 }
 
+/**
+ * Define os status de recorrência de pagamento.
+ */
 export type PaymentRecurrenceStatus =
   | "active"
   | "canceled"
   | "pending_cancellation"
 
+/**
+ * Modelo para retornar uma lista de pagamentos via API.
+ */
 export type PaymentsPublic = {
   data: Array<PaymentPublic>
   count: number
@@ -199,6 +420,17 @@ export type PlainTextResumePublic = {
   work_preferences?: WorkPreferences
 }
 
+/**
+ * Modelo para informações de um pod Kubernetes
+ */
+export type PodInfo = {
+  session_id: string
+  kubernetes_pod_name: string
+  kubernetes_namespace: string
+  kubernetes_pod_status?: string | null
+  kubernetes_pod_ip?: string | null
+}
+
 export type Project = {
   name?: string
   description?: string
@@ -217,8 +449,49 @@ export type SelfIdentification = {
   ethnicity?: string
 }
 
+/**
+ * Modelo para criação de uma sessão de bot
+ */
+export type SessionCreate = {
+  credentials_id: string
+  applies_limit?: number
+  style?: BotStyleChoice
+}
+
+export type SessionPublic = {
+  id: string
+  credentials_id: string
+  applies_limit?: number
+  style?: BotStyleChoice
+  status: BotSessionStatus
+  total_applied: number
+  total_success: number
+  total_failed: number
+  created_at: string
+  started_at?: string | null
+  finished_at?: string | null
+  resumed_at?: string | null
+  paused_at?: string | null
+  total_paused_time: number
+  last_heartbeat_at?: string | null
+}
+
+/**
+ * Modelo para resposta de listagem de sessões
+ */
+export type SessionsResponse = {
+  total: number
+  items: Array<SessionPublic>
+}
+
+/**
+ * Define os tipos de métricas para assinaturas.
+ */
 export type SubscriptionMetric = "day" | "week" | "month" | "year" | "applies"
 
+/**
+ * Modelo completo de plano de assinatura para armazenamento no banco de dados.
+ */
 export type SubscriptionPlan = {
   id?: string
   name: string
@@ -238,10 +511,16 @@ export type SubscriptionPlan = {
   stripe_price_id?: string | null
 }
 
+/**
+ * Modelo público para benefícios de plano de assinatura.
+ */
 export type SubscriptionPlanBenefitPublic = {
   name: string
 }
 
+/**
+ * Modelo para criação de planos de assinatura via API.
+ */
 export type SubscriptionPlanCreate = {
   name: string
   price: number
@@ -259,6 +538,9 @@ export type SubscriptionPlanCreate = {
   benefits?: Array<SubscriptionPlanBenefitPublic>
 }
 
+/**
+ * Modelo público completo para planos de assinatura.
+ */
 export type SubscriptionPlanPublic = {
   id: string
   name: string
@@ -277,10 +559,16 @@ export type SubscriptionPlanPublic = {
   benefits?: Array<SubscriptionPlanBenefitPublic>
 }
 
+/**
+ * Modelo para retornar uma lista de planos de assinatura via API.
+ */
 export type SubscriptionPlansPublic = {
   plans?: Array<SubscriptionPlanPublic>
 }
 
+/**
+ * Modelo para atualização de planos de assinatura via API.
+ */
 export type SubscriptionPlanUpdate = {
   name?: string | null
   price?: number | null
@@ -298,6 +586,9 @@ export type SubscriptionPlanUpdate = {
   benefits?: Array<SubscriptionPlanBenefitPublic> | null
 }
 
+/**
+ * Modelo de assinatura para retorno via API.
+ */
 export type SubscriptionPublic = {
   id: string
   user_id: string
@@ -311,6 +602,9 @@ export type SubscriptionPublic = {
   subscription_plan?: SubscriptionPlan | null
 }
 
+/**
+ * Modelo estendido de assinatura para retorno via API com pagamentos.
+ */
 export type SubscriptionPublicExtended = {
   id: string
   user_id: string
@@ -325,16 +619,72 @@ export type SubscriptionPublicExtended = {
   payments?: Array<PaymentPublic>
 }
 
+/**
+ * Modelo para resposta de saúde do sistema
+ */
+export type SystemHealthResponse = {
+  total_sessions: number
+  status_counts: {
+    [key: string]: number
+  }
+  recent_sessions: number
+  error_sessions: number
+  stalled_sessions: number
+  zombie_sessions: number
+  timestamp: string
+}
+
+/**
+ * Modelo para representar tokens JWT de autenticação.
+ */
 export type Token = {
   access_token: string
   token_type?: string
 }
 
+/**
+ * Modelo usado para atualização de senha.
+ */
 export type UpdatePassword = {
   current_password: string
   new_password: string
 }
 
+/**
+ * Modelo para exibição pública de uma ação do usuário
+ */
+export type UserActionPublic = {
+  id: string
+  bot_session_id: string
+  action_type: UserActionType
+  description: string
+  input_field?: string | null
+  is_completed: boolean
+  user_input?: string | null
+  requested_at: string
+  completed_at?: string | null
+}
+
+/**
+ * Modelo para resposta de listagem de ações
+ */
+export type UserActionsResponse = {
+  total: number
+  items: Array<UserActionPublic>
+}
+
+/**
+ * Tipos de ações que o usuário pode precisar executar.
+ */
+export type UserActionType =
+  | "provide_2fa"
+  | "solve_captcha"
+  | "answer_question"
+  | "confirm_action"
+
+/**
+ * Modelo usado na criação de usuários via API.
+ */
 export type UserCreate = {
   email: string
   is_active?: boolean
@@ -344,6 +694,9 @@ export type UserCreate = {
   password: string
 }
 
+/**
+ * Modelo de usuário para retorno via API.
+ */
 export type UserPublic = {
   email: string
   is_active?: boolean
@@ -353,17 +706,26 @@ export type UserPublic = {
   id: string
 }
 
+/**
+ * Modelo usado para registro de novos usuários.
+ */
 export type UserRegister = {
   email: string
   password: string
   full_name?: string | null
 }
 
+/**
+ * Modelo para retornar uma lista de usuários via API.
+ */
 export type UsersPublic = {
   data: Array<UserPublic>
   count: number
 }
 
+/**
+ * Modelo usado para atualização de usuários via API.
+ */
 export type UserUpdate = {
   email?: string | null
   is_active?: boolean
@@ -373,6 +735,9 @@ export type UserUpdate = {
   password?: string | null
 }
 
+/**
+ * Modelo usado por usuários para atualizar seu próprio perfil.
+ */
 export type UserUpdateMe = {
   full_name?: string | null
   email?: string | null
@@ -392,6 +757,95 @@ export type WorkPreferences = {
   willing_to_undergo_drug_tests?: boolean
   willing_to_undergo_background_checks?: boolean
 }
+
+export type GetSessionActionsData = {
+  includeCompleted?: boolean
+  limit?: number
+  sessionId: string
+  skip?: number
+}
+
+export type GetSessionActionsResponse = UserActionsResponse
+
+export type CompleteActionData = {
+  actionId: string
+  requestBody: ActionResponse
+  sessionId: string
+}
+
+export type CompleteActionResponse = Message
+
+export type GetSessionAppliesData = {
+  limit?: number
+  requestBody?: Array<string> | null
+  sessionId: string
+  skip?: number
+}
+
+export type GetSessionAppliesResponse = AppliesResponse
+
+export type GetAppliesSummaryData = {
+  sessionId: string
+}
+
+export type GetAppliesSummaryResponse = ApplySummary
+
+export type GetApplyDetailsData = {
+  applyId: number
+  sessionId: string
+}
+
+export type GetApplyDetailsResponse = ApplyPublic
+
+export type CreateBotSessionData = {
+  requestBody: SessionCreate
+}
+
+export type CreateBotSessionResponse = SessionPublic
+
+export type GetBotSessionsData = {
+  limit?: number
+  requestBody?: Array<string> | null
+  skip?: number
+}
+
+export type GetBotSessionsResponse = SessionsResponse
+
+export type GetBotSessionData = {
+  sessionId: string
+}
+
+export type GetBotSessionResponse = SessionPublic
+
+export type DeleteBotSessionData = {
+  sessionId: string
+}
+
+export type DeleteBotSessionResponse = Message
+
+export type StartBotSessionData = {
+  sessionId: string
+}
+
+export type StartBotSessionResponse = SessionPublic
+
+export type StopBotSessionData = {
+  sessionId: string
+}
+
+export type StopBotSessionResponse = SessionPublic
+
+export type PauseBotSessionData = {
+  sessionId: string
+}
+
+export type PauseBotSessionResponse = SessionPublic
+
+export type ResumeBotSessionData = {
+  sessionId: string
+}
+
+export type ResumeBotSessionResponse = SessionPublic
 
 export type StripeSuccessData = {
   sessionId: string
@@ -463,6 +917,42 @@ export type UpdatePlainTextResumeData = {
 
 export type UpdatePlainTextResumeResponse = unknown
 
+export type GetUserCredentialsResponse = CredentialsResponse
+
+export type CreateCredentialsData = {
+  requestBody: CredentialsCreate
+}
+
+export type CreateCredentialsResponse = CredentialsPublic
+
+export type UpdateCredentialsData = {
+  credentialsId: string
+  requestBody: CredentialsUpdate
+}
+
+export type UpdateCredentialsResponse = CredentialsPublic
+
+export type DeleteCredentialsData = {
+  credentialsId: string
+}
+
+export type DeleteCredentialsResponse = Message
+
+export type GetSessionEventsData = {
+  eventType?: string | null
+  limit?: number
+  sessionId: string
+  skip?: number
+}
+
+export type GetSessionEventsResponse = EventsResponse
+
+export type GetSessionEventsSummaryData = {
+  sessionId: string
+}
+
+export type GetSessionEventsSummaryResponse = EventSummary
+
 export type LoginAccessTokenData = {
   formData: Body_login_login_access_token
 }
@@ -488,6 +978,18 @@ export type RecoverPasswordHtmlContentData = {
 }
 
 export type RecoverPasswordHtmlContentResponse = string
+
+export type GetAllActiveSessionsResponse = ActiveSessionsResponse
+
+export type GetSessionsStatusSummaryResponse = SystemHealthResponse
+
+export type GetKubernetesPodsResponse = KubernetesPodsResponse
+
+export type ForceStopSessionData = {
+  sessionId: string
+}
+
+export type ForceStopSessionResponse = Message
 
 export type ReadPaymentsByCurrentUserData = {
   limit?: number
