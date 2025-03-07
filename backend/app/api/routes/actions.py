@@ -67,16 +67,13 @@ def get_session_actions(
     """
     action_service = UserActionService(session)
 
-    try:
-        actions, total = action_service.get_session_actions(
-            session_id=session_id,
-            user=user,
-            skip=skip,
-            limit=limit,
-            include_completed=include_completed,
-        )
-    except HTTPException as e:
-        raise e
+    actions, total = action_service.get_session_actions(
+        session_id=session_id,
+        user=user,
+        skip=skip,
+        limit=limit,
+        include_completed=include_completed,
+    )
 
     return {
         "total": total,
@@ -106,15 +103,12 @@ def complete_action(
     """
     action_service = UserActionService(session)
 
-    try:
-        result = action_service.complete_action(
-            action_id=action_id,
-            session_id=session_id,
-            user=user,
-            user_input=response.user_input,
-        )
-    except HTTPException as e:
-        raise e
+    result = action_service.complete_action(
+        action_id=action_id,
+        session_id=session_id,
+        user=user,
+        user_input=response.user_input,
+    )
 
     if not result:
         raise HTTPException(

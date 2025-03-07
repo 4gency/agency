@@ -161,12 +161,9 @@ def delete_credentials(
     """
     credentials_service = CredentialsService(session)
 
-    try:
-        result = credentials_service.delete_credentials(
-            credentials_id=credentials_id, user_id=user.id
-        )
-    except HTTPException as e:
-        raise e
+    result = credentials_service.delete_credentials(
+        credentials_id=credentials_id, user_id=user.id
+    )
 
     if not result:
         raise HTTPException(

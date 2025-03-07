@@ -1,7 +1,7 @@
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from sqlmodel import Field, SQLModel
 
 from app.api.deps import CurrentUser, SessionDep
@@ -70,12 +70,9 @@ def get_session_applies(
     """
     apply_service = ApplyService(session)
 
-    try:
-        applies, total = apply_service.get_session_applies(
-            session_id=session_id, user=user, skip=skip, limit=limit, status=status
-        )
-    except HTTPException as e:
-        raise e
+    applies, total = apply_service.get_session_applies(
+        session_id=session_id, user=user, skip=skip, limit=limit, status=status
+    )
 
     return {"total": total, "items": [ApplyPublic.model_validate(a) for a in applies]}
 
@@ -97,16 +94,13 @@ def get_applies_summary(
     """
     apply_service = ApplyService(session)
 
-    try:
-        (
-            total_applies,
-            status_counts,
-            company_counts,
-            total_time,
-            latest_applies,
-        ) = apply_service.get_applies_summary(session_id=session_id, user=user)
-    except HTTPException as e:
-        raise e
+    (
+        total_applies,
+        status_counts,
+        company_counts,
+        total_time,
+        latest_applies,
+    ) = apply_service.get_applies_summary(session_id=session_id, user=user)
 
     return {
         "total_applies": total_applies,
@@ -134,11 +128,8 @@ def get_apply_details(
     """
     apply_service = ApplyService(session)
 
-    try:
-        apply = apply_service.get_apply_by_id(
-            apply_id=apply_id, session_id=session_id, user=user
-        )
-    except HTTPException as e:
-        raise e
+    apply = apply_service.get_apply_by_id(
+        apply_id=apply_id, session_id=session_id, user=user
+    )
 
     return ApplyPublic.model_validate(apply)
