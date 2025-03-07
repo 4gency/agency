@@ -5,9 +5,9 @@ import {
   Select,
   SimpleGrid,
 } from "@chakra-ui/react"
-import { UseFormRegister } from "react-hook-form"
+import type { UseFormRegister } from "react-hook-form"
+import type { ResumeForm } from "../types"
 import SectionContainer from "./SectionContainer"
-import { ResumeForm } from "../types"
 
 interface SalaryExpectationSectionProps {
   register: UseFormRegister<ResumeForm>
@@ -24,8 +24,8 @@ const SalaryExpectationSection: React.FC<SalaryExpectationSectionProps> = ({
           <Input
             type="number"
             placeholder="Minimum salary"
-            {...register("salary_expectation.minimum", { 
-              valueAsNumber: true 
+            {...register("salary_expectation.minimum", {
+              valueAsNumber: true,
             })}
           />
         </FormControl>
@@ -35,8 +35,8 @@ const SalaryExpectationSection: React.FC<SalaryExpectationSectionProps> = ({
           <Input
             type="number"
             placeholder="Maximum salary"
-            {...register("salary_expectation.maximum", { 
-              valueAsNumber: true 
+            {...register("salary_expectation.maximum", {
+              valueAsNumber: true,
             })}
           />
         </FormControl>
@@ -64,4 +64,4 @@ const SalaryExpectationSection: React.FC<SalaryExpectationSectionProps> = ({
   )
 }
 
-export default SalaryExpectationSection 
+export default SalaryExpectationSection

@@ -1,46 +1,47 @@
-import { useState } from "react"
 import {
+  Badge,
   Box,
   Button,
   Container,
   Flex,
+  HStack,
   Heading,
+  Spinner,
   Table,
-  Thead,
   Tbody,
-  Tr,
-  Th,
   Td,
   Text,
-  Badge,
-  useColorModeValue,
-  Spinner,
-  HStack,
+  Th,
+  Thead,
   Tooltip,
+  Tr,
+  useColorModeValue,
 } from "@chakra-ui/react"
 import { useQuery } from "@tanstack/react-query"
+import { useState } from "react"
 
-import {
-  type PaymentPublic,
-  UsersService,
-} from "../../client"
+import { type PaymentPublic, UsersService } from "../../client"
 
 const Payments = () => {
   const color = useColorModeValue("inherit", "ui.light")
-  
+
   // Estados para paginação
   const PAGE_SIZE = 10
   const [page, setPage] = useState(0)
 
   // Query para buscar pagamentos
-  const { data: paymentsData, isLoading, isError } = usePayments(page, PAGE_SIZE)
+  const {
+    data: paymentsData,
+    isLoading,
+    isError,
+  } = usePayments(page, PAGE_SIZE)
   const payments = paymentsData?.data || []
   const totalCount = paymentsData?.count || 0
 
   // Formatar moeda
   const formatCurrency = (amount: number, currency: string) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
       currency: currency.toUpperCase(),
     }).format(amount)
   }
@@ -71,7 +72,7 @@ const Payments = () => {
       failed: "red",
       refunded: "purple",
     }
-    
+
     return (
       <Badge colorScheme={statusMap[status.toLowerCase()] || "gray"}>
         {status}
@@ -133,22 +134,23 @@ const Payments = () => {
               </Tbody>
             </Table>
           </Box>
-          
+
           {/* Paginação */}
           <Flex justify="space-between" mt={4}>
             <Text>
-              Showing {page * PAGE_SIZE + 1}-{Math.min((page + 1) * PAGE_SIZE, totalCount)} of {totalCount}
+              Showing {page * PAGE_SIZE + 1}-
+              {Math.min((page + 1) * PAGE_SIZE, totalCount)} of {totalCount}
             </Text>
             <HStack>
-              <Button 
-                onClick={handlePrevPage} 
+              <Button
+                onClick={handlePrevPage}
                 isDisabled={page === 0}
                 size="sm"
               >
                 Previous
               </Button>
-              <Button 
-                onClick={handleNextPage} 
+              <Button
+                onClick={handleNextPage}
                 isDisabled={(page + 1) * PAGE_SIZE >= totalCount}
                 size="sm"
               >
@@ -168,11 +170,12 @@ const Payments = () => {
 function usePayments(page: number, pageSize: number) {
   return useQuery({
     queryKey: ["payments", page, pageSize],
-    queryFn: () => UsersService.readPaymentsByCurrentUser({
-      skip: page * pageSize,
-      limit: pageSize
-    }),
+    queryFn: () =>
+      UsersService.readPaymentsByCurrentUser({
+        skip: page * pageSize,
+        limit: pageSize,
+      }),
   })
 }
 
-export default Payments 
+export default Payments

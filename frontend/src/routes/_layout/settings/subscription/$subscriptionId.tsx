@@ -1,50 +1,52 @@
-import { createFileRoute, redirect } from "@tanstack/react-router"
 import {
+  AlertDialog,
+  AlertDialogBody,
+  AlertDialogContent,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogOverlay,
+  Badge,
   Box,
+  Button,
+  Card,
+  CardBody,
+  CardHeader,
   Container,
-  Heading,
-  Text,
-  Spinner,
+  Divider,
   Flex,
   Grid,
   GridItem,
-  Badge,
-  Button,
-  Card,
-  CardHeader,
-  CardBody,
-  Divider,
+  Heading,
+  Spinner,
   Table,
-  Thead,
   Tbody,
-  Tr,
-  Th,
   Td,
+  Text,
+  Th,
+  Thead,
+  Tr,
   useColorModeValue,
-  useToast,
-  AlertDialog,
-  AlertDialogBody,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogContent,
-  AlertDialogOverlay,
   useDisclosure,
+  useToast,
 } from "@chakra-ui/react"
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { createFileRoute, redirect } from "@tanstack/react-router"
+import { useEffect, useRef } from "react"
 import { UsersService } from "../../../../client"
-import { useRef, useEffect } from "react"
 import { isLoggedIn } from "../../../../hooks/useAuth"
 
 // Definindo cores personalizadas para botões - serão usadas diretamente
-const TEAL_COLOR = "#009688";
-const TEAL_HOVER = "#00897B";
-const TEAL_ACTIVE = "#00796B";
-const RED_COLOR = "#F44336";
-const RED_HOVER = "#E53935";
-const RED_ACTIVE = "#D32F2F";
+const TEAL_COLOR = "#009688"
+const TEAL_HOVER = "#00897B"
+const TEAL_ACTIVE = "#00796B"
+const RED_COLOR = "#F44336"
+const RED_HOVER = "#E53935"
+const RED_ACTIVE = "#D32F2F"
 
 // Simplificando a rota para garantir que funcione corretamente
-export const Route = createFileRoute("/_layout/settings/subscription/$subscriptionId")({
+export const Route = createFileRoute(
+  "/_layout/settings/subscription/$subscriptionId",
+)({
   component: SubscriptionDetailPage,
   beforeLoad: () => {
     if (!isLoggedIn()) {
@@ -52,7 +54,7 @@ export const Route = createFileRoute("/_layout/settings/subscription/$subscripti
         to: "/login",
       })
     }
-    console.log("Carregando rota de detalhes da assinatura");
+    console.log("Carregando rota de detalhes da assinatura")
   },
 })
 
@@ -60,10 +62,10 @@ function SubscriptionDetailPage() {
   // Usando o Route.useParams() para obter o ID da assinatura de forma confiável
   const params = Route.useParams()
   const subscriptionId = params.subscriptionId
-  
+
   // Logging para debug
   useEffect(() => {
-    console.log("ID da assinatura da rota:", subscriptionId);
+    console.log("ID da assinatura da rota:", subscriptionId)
   }, [subscriptionId])
 
   // Resto do componente
@@ -73,9 +75,9 @@ function SubscriptionDetailPage() {
   const { isOpen, onOpen, onClose } = useDisclosure()
   const cancelRef = useRef<HTMLButtonElement>(null)
   const queryClient = useQueryClient()
-  
+
   // Determinando se estamos no modo escuro
-  const isDarkMode = !useColorModeValue(true, false);
+  const isDarkMode = !useColorModeValue(true, false)
 
   // Query subscription details
   const {
@@ -100,7 +102,9 @@ function SubscriptionDetailPage() {
         duration: 5000,
         isClosable: true,
       })
-      queryClient.invalidateQueries({ queryKey: ["subscription", subscriptionId] })
+      queryClient.invalidateQueries({
+        queryKey: ["subscription", subscriptionId],
+      })
       queryClient.invalidateQueries({ queryKey: ["subscriptions"] })
       onClose()
     },
@@ -117,7 +121,8 @@ function SubscriptionDetailPage() {
   })
 
   const reactivateMutation = useMutation({
-    mutationFn: () => UsersService.reactivateUserSubscription({ subscriptionId }),
+    mutationFn: () =>
+      UsersService.reactivateUserSubscription({ subscriptionId }),
     onSuccess: () => {
       toast({
         title: "Subscription reactivated",
@@ -126,7 +131,9 @@ function SubscriptionDetailPage() {
         duration: 5000,
         isClosable: true,
       })
-      queryClient.invalidateQueries({ queryKey: ["subscription", subscriptionId] })
+      queryClient.invalidateQueries({
+        queryKey: ["subscription", subscriptionId],
+      })
       queryClient.invalidateQueries({ queryKey: ["subscriptions"] })
     },
     onError: (err: any) => {
@@ -152,7 +159,7 @@ function SubscriptionDetailPage() {
       currency: currency || "USD",
     }).format(amount)
   }
-  
+
   // Handler para voltar - mantendo window.location porque está funcionando bem
   const handleBackToSettings = () => {
     window.location.href = "/settings"
@@ -166,9 +173,7 @@ function SubscriptionDetailPage() {
         </Heading>
         <Box maxW="container.lg" mx="auto">
           <Text mb={4}>The subscription ID is missing.</Text>
-          <Button onClick={handleBackToSettings}>
-            Go Back to Settings
-          </Button>
+          <Button onClick={handleBackToSettings}>Go Back to Settings</Button>
         </Box>
       </Container>
     )
@@ -185,7 +190,7 @@ function SubscriptionDetailPage() {
   if (isError) {
     const statusCode = (error as any)?.response?.status
     console.error("Erro ao carregar assinatura:", error, "Status:", statusCode)
-    
+
     if (statusCode === 404) {
       return (
         <Container maxW="full">
@@ -193,15 +198,16 @@ function SubscriptionDetailPage() {
             Subscription Not Found
           </Heading>
           <Box maxW="container.lg" mx="auto">
-            <Text mb={4}>The subscription you're looking for doesn't exist or you don't have access to it.</Text>
-            <Button onClick={handleBackToSettings}>
-              Go Back to Settings
-            </Button>
+            <Text mb={4}>
+              The subscription you're looking for doesn't exist or you don't
+              have access to it.
+            </Text>
+            <Button onClick={handleBackToSettings}>Go Back to Settings</Button>
           </Box>
         </Container>
       )
     }
-    
+
     if (statusCode === 422) {
       return (
         <Container maxW="full">
@@ -210,9 +216,7 @@ function SubscriptionDetailPage() {
           </Heading>
           <Box maxW="container.lg" mx="auto">
             <Text mb={4}>The subscription ID format is invalid.</Text>
-            <Button onClick={handleBackToSettings}>
-              Go Back to Settings
-            </Button>
+            <Button onClick={handleBackToSettings}>Go Back to Settings</Button>
           </Box>
         </Container>
       )
@@ -224,10 +228,11 @@ function SubscriptionDetailPage() {
           Error
         </Heading>
         <Box maxW="container.lg" mx="auto">
-          <Text mb={4}>An error occurred while loading the subscription details. Please try again later.</Text>
-          <Button onClick={handleBackToSettings}>
-            Go Back to Settings
-          </Button>
+          <Text mb={4}>
+            An error occurred while loading the subscription details. Please try
+            again later.
+          </Text>
+          <Button onClick={handleBackToSettings}>Go Back to Settings</Button>
         </Box>
       </Container>
     )
@@ -241,9 +246,7 @@ function SubscriptionDetailPage() {
         </Heading>
         <Box maxW="container.lg" mx="auto">
           <Text mb={4}>Unable to load subscription details.</Text>
-          <Button onClick={handleBackToSettings}>
-            Go Back to Settings
-          </Button>
+          <Button onClick={handleBackToSettings}>Go Back to Settings</Button>
         </Box>
       </Container>
     )
@@ -257,7 +260,12 @@ function SubscriptionDetailPage() {
         Subscription Details
       </Heading>
 
-      <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={6} maxW="container.lg" mx="auto">
+      <Grid
+        templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }}
+        gap={6}
+        maxW="container.lg"
+        mx="auto"
+      >
         {/* Subscription Info Card */}
         <GridItem colSpan={1}>
           <Card bg={bgCard} shadow="md" borderRadius="md">
@@ -267,32 +275,41 @@ function SubscriptionDetailPage() {
             <CardBody>
               <Box mb={4}>
                 <Text fontWeight="bold">Plan Name:</Text>
-                <Text fontSize="xl">{subscription.subscription_plan?.name || "Unknown Plan"}</Text>
+                <Text fontSize="xl">
+                  {subscription.subscription_plan?.name || "Unknown Plan"}
+                </Text>
               </Box>
-              
+
               <Box mb={4}>
                 <Text fontWeight="bold">Description:</Text>
-                <Text>{subscription.subscription_plan?.description || "No description available"}</Text>
+                <Text>
+                  {subscription.subscription_plan?.description ||
+                    "No description available"}
+                </Text>
               </Box>
-              
+
               <Box mb={4}>
                 <Text fontWeight="bold">Price:</Text>
                 <Text>
-                  {subscription.subscription_plan?.price 
-                    ? formatCurrency(subscription.subscription_plan.price, subscription.subscription_plan.currency || "USD")
+                  {subscription.subscription_plan?.price
+                    ? formatCurrency(
+                        subscription.subscription_plan.price,
+                        subscription.subscription_plan.currency || "USD",
+                      )
                     : "N/A"}
                 </Text>
               </Box>
-              
+
               <Box mb={4}>
                 <Text fontWeight="bold">Status:</Text>
-                <Badge 
+                <Badge
                   colorScheme={
                     subscription.payment_recurrence_status === "active"
                       ? "green"
-                      : subscription.payment_recurrence_status === "pending_cancellation"
-                      ? "yellow"
-                      : "red"
+                      : subscription.payment_recurrence_status ===
+                          "pending_cancellation"
+                        ? "yellow"
+                        : "red"
                   }
                   fontSize="0.9em"
                   px={2}
@@ -302,26 +319,29 @@ function SubscriptionDetailPage() {
                   {subscription.payment_recurrence_status}
                 </Badge>
               </Box>
-              
+
               <Box mb={4}>
                 <Text fontWeight="bold">Period:</Text>
                 <Text>
-                  {formatDate(subscription.start_date)} to {formatDate(subscription.end_date)}
+                  {formatDate(subscription.start_date)} to{" "}
+                  {formatDate(subscription.end_date)}
                 </Text>
               </Box>
 
               <Box mb={4}>
                 <Text fontWeight="bold">Usage:</Text>
                 <Text>
-                  {subscription.metric_type}: {subscription.metric_status} 
-                  {subscription.subscription_plan?.metric_value ? ` / ${subscription.subscription_plan.metric_value}` : ""}
+                  {subscription.metric_type}: {subscription.metric_status}
+                  {subscription.subscription_plan?.metric_value
+                    ? ` / ${subscription.subscription_plan.metric_value}`
+                    : ""}
                 </Text>
               </Box>
 
               <Divider my={4} />
 
               {subscription.payment_recurrence_status === "active" ? (
-                <Button 
+                <Button
                   colorScheme="red"
                   width="full"
                   onClick={onOpen}
@@ -332,8 +352,9 @@ function SubscriptionDetailPage() {
                 >
                   Cancel Subscription
                 </Button>
-              ) : subscription.payment_recurrence_status === "pending_cancellation" ? (
-                <Button 
+              ) : subscription.payment_recurrence_status ===
+                "pending_cancellation" ? (
+                <Button
                   colorScheme="green"
                   width="full"
                   onClick={() => reactivateMutation.mutate()}
@@ -345,8 +366,9 @@ function SubscriptionDetailPage() {
                 >
                   Reactivate Subscription
                 </Button>
-              ) : subscription.payment_recurrence_status === "canceled" && subscription.is_active ? (
-                <Button 
+              ) : subscription.payment_recurrence_status === "canceled" &&
+                subscription.is_active ? (
+                <Button
                   colorScheme="green"
                   width="full"
                   onClick={() => reactivateMutation.mutate()}
@@ -384,19 +406,22 @@ function SubscriptionDetailPage() {
                       {subscription.payments.map((payment) => (
                         <Tr key={payment.id}>
                           <Td>{formatDate(payment.payment_date)}</Td>
-                          <Td>{formatCurrency(payment.amount, payment.currency)}</Td>
+                          <Td>
+                            {formatCurrency(payment.amount, payment.currency)}
+                          </Td>
                           <Td>
                             <Badge
                               colorScheme={
-                                payment.payment_status === "succeeded" || 
+                                payment.payment_status === "succeeded" ||
                                 payment.payment_status === "paid"
                                   ? "green"
                                   : payment.payment_status === "pending"
-                                  ? "yellow"
-                                  : "red"
+                                    ? "yellow"
+                                    : "red"
                               }
                               bg={
-                                (payment.payment_status === "succeeded" || payment.payment_status === "paid") && 
+                                (payment.payment_status === "succeeded" ||
+                                  payment.payment_status === "paid") &&
                                 isDarkMode
                                   ? TEAL_COLOR
                                   : undefined
@@ -431,16 +456,17 @@ function SubscriptionDetailPage() {
             </AlertDialogHeader>
 
             <AlertDialogBody>
-              Are you sure you want to cancel your subscription? You will still have access to your subscription benefits until the end date.
+              Are you sure you want to cancel your subscription? You will still
+              have access to your subscription benefits until the end date.
             </AlertDialogBody>
 
             <AlertDialogFooter>
               <Button ref={cancelRef} onClick={onClose}>
                 No, Keep It
               </Button>
-              <Button 
+              <Button
                 colorScheme="red"
-                onClick={() => cancelMutation.mutate()} 
+                onClick={() => cancelMutation.mutate()}
                 ml={3}
                 isLoading={cancelMutation.isPending}
                 bg={isDarkMode ? RED_COLOR : undefined}
@@ -455,4 +481,4 @@ function SubscriptionDetailPage() {
       </AlertDialog>
     </Container>
   )
-} 
+}

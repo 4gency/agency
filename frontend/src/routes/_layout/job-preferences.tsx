@@ -1,8 +1,8 @@
 import { createFileRoute, redirect } from "@tanstack/react-router"
 import { z } from "zod"
+import { UsersService } from "../../client"
 import JobPreferencesPage from "../../components/UserSettings/JobPreferences"
 import { isLoggedIn } from "../../hooks/useAuth"
-import { UsersService } from "../../client"
 
 const jobPreferencesSearchSchema = z.object({})
 

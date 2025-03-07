@@ -1,9 +1,9 @@
 import { Box, Flex, Icon, Text, useColorModeValue } from "@chakra-ui/react"
 import { useQueryClient } from "@tanstack/react-query"
-import { Link, useNavigate, useMatchRoute } from "@tanstack/react-router"
+import { Link, useMatchRoute, useNavigate } from "@tanstack/react-router"
 import { FiBriefcase, FiHome, FiSettings, FiUsers } from "react-icons/fi"
-import { SlCalender } from "react-icons/sl"
 import { HiOutlineDocumentText } from "react-icons/hi"
+import { SlCalender } from "react-icons/sl"
 
 import type { UserPublic } from "../../client"
 import useSubscriptions from "../../hooks/userSubscriptions"
@@ -16,8 +16,16 @@ const baseItems = [
 ]
 
 // Subscriber-only items
-const jobPreferencesItem = { icon: FiBriefcase, title: "Job Preferences", path: "/job-preferences" }
-const resumeItem = { icon: HiOutlineDocumentText, title: "Resume", path: "/resume" }
+const jobPreferencesItem = {
+  icon: FiBriefcase,
+  title: "Job Preferences",
+  path: "/job-preferences",
+}
+const resumeItem = {
+  icon: HiOutlineDocumentText,
+  title: "Resume",
+  path: "/resume",
+}
 
 interface SidebarItemsProps {
   onClose?: () => void
@@ -26,38 +34,46 @@ interface SidebarItemsProps {
 const SidebarItems = ({ onClose }: SidebarItemsProps) => {
   const queryClient = useQueryClient()
   const textColor = useColorModeValue("gray.800", "white")
-  const bgActive = useColorModeValue("rgba(255, 255, 255, 0.7)", "rgba(66, 75, 95, 0.5)")
-  const hoverBg = useColorModeValue("rgba(255, 255, 255, 0.5)", "rgba(45, 55, 72, 0.4)")
+  const bgActive = useColorModeValue(
+    "rgba(255, 255, 255, 0.7)",
+    "rgba(66, 75, 95, 0.5)",
+  )
+  const hoverBg = useColorModeValue(
+    "rgba(255, 255, 255, 0.5)",
+    "rgba(45, 55, 72, 0.4)",
+  )
   const currentUser = queryClient.getQueryData<UserPublic>(["currentUser"])
   const { data: subscriptions } = useSubscriptions()
   const navigate = useNavigate()
   const matchRoute = useMatchRoute()
-  
+
   // Verificar se estamos na página de configurações usando o router
-  const isSettingsActive = matchRoute({
-    to: "/settings",
-    fuzzy: false,
-  }) || matchRoute({
-    to: "/settings/",
-    fuzzy: false,
-  })
-  
+  const isSettingsActive =
+    matchRoute({
+      to: "/settings",
+      fuzzy: false,
+    }) ||
+    matchRoute({
+      to: "/settings/",
+      fuzzy: false,
+    })
+
   // Check if user is a subscriber
   const isSubscriber = subscriptions && subscriptions.length > 0
 
   // Build the items array based on user state
   let items = [...baseItems]
-  
+
   // Add subscriber-only items
   if (isSubscriber) {
     items = [
-      baseItems[0], 
+      baseItems[0],
       jobPreferencesItem,
       resumeItem,
-      ...baseItems.slice(1)
+      ...baseItems.slice(1),
     ]
   }
-  
+
   // Add admin link for superusers
   const finalItems = currentUser?.is_superuser
     ? [...items, { icon: FiUsers, title: "Admin", path: "/admin" }]
@@ -65,22 +81,22 @@ const SidebarItems = ({ onClose }: SidebarItemsProps) => {
 
   const handleClick = (path: string) => {
     if (onClose) {
-      onClose();
+      onClose()
     }
-    
+
     // Para o item Settings, usamos navegação direta com window.location
-    if (path === '/settings') {
-      window.location.href = path;
-      return;
+    if (path === "/settings") {
+      window.location.href = path
+      return
     }
-    
+
     // Para outros itens, usamos a navegação normal
-    navigate({ to: path });
-  };
+    navigate({ to: path })
+  }
 
   const listItems = finalItems.map(({ icon, title, path }) => {
     // Se for o item Settings, renderizamos de forma diferente
-    if (path === '/settings') {
+    if (path === "/settings") {
       return (
         <Flex
           as="div"
@@ -100,9 +116,9 @@ const SidebarItems = ({ onClose }: SidebarItemsProps) => {
           <Icon as={icon} alignSelf="center" />
           <Text ml={2}>{title}</Text>
         </Flex>
-      );
+      )
     }
-    
+
     // Para outros itens, usamos o componente Link
     return (
       <Flex
@@ -129,14 +145,10 @@ const SidebarItems = ({ onClose }: SidebarItemsProps) => {
         <Icon as={icon} alignSelf="center" />
         <Text ml={2}>{title}</Text>
       </Flex>
-    );
-  });
+    )
+  })
 
-  return (
-    <Box mb={4}>
-      {listItems}
-    </Box>
-  )
+  return <Box mb={4}>{listItems}</Box>
 }
 
 export default SidebarItems

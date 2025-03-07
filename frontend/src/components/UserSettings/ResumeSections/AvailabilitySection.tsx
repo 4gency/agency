@@ -1,11 +1,7 @@
-import {
-  FormControl,
-  FormLabel,
-  Input,
-} from "@chakra-ui/react"
-import { UseFormRegister } from "react-hook-form"
+import { FormControl, FormLabel, Input } from "@chakra-ui/react"
+import type { UseFormRegister } from "react-hook-form"
+import type { ResumeForm } from "../types"
 import SectionContainer from "./SectionContainer"
-import { ResumeForm } from "../types"
 
 interface AvailabilitySectionProps {
   register: UseFormRegister<ResumeForm>
@@ -18,7 +14,7 @@ const AvailabilitySection: React.FC<AvailabilitySectionProps> = ({
     <SectionContainer title="Availability">
       <FormControl>
         <FormLabel>Notice Period</FormLabel>
-        <Input 
+        <Input
           {...register("availability")}
           placeholder="How quickly can you start (e.g., 2 weeks, immediately)"
         />
@@ -27,4 +23,4 @@ const AvailabilitySection: React.FC<AvailabilitySectionProps> = ({
   )
 }
 
-export default AvailabilitySection 
+export default AvailabilitySection

@@ -48,17 +48,29 @@ const Sidebar = () => {
         zIndex="200"
       />
       <Drawer isOpen={isOpen} placement="left" onClose={onClose}>
-        <DrawerOverlay bg={useColorModeValue('rgba(255, 255, 255, 0.5)', 'rgba(0, 0, 0, 0.2)')} backdropFilter="blur(8px)" />
-        <DrawerContent 
-          maxW="250px" 
-          bg={useColorModeValue('rgba(255, 255, 255, 0.8)', 'rgba(26, 32, 44, 0.3)')}
+        <DrawerOverlay
+          bg={useColorModeValue(
+            "rgba(255, 255, 255, 0.5)",
+            "rgba(0, 0, 0, 0.2)",
+          )}
+          backdropFilter="blur(8px)"
+        />
+        <DrawerContent
+          maxW="250px"
+          bg={useColorModeValue(
+            "rgba(255, 255, 255, 0.8)",
+            "rgba(26, 32, 44, 0.3)",
+          )}
           backdropFilter="blur(20px)"
           style={{ WebkitBackdropFilter: "blur(20px)" }}
           borderRight="1px solid"
-          borderColor={useColorModeValue('rgba(209, 213, 219, 0.4)', 'rgba(255, 255, 255, 0.1)')}
-          boxShadow={useColorModeValue('lg', 'xl')}
+          borderColor={useColorModeValue(
+            "rgba(209, 213, 219, 0.4)",
+            "rgba(255, 255, 255, 0.1)",
+          )}
+          boxShadow={useColorModeValue("lg", "xl")}
         >
-          <DrawerCloseButton color={useColorModeValue('gray.800', 'white')} />
+          <DrawerCloseButton color={useColorModeValue("gray.800", "white")} />
           <DrawerBody py={8}>
             <Flex flexDir="column" justify="space-between">
               <Box>
@@ -66,7 +78,7 @@ const Sidebar = () => {
                   <Logo alt="logo" />
                 </Box>
                 <SidebarItems onClose={onClose} />
-                
+
                 {/* Theme Toggle Button */}
                 <Flex
                   as="button"
@@ -75,15 +87,22 @@ const Sidebar = () => {
                   fontWeight="medium"
                   alignItems="center"
                   mt={4}
-                  color={useColorModeValue('gray.800', 'white')}
-                  _hover={{ bg: useColorModeValue('rgba(255, 255, 255, 0.4)', 'rgba(45, 55, 72, 0.4)') }}
+                  color={useColorModeValue("gray.800", "white")}
+                  _hover={{
+                    bg: useColorModeValue(
+                      "rgba(255, 255, 255, 0.4)",
+                      "rgba(45, 55, 72, 0.4)",
+                    ),
+                  }}
                   borderRadius="md"
                   mb={3}
                 >
-                  {colorMode === 'dark' ? <FiSun /> : <FiMoon />}
-                  <Text ml={2}>{colorMode === 'dark' ? 'Light mode' : 'Dark mode'}</Text>
+                  {colorMode === "dark" ? <FiSun /> : <FiMoon />}
+                  <Text ml={2}>
+                    {colorMode === "dark" ? "Light mode" : "Dark mode"}
+                  </Text>
                 </Flex>
-                
+
                 {/* Logout Button */}
                 <Flex
                   as="button"
@@ -92,7 +111,12 @@ const Sidebar = () => {
                   color="ui.danger"
                   fontWeight="bold"
                   alignItems="center"
-                  _hover={{ bg: useColorModeValue('rgba(255, 255, 255, 0.4)', 'rgba(45, 55, 72, 0.4)') }}
+                  _hover={{
+                    bg: useColorModeValue(
+                      "rgba(255, 255, 255, 0.4)",
+                      "rgba(45, 55, 72, 0.4)",
+                    ),
+                  }}
                   borderRadius="md"
                 >
                   <FiLogOut />
@@ -100,7 +124,12 @@ const Sidebar = () => {
                 </Flex>
               </Box>
               {currentUser?.email && (
-                <Text color={useColorModeValue('gray.800', 'white')} noOfLines={2} fontSize="sm" p={2}>
+                <Text
+                  color={useColorModeValue("gray.800", "white")}
+                  noOfLines={2}
+                  fontSize="sm"
+                  p={2}
+                >
                   Logged in as: {currentUser.email}
                 </Text>
               )}

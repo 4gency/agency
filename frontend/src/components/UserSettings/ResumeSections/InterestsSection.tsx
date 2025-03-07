@@ -1,14 +1,16 @@
-import {
-  FormControl,
-} from "@chakra-ui/react"
-import { UseFormGetValues, UseFormWatch } from "react-hook-form"
-import SectionContainer from "./SectionContainer"
-import { ResumeForm } from "../types"
-import ArrayInputField from "./ArrayInputField"
+import { FormControl } from "@chakra-ui/react"
 import { useEffect } from "react"
+import type { UseFormGetValues, UseFormWatch } from "react-hook-form"
+import type { ResumeForm } from "../types"
+import ArrayInputField from "./ArrayInputField"
+import SectionContainer from "./SectionContainer"
 
 interface InterestsSectionProps {
-  setValue: (field: "interests", value: string[], options?: {shouldDirty?: boolean}) => void
+  setValue: (
+    field: "interests",
+    value: string[],
+    options?: { shouldDirty?: boolean },
+  ) => void
   getValues: UseFormGetValues<ResumeForm>
   watch?: UseFormWatch<ResumeForm>
 }
@@ -16,7 +18,7 @@ interface InterestsSectionProps {
 const InterestsSection: React.FC<InterestsSectionProps> = ({
   setValue,
   getValues,
-  watch
+  watch,
 }) => {
   // Garantir que interests sempre seja um array válido
   useEffect(() => {
@@ -29,7 +31,7 @@ const InterestsSection: React.FC<InterestsSectionProps> = ({
   // Obter interests do formulário utilizando watch se disponível, caso contrário usar getValues
   // Isso garante reatividade quando o hook watch está disponível
   const interests = watch ? watch("interests") : getValues("interests") || []
-  
+
   // Sempre garantir que temos um array válido para exibição
   const displayInterests = Array.isArray(interests) ? interests : []
 
@@ -48,4 +50,4 @@ const InterestsSection: React.FC<InterestsSectionProps> = ({
   )
 }
 
-export default InterestsSection 
+export default InterestsSection

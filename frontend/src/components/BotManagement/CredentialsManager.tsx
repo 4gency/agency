@@ -1,229 +1,251 @@
-import { useState, useEffect } from "react";
 import {
+  Badge,
   Box,
   Button,
-  Flex,
-  Heading,
-  Text,
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalFooter,
-  ModalBody,
-  ModalCloseButton,
-  useDisclosure,
-  FormControl,
-  FormLabel,
-  Input,
   Card,
   CardBody,
-  Stack,
-  useToast,
-  IconButton,
+  Flex,
+  FormControl,
+  FormLabel,
   HStack,
-  VStack,
+  Heading,
+  IconButton,
+  Input,
+  Modal,
+  ModalBody,
+  ModalCloseButton,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  ModalOverlay,
   Spinner,
-  Badge,
-} from "@chakra-ui/react";
-import { FiEdit, FiTrash2, FiPlus } from "react-icons/fi";
-import { CredentialsService, type CredentialsPublic, type CredentialsCreate, type CredentialsUpdate } from "../../client";
-import DeleteAlert from "../Common/DeleteAlert";
+  Stack,
+  Text,
+  VStack,
+  useDisclosure,
+  useToast,
+} from "@chakra-ui/react"
+import { useEffect, useState } from "react"
+import { FiEdit, FiPlus, FiTrash2 } from "react-icons/fi"
+import {
+  type CredentialsCreate,
+  type CredentialsPublic,
+  CredentialsService,
+  type CredentialsUpdate,
+} from "../../client"
+import DeleteAlert from "../Common/DeleteAlert"
 
 export type CredentialsManagerProps = {
-  onCredentialSelect?: (credentialId: string) => void;
-  selectedCredentialId?: string;
-  onCredentialsUpdate?: () => void;
-};
+  onCredentialSelect?: (credentialId: string) => void
+  selectedCredentialId?: string
+  onCredentialsUpdate?: () => void
+}
 
-const CredentialsManager = ({ 
-  onCredentialSelect, 
+const CredentialsManager = ({
+  onCredentialSelect,
   selectedCredentialId,
-  onCredentialsUpdate 
+  onCredentialsUpdate,
 }: CredentialsManagerProps) => {
-  const [credentials, setCredentials] = useState<CredentialsPublic[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [credentialToDelete, setCredentialToDelete] = useState<string | null>(null);
-  const [credentialToEdit, setCredentialToEdit] = useState<CredentialsPublic | null>(null);
-  const [formData, setFormData] = useState<CredentialsCreate | CredentialsUpdate>({
+  const [credentials, setCredentials] = useState<CredentialsPublic[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [credentialToDelete, setCredentialToDelete] = useState<string | null>(
+    null,
+  )
+  const [credentialToEdit, setCredentialToEdit] =
+    useState<CredentialsPublic | null>(null)
+  const [formData, setFormData] = useState<
+    CredentialsCreate | CredentialsUpdate
+  >({
     email: "",
     password: "",
-  });
+  })
 
-  const { isOpen: isCreateOpen, onOpen: onCreateOpen, onClose: onCreateClose } = useDisclosure();
-  const { isOpen: isEditOpen, onOpen: onEditOpen, onClose: onEditClose } = useDisclosure();
-  const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
-  
-  const toast = useToast();
+  const {
+    isOpen: isCreateOpen,
+    onOpen: onCreateOpen,
+    onClose: onCreateClose,
+  } = useDisclosure()
+  const {
+    isOpen: isEditOpen,
+    onOpen: onEditOpen,
+    onClose: onEditClose,
+  } = useDisclosure()
+  const {
+    isOpen: isDeleteOpen,
+    onOpen: onDeleteOpen,
+    onClose: onDeleteClose,
+  } = useDisclosure()
+
+  const toast = useToast()
 
   // Fetch credentials on component mount
   useEffect(() => {
-    fetchCredentials();
-  }, []);
+    fetchCredentials()
+  }, [])
 
   // Fetch credentials from API
   const fetchCredentials = async () => {
-    setIsLoading(true);
-    setError(null);
+    setIsLoading(true)
+    setError(null)
     try {
-      const response = await CredentialsService.getUserCredentials();
-      setCredentials(response.items || []);
+      const response = await CredentialsService.getUserCredentials()
+      setCredentials(response.items || [])
     } catch (err) {
-      console.error("Error fetching credentials:", err);
-      setError("Failed to load credentials. Please try again.");
+      console.error("Error fetching credentials:", err)
+      setError("Failed to load credentials. Please try again.")
       toast({
         title: "Error",
         description: "Failed to load credentials",
         status: "error",
         duration: 3000,
         isClosable: true,
-      });
+      })
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   // Handle input changes for create/edit forms
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
+    const { name, value } = e.target
     setFormData({
       ...formData,
       [name]: value,
-    });
-  };
+    })
+  }
 
   // Open edit modal and set form data
   const handleEditClick = (credential: CredentialsPublic) => {
-    setCredentialToEdit(credential);
+    setCredentialToEdit(credential)
     setFormData({
       email: credential.email,
       password: "", // Password is not returned from the API for security reasons
-    });
-    onEditOpen();
-  };
+    })
+    onEditOpen()
+  }
 
   // Handle credential creation
   const handleCreateCredential = async () => {
     try {
       await CredentialsService.createCredentials({
         requestBody: formData as CredentialsCreate,
-      });
+      })
       toast({
         title: "Success",
         description: "Credential created successfully",
         status: "success",
         duration: 3000,
         isClosable: true,
-      });
-      onCreateClose();
-      setFormData({ email: "", password: "" });
-      await fetchCredentials();
-      
+      })
+      onCreateClose()
+      setFormData({ email: "", password: "" })
+      await fetchCredentials()
+
       // Notify parent component that credentials have been updated
       if (onCredentialsUpdate) {
-        onCredentialsUpdate();
+        onCredentialsUpdate()
       }
     } catch (err) {
-      console.error("Error creating credential:", err);
+      console.error("Error creating credential:", err)
       toast({
         title: "Error",
         description: "Failed to create credential",
         status: "error",
         duration: 3000,
         isClosable: true,
-      });
+      })
     }
-  };
+  }
 
   // Handle credential update
   const handleUpdateCredential = async () => {
     try {
-      if (!credentialToEdit) return;
-      
+      if (!credentialToEdit) return
+
       await CredentialsService.updateCredentials({
         credentialsId: credentialToEdit.id,
         requestBody: formData as CredentialsUpdate,
-      });
+      })
       toast({
         title: "Success",
         description: "Credential updated successfully",
         status: "success",
         duration: 3000,
         isClosable: true,
-      });
-      onEditClose();
-      setFormData({ email: "", password: "" });
-      await fetchCredentials();
-      
+      })
+      onEditClose()
+      setFormData({ email: "", password: "" })
+      await fetchCredentials()
+
       // Notify parent component that credentials have been updated
       if (onCredentialsUpdate) {
-        onCredentialsUpdate();
+        onCredentialsUpdate()
       }
     } catch (err) {
-      console.error("Error updating credential:", err);
+      console.error("Error updating credential:", err)
       toast({
         title: "Error",
         description: "Failed to update credential",
         status: "error",
         duration: 3000,
         isClosable: true,
-      });
+      })
     }
-  };
+  }
 
   // Open delete confirmation modal
   const handleDeleteClick = (id: string) => {
-    setCredentialToDelete(id);
-    onDeleteOpen();
-  };
+    setCredentialToDelete(id)
+    onDeleteOpen()
+  }
 
   // Handle credential deletion
   const handleDeleteCredential = async () => {
     try {
-      if (!credentialToDelete) return;
-      
+      if (!credentialToDelete) return
+
       await CredentialsService.deleteCredentials({
         credentialsId: credentialToDelete,
-      });
+      })
       toast({
         title: "Success",
         description: "Credential deleted successfully",
         status: "success",
         duration: 3000,
         isClosable: true,
-      });
-      onDeleteClose();
-      setCredentialToDelete(null);
-      await fetchCredentials();
-      
+      })
+      onDeleteClose()
+      setCredentialToDelete(null)
+      await fetchCredentials()
+
       // Notify parent component that credentials have been updated
       if (onCredentialsUpdate) {
-        onCredentialsUpdate();
+        onCredentialsUpdate()
       }
     } catch (err) {
-      console.error("Error deleting credential:", err);
+      console.error("Error deleting credential:", err)
       toast({
         title: "Error",
         description: "Failed to delete credential",
         status: "error",
         duration: 3000,
         isClosable: true,
-      });
+      })
     }
-  };
+  }
 
   // Reset form data when closing modals
   const handleCreateClose = () => {
-    setFormData({ email: "", password: "" });
-    onCreateClose();
-  };
+    setFormData({ email: "", password: "" })
+    onCreateClose()
+  }
 
   const handleEditClose = () => {
-    setCredentialToEdit(null);
-    setFormData({ email: "", password: "" });
-    onEditClose();
-  };
+    setCredentialToEdit(null)
+    setFormData({ email: "", password: "" })
+    onEditClose()
+  }
 
   return (
     <Box>
@@ -243,18 +265,25 @@ const CredentialsManager = ({
       ) : credentials.length === 0 ? (
         <Card>
           <CardBody>
-            <Text textAlign="center">No credentials found. Add your LinkedIn credentials to start using the bot.</Text>
+            <Text textAlign="center">
+              No credentials found. Add your LinkedIn credentials to start using
+              the bot.
+            </Text>
           </CardBody>
         </Card>
       ) : (
         <VStack spacing={3} align="stretch">
           {credentials.map((credential) => (
-            <Card 
-              key={credential.id} 
+            <Card
+              key={credential.id}
               cursor="pointer"
-              borderColor={selectedCredentialId === credential.id ? "ui.main" : "transparent"}
+              borderColor={
+                selectedCredentialId === credential.id
+                  ? "ui.main"
+                  : "transparent"
+              }
               borderWidth={2}
-              onClick={() => onCredentialSelect && onCredentialSelect(credential.id)}
+              onClick={() => onCredentialSelect?.(credential.id)}
               _hover={{ shadow: "md" }}
               transition="all 0.2s"
             >
@@ -276,8 +305,8 @@ const CredentialsManager = ({
                       size="sm"
                       variant="ghost"
                       onClick={(e) => {
-                        e.stopPropagation();
-                        handleEditClick(credential);
+                        e.stopPropagation()
+                        handleEditClick(credential)
                       }}
                     />
                     <IconButton
@@ -287,8 +316,8 @@ const CredentialsManager = ({
                       variant="ghost"
                       colorScheme="red"
                       onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteClick(credential.id);
+                        e.stopPropagation()
+                        handleDeleteClick(credential.id)
                       }}
                     />
                   </HStack>
@@ -332,8 +361,8 @@ const CredentialsManager = ({
             <Button variant="outline" mr={3} onClick={handleCreateClose}>
               Cancel
             </Button>
-            <Button 
-              colorScheme="teal" 
+            <Button
+              colorScheme="teal"
               onClick={handleCreateCredential}
               isDisabled={!formData.email || !formData.password}
             >
@@ -379,8 +408,8 @@ const CredentialsManager = ({
             <Button variant="outline" mr={3} onClick={handleEditClose}>
               Cancel
             </Button>
-            <Button 
-              colorScheme="teal" 
+            <Button
+              colorScheme="teal"
               onClick={handleUpdateCredential}
               isDisabled={!formData.email}
             >
@@ -399,7 +428,7 @@ const CredentialsManager = ({
         message="Are you sure you want to delete this credential? This action cannot be undone."
       />
     </Box>
-  );
-};
+  )
+}
 
-export default CredentialsManager; 
+export default CredentialsManager

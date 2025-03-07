@@ -1,9 +1,9 @@
+import { useNavigate } from "@tanstack/react-router"
+import confetti from "canvas-confetti"
 import { useEffect, useState } from "react"
 import { CheckoutService } from "../client/sdk.gen"
-import { useNavigate } from "@tanstack/react-router"
-import useCustomToast from "./useCustomToast"
-import confetti from "canvas-confetti"
 import { is404Error } from "../utils/errorUtils"
+import useCustomToast from "./useCustomToast"
 
 interface UseSuccessCheckoutParams {
   authUser: any
@@ -11,10 +11,10 @@ interface UseSuccessCheckoutParams {
   sessionId?: string
 }
 
-export function useProcessSuccessCheckout({ 
-  authUser, 
-  isLoading, 
-  sessionId 
+export function useProcessSuccessCheckout({
+  authUser,
+  isLoading,
+  sessionId,
 }: UseSuccessCheckoutParams) {
   const [shouldShowCard, setShouldShowCard] = useState(false)
   const [successMessage, setSuccessMessage] = useState("")
@@ -25,10 +25,10 @@ export function useProcessSuccessCheckout({
   const triggerConfetti = () => {
     const duration = 1000
     const animationEnd = Date.now() + duration
-    const defaults = { 
-      startVelocity: 40, 
-      spread: 100, 
-      ticks: 80, 
+    const defaults = {
+      startVelocity: 40,
+      spread: 100,
+      ticks: 80,
       zIndex: -1, // Coloca o confete atrás do modal
       particleCount: 80,
       scalar: 1.5, // Faz os confetes maiores
@@ -42,14 +42,14 @@ export function useProcessSuccessCheckout({
       }
 
       const particleCount = 50 * (timeLeft / duration)
-      
+
       // Confetes emanando do centro
       confetti({
         ...defaults,
         particleCount,
         origin: { x: 0.5, y: 0.5 }, // Centro da tela
         gravity: 0.8, // Um pouco mais de gravidade para que os confetes não subam muito
-        disableForReducedMotion: true
+        disableForReducedMotion: true,
       })
     }, 200)
   }
@@ -62,7 +62,11 @@ export function useProcessSuccessCheckout({
 
     if (!sessionId) {
       navigate({ to: "/" })
-      showToast("Missing Information", "Session ID is required for checkout verification", "error")
+      showToast(
+        "Missing Information",
+        "Session ID is required for checkout verification",
+        "error",
+      )
       return
     }
 
@@ -73,17 +77,19 @@ export function useProcessSuccessCheckout({
     const processCheckout = async () => {
       try {
         // Call the API with sessionId
-        const response = await CheckoutService.stripeSuccess({ sessionId: validSessionId })
-        
+        const response = await CheckoutService.stripeSuccess({
+          sessionId: validSessionId,
+        })
+
         // Store the message from the API
         setSuccessMessage(response.message)
-        
+
         // Trigger confetti and show card
         triggerConfetti()
         setShouldShowCard(true)
       } catch (error: unknown) {
         console.error("Failed to process checkout:", error)
-        
+
         // Use the utility function to check for 404 errors
         if (is404Error(error)) {
           console.log("404 error detected, redirecting to dashboard")
@@ -91,11 +97,15 @@ export function useProcessSuccessCheckout({
           navigate({ to: "/" })
         } else {
           // For other errors, redirect to the failed page
-          navigate({ 
-            to: "/checkout-failed", 
-            search: { sessionId: validSessionId }
+          navigate({
+            to: "/checkout-failed",
+            search: { sessionId: validSessionId },
           })
-          showToast("Payment Processing Failed", "We were unable to process your payment.", "error")
+          showToast(
+            "Payment Processing Failed",
+            "We were unable to process your payment.",
+            "error",
+          )
         }
       }
     }
@@ -106,4 +116,4 @@ export function useProcessSuccessCheckout({
   }, [authUser, isLoading, sessionId, navigate, showToast])
 
   return { shouldShowCard, successMessage }
-} 
+}

@@ -1,3 +1,4 @@
+import { AddIcon, DeleteIcon } from "@chakra-ui/icons"
 import {
   Box,
   Button,
@@ -12,10 +13,15 @@ import {
   Textarea,
   useColorModeValue,
 } from "@chakra-ui/react"
-import { AddIcon, DeleteIcon } from "@chakra-ui/icons"
-import { Control, FieldErrors, UseFormRegister, useFieldArray, UseFormWatch } from "react-hook-form"
+import {
+  type Control,
+  type FieldErrors,
+  type UseFormRegister,
+  type UseFormWatch,
+  useFieldArray,
+} from "react-hook-form"
+import type { ResumeForm } from "../types"
 import SectionContainer from "./SectionContainer"
-import { ResumeForm } from "../types"
 
 interface WorkExperienceSectionProps {
   register: UseFormRegister<ResumeForm>
@@ -218,4 +224,4 @@ const WorkExperienceSection: React.FC<WorkExperienceSectionProps> = ({
   )
 }
 
-export default WorkExperienceSection 
+export default WorkExperienceSection

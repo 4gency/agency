@@ -1,17 +1,17 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router"
+import { CheckIcon } from "@chakra-ui/icons"
 import {
+  Box,
   Button,
   Container,
   Heading,
   Text,
-  useColorModeValue,
   VStack,
-  Box,
+  useColorModeValue,
 } from "@chakra-ui/react"
-import { CheckIcon } from "@chakra-ui/icons"
-import useAuth from "../hooks/useAuth"
+import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { AnimatedCard } from "../components/Common/AnimatedCard"
 import { CircleIcon } from "../components/Common/CircleIcon"
+import useAuth from "../hooks/useAuth"
 import { useProcessSuccessCheckout } from "../hooks/useProcessSuccessCheckout"
 
 // Define search params
@@ -21,7 +21,9 @@ interface CheckoutSuccessSearchParams {
 
 export const Route = createFileRoute("/checkout-success")({
   component: CheckoutSuccess,
-  validateSearch: (search: Record<string, unknown>): CheckoutSuccessSearchParams => {
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): CheckoutSuccessSearchParams => {
     return {
       sessionId: search.sessionId as string | undefined,
     }
@@ -32,12 +34,12 @@ function CheckoutSuccess() {
   const { sessionId } = Route.useSearch()
   const { user: authUser, isLoading } = useAuth()
   const navigate = useNavigate()
-  
+
   // Use our custom hook for checkout processing
   const { shouldShowCard, successMessage } = useProcessSuccessCheckout({
     authUser,
     isLoading,
-    sessionId
+    sessionId,
   })
 
   // Colors for theming
@@ -48,22 +50,22 @@ function CheckoutSuccess() {
 
   if (!shouldShowCard) {
     return (
-      <Container 
-        maxW="100%" 
-        height="100vh" 
-        display="flex" 
-        alignItems="center" 
+      <Container
+        maxW="100%"
+        height="100vh"
+        display="flex"
+        alignItems="center"
         justifyContent="center"
       />
     )
   }
 
   return (
-    <Container 
-      maxW="100%" 
-      height="100vh" 
-      display="flex" 
-      alignItems="center" 
+    <Container
+      maxW="100%"
+      height="100vh"
+      display="flex"
+      alignItems="center"
       justifyContent="center"
     >
       <Box
@@ -80,26 +82,20 @@ function CheckoutSuccess() {
           boxShadow="lg"
         >
           <VStack spacing={4} align="flex-start">
-            <CircleIcon 
-              icon={CheckIcon} 
-              bgColor={checkBgColor}
-              iconSize={5}
-            />
-            
+            <CircleIcon icon={CheckIcon} bgColor={checkBgColor} iconSize={5} />
+
             <Heading as="h2" size="xl" color={textColor} fontWeight="bold">
               Payment succeeded!
             </Heading>
-            
+
             <Box>
               <Text color={textColor} mb={2}>
                 Thank you for processing your most recent payment.
               </Text>
-              
-              <Text color={textColor}>
-                {successMessage}
-              </Text>
+
+              <Text color={textColor}>{successMessage}</Text>
             </Box>
-            
+
             <Button
               mt={4}
               bg={buttonBgColor}
@@ -117,4 +113,4 @@ function CheckoutSuccess() {
       </Box>
     </Container>
   )
-} 
+}

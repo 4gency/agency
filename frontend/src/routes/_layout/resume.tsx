@@ -1,7 +1,7 @@
 import { createFileRoute, redirect } from "@tanstack/react-router"
+import { UsersService } from "../../client"
 import ResumePage from "../../components/UserSettings/Resume"
 import { isLoggedIn } from "../../hooks/useAuth"
-import { UsersService } from "../../client"
 
 export const Route = createFileRoute("/_layout/resume")({
   component: ResumePage,
@@ -16,7 +16,7 @@ export const Route = createFileRoute("/_layout/resume")({
     try {
       // If the user is logged in, fetch their subscriptions
       const subscriptions = await UsersService.getUserSubscriptions()
-      
+
       // If the user has no subscriptions, redirect to root
       if (!subscriptions || subscriptions.length === 0) {
         throw redirect({
@@ -34,4 +34,4 @@ export const Route = createFileRoute("/_layout/resume")({
       })
     }
   },
-}) 
+})

@@ -1,3 +1,4 @@
+import { AddIcon, DeleteIcon } from "@chakra-ui/icons"
 import {
   Box,
   Button,
@@ -11,10 +12,14 @@ import {
   Select,
   useColorModeValue,
 } from "@chakra-ui/react"
-import { AddIcon, DeleteIcon } from "@chakra-ui/icons"
-import { Control, FieldErrors, UseFormRegister, useFieldArray } from "react-hook-form"
+import {
+  type Control,
+  type FieldErrors,
+  type UseFormRegister,
+  useFieldArray,
+} from "react-hook-form"
+import type { ResumeForm } from "../types"
 import SectionContainer from "./SectionContainer"
-import { ResumeForm } from "../types"
 
 interface LanguagesSectionProps {
   register: UseFormRegister<ResumeForm>
@@ -43,7 +48,7 @@ const LanguagesSection: React.FC<LanguagesSectionProps> = ({
     "B2 - Upper Intermediate",
     "C1 - Advanced",
     "C2 - Proficient",
-    "Native"
+    "Native",
   ]
 
   return (
@@ -89,10 +94,7 @@ const LanguagesSection: React.FC<LanguagesSectionProps> = ({
 
           <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={4}>
             <GridItem>
-              <FormControl
-                isInvalid={!!errors.languages?.[index]?.name}
-                mb={4}
-              >
+              <FormControl isInvalid={!!errors.languages?.[index]?.name} mb={4}>
                 <FormLabel>Language</FormLabel>
                 <Input
                   {...register(`languages.${index}.name` as const, {
@@ -154,4 +156,4 @@ const LanguagesSection: React.FC<LanguagesSectionProps> = ({
   )
 }
 
-export default LanguagesSection 
+export default LanguagesSection
