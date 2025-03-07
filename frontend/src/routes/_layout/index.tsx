@@ -26,9 +26,12 @@ import {
   ModalCloseButton,
   useDisclosure,
   Button,
+  VStack,
+  useColorModeValue,
+  Badge,
 } from "@chakra-ui/react";
 import { createFileRoute } from "@tanstack/react-router";
-import { FiUsers, FiActivity, FiBriefcase, FiAlertTriangle } from "react-icons/fi";
+import { FiUsers, FiActivity, FiBriefcase, FiAlertTriangle, FiLock } from "react-icons/fi";
 
 import useAuth from "../../hooks/useAuth";
 import CredentialsManager from "../../components/BotManagement/CredentialsManager";
@@ -71,6 +74,109 @@ function Dashboard() {
   const handleCredentialSelect = (credentialId: string) => {
     setSelectedCredentialId(credentialId);
   };
+  
+  // Subscription card styling
+  const cardBg = useColorModeValue('white', 'gray.800');
+  const cardBorder = useColorModeValue('gray.200', 'gray.700');
+  const highlightColor = useColorModeValue('teal.500', 'teal.300');
+  const planBg = useColorModeValue('gray.50', 'gray.700');
+  const planBorder = useColorModeValue('gray.200', 'gray.600');
+
+  // Dashboard content - to be blurred if not subscribed
+  const DashboardContent = () => (
+    <>
+      {/* Stats Overview Section */}
+      <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={6} mb={8}>
+        <Card>
+          <CardBody>
+            <Stat>
+              <Flex justify="space-between">
+                <Box>
+                  <StatLabel>Total Applications</StatLabel>
+                  <StatNumber>{stats.totalApplications}</StatNumber>
+                  <StatHelpText>Across all sessions</StatHelpText>
+                </Box>
+                <Box>
+                  <Icon as={FiBriefcase} boxSize={10} color="teal.400" />
+                </Box>
+              </Flex>
+            </Stat>
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardBody>
+            <Stat>
+              <Flex justify="space-between">
+                <Box>
+                  <StatLabel>Successful</StatLabel>
+                  <StatNumber>{stats.successfulApplications}</StatNumber>
+                  <StatHelpText>Success Rate: {stats.successRate}%</StatHelpText>
+                </Box>
+                <Box>
+                  <Icon as={FiActivity} boxSize={10} color="green.400" />
+                </Box>
+              </Flex>
+            </Stat>
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardBody>
+            <Stat>
+              <Flex justify="space-between">
+                <Box>
+                  <StatLabel>Failed</StatLabel>
+                  <StatNumber>{stats.failedApplications}</StatNumber>
+                  <StatHelpText>Failure Rate: {100 - stats.successRate}%</StatHelpText>
+                </Box>
+                <Box>
+                  <Icon as={FiAlertTriangle} boxSize={10} color="red.400" />
+                </Box>
+              </Flex>
+            </Stat>
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardBody>
+            <Stat>
+              <Flex justify="space-between">
+                <Box>
+                  <StatLabel>Pending</StatLabel>
+                  <StatNumber>{stats.pendingApplications}</StatNumber>
+                  <StatHelpText>Awaiting Responses</StatHelpText>
+                </Box>
+                <Box>
+                  <Icon as={FiUsers} boxSize={10} color="blue.400" />
+                </Box>
+              </Flex>
+            </Stat>
+          </CardBody>
+        </Card>
+      </SimpleGrid>
+
+      {/* Main Bot Management Tabs */}
+      <Tabs variant="enclosed" colorScheme="teal" mb={4}>
+        <TabList>
+          <Tab>Bot Sessions</Tab>
+          <Tab>Credentials</Tab>
+        </TabList>
+
+        <TabPanels>
+          <TabPanel px={0}>
+            <BotSessionManager />
+          </TabPanel>
+          <TabPanel px={0}>
+            <CredentialsManager 
+              onCredentialSelect={handleCredentialSelect}
+              selectedCredentialId={selectedCredentialId || undefined}
+            />
+          </TabPanel>
+        </TabPanels>
+      </Tabs>
+    </>
+  );
 
   return (
     <Container maxW="full">
@@ -85,113 +191,96 @@ function Dashboard() {
         </Flex>
 
         {!isSubscriber ? (
-          <Card mb={6}>
-            <CardBody>
-              <Text fontSize="lg" fontWeight="medium">
-                You don't have an active subscription. Please subscribe to use the bot features.
-              </Text>
-              <Button 
-                colorScheme="teal" 
-                mt={4} 
-                onClick={() => window.location.href = "/pricing"}
+          <Box position="relative">
+            {/* Blurred dashboard in background */}
+            <Box 
+              filter="blur(6px)" 
+              pointerEvents="none" 
+              opacity={0.7}
+              position="relative"
+              zIndex={1}
+            >
+              <DashboardContent />
+            </Box>
+            
+            {/* Subscription CTA overlay */}
+            <Box 
+              position="absolute" 
+              top="50%" 
+              left="50%" 
+              transform="translate(-50%, -50%)" 
+              zIndex={2} 
+              width={{ base: "90%", md: "500px" }}
+              maxWidth="90vw"
+            >
+              <Card 
+                bg={cardBg} 
+                borderColor={cardBorder} 
+                borderWidth="1px" 
+                borderRadius="xl" 
+                boxShadow="lg" 
+                overflow="hidden"
               >
-                View Pricing
-              </Button>
-            </CardBody>
-          </Card>
+                <Box bg="teal.500" h="8px" w="full" />
+                <CardBody p={8}>
+                  <VStack spacing={6} align="center">
+                    <Icon as={FiLock} boxSize={16} color={highlightColor} />
+                    
+                    <VStack spacing={2}>
+                      <Heading size="lg" textAlign="center">Unlock Bot Features</Heading>
+                      <Text textAlign="center" fontSize="md" color="gray.500">
+                        To access the automated job application bot and all dashboard features, 
+                        you need an active subscription plan.
+                      </Text>
+                    </VStack>
+                    
+                    <Box w="full" pt={4}>
+                      <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4} width="full">
+                        <VStack 
+                          p={4} 
+                          bg={planBg}
+                          borderRadius="md" 
+                          borderWidth="1px" 
+                          borderColor={planBorder}
+                          align="flex-start"
+                          spacing={2}
+                        >
+                          <Badge colorScheme="teal">Basic Plan</Badge>
+                          <Text fontWeight="bold">100 Applications</Text>
+                          <Text fontSize="sm">Perfect for casual job seekers</Text>
+                        </VStack>
+                        
+                        <VStack 
+                          p={4} 
+                          bg={planBg}
+                          borderRadius="md" 
+                          borderWidth="1px" 
+                          borderColor={planBorder}
+                          align="flex-start"
+                          spacing={2}
+                        >
+                          <Badge colorScheme="purple">Pro Plan</Badge>
+                          <Text fontWeight="bold">Unlimited Applications</Text>
+                          <Text fontSize="sm">Ideal for active job seekers</Text>
+                        </VStack>
+                      </SimpleGrid>
+                    </Box>
+                    
+                    <Button 
+                      colorScheme="teal" 
+                      size="lg"
+                      width={{ base: "full", md: "auto" }}
+                      onClick={() => window.location.href = "/pricing"}
+                    >
+                      View Pricing Plans
+                    </Button>
+                  </VStack>
+                </CardBody>
+              </Card>
+            </Box>
+          </Box>
         ) : (
-          <>
-            {/* Stats Overview Section */}
-            <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={6} mb={8}>
-              <Card>
-                <CardBody>
-                  <Stat>
-                    <Flex justify="space-between">
-                      <Box>
-                        <StatLabel>Total Applications</StatLabel>
-                        <StatNumber>{stats.totalApplications}</StatNumber>
-                        <StatHelpText>Across all sessions</StatHelpText>
-                      </Box>
-                      <Box>
-                        <Icon as={FiBriefcase} boxSize={10} color="teal.400" />
-                      </Box>
-                    </Flex>
-                  </Stat>
-                </CardBody>
-              </Card>
-
-              <Card>
-                <CardBody>
-                  <Stat>
-                    <Flex justify="space-between">
-                      <Box>
-                        <StatLabel>Successful</StatLabel>
-                        <StatNumber>{stats.successfulApplications}</StatNumber>
-                        <StatHelpText>Success Rate: {stats.successRate}%</StatHelpText>
-                      </Box>
-                      <Box>
-                        <Icon as={FiActivity} boxSize={10} color="green.400" />
-                      </Box>
-                    </Flex>
-                  </Stat>
-                </CardBody>
-              </Card>
-
-              <Card>
-                <CardBody>
-                  <Stat>
-                    <Flex justify="space-between">
-                      <Box>
-                        <StatLabel>Failed</StatLabel>
-                        <StatNumber>{stats.failedApplications}</StatNumber>
-                        <StatHelpText>Failure Rate: {100 - stats.successRate}%</StatHelpText>
-                      </Box>
-                      <Box>
-                        <Icon as={FiAlertTriangle} boxSize={10} color="red.400" />
-                      </Box>
-                    </Flex>
-                  </Stat>
-                </CardBody>
-              </Card>
-
-              <Card>
-                <CardBody>
-                  <Stat>
-                    <Flex justify="space-between">
-                      <Box>
-                        <StatLabel>Pending</StatLabel>
-                        <StatNumber>{stats.pendingApplications}</StatNumber>
-                        <StatHelpText>Awaiting Responses</StatHelpText>
-                      </Box>
-                      <Box>
-                        <Icon as={FiUsers} boxSize={10} color="blue.400" />
-                      </Box>
-                    </Flex>
-                  </Stat>
-                </CardBody>
-              </Card>
-            </SimpleGrid>
-
-            {/* Main Bot Management Tabs */}
-            <Tabs variant="enclosed" colorScheme="teal" mb={4}>
-              <TabList>
-                <Tab>Bot Sessions</Tab>
-                <Tab>Credentials</Tab>
-              </TabList>
-
-              <TabPanels>
-                <TabPanel px={0}>
-                  <BotSessionManager />
-                </TabPanel>
-                <TabPanel px={0}>
-                  <CredentialsManager 
-                    onCredentialSelect={handleCredentialSelect}
-                    selectedCredentialId={selectedCredentialId || undefined}
-                  />
-                </TabPanel>
-              </TabPanels>
-            </Tabs>
-          </>
+          <DashboardContent />
         )}
       </Box>
 
