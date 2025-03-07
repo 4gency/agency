@@ -1,14 +1,25 @@
+# core.py
 import uuid
 from datetime import datetime, timedelta, timezone
 from enum import Enum
+from typing import TYPE_CHECKING
 
 from dateutil.relativedelta import relativedelta
 from pydantic import EmailStr, field_validator
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlmodel import Column, Field, ForeignKey, Relationship, SQLModel
 
+# Handle circular imports with TYPE_CHECKING
+if TYPE_CHECKING:
+    from app.models.bot import (
+        BotSession,
+        Credentials,
+    )
+
 
 class SubscriptionMetric(Enum):
+    """Define os tipos de métricas para assinaturas."""
+
     DAY = "day"
     WEEK = "week"
     MONTH = "month"
@@ -17,13 +28,17 @@ class SubscriptionMetric(Enum):
 
 
 class PaymentRecurrenceStatus(Enum):
+    """Define os status de recorrência de pagamento."""
+
     ACTIVE = "active"
     CANCELED = "canceled"
     PENDING_CANCELLATION = "pending_cancellation"
 
 
-# Shared properties
+# Modelo base para usuários
 class UserBase(SQLModel):
+    """Modelo base com propriedades compartilhadas para usuários."""
+
     email: EmailStr = Field(unique=True, index=True, max_length=255)
     is_active: bool = Field(default=True)
     is_superuser: bool = Field(default=False)
@@ -31,49 +46,77 @@ class UserBase(SQLModel):
     full_name: str | None = Field(default=None, max_length=255)
 
 
-# properties to receive via API on creation
+# Modelo para criação de usuários via API
 class UserCreate(UserBase):
+    """Modelo usado na criação de usuários via API."""
+
     password: str = Field(min_length=8, max_length=40)
 
 
+# Modelo para registro de usuários
 class UserRegister(SQLModel):
+    """Modelo usado para registro de novos usuários."""
+
     email: EmailStr = Field(max_length=255)
     password: str = Field(min_length=8, max_length=40)
     full_name: str | None = Field(default=None, max_length=255)
 
 
-# Properties to receive via API on update, all are optional
+# Modelo para atualização de usuários via API
 class UserUpdate(UserBase):
+    """Modelo usado para atualização de usuários via API."""
+
     email: EmailStr | None = Field(default=None, max_length=255)  # type: ignore
     password: str | None = Field(default=None, min_length=8, max_length=40)
 
 
+# Modelo para atualização do próprio perfil
 class UserUpdateMe(SQLModel):
+    """Modelo usado por usuários para atualizar seu próprio perfil."""
+
     full_name: str | None = Field(default=None, max_length=255)
     email: EmailStr | None = Field(default=None, max_length=255)
 
 
+# Modelo para atualização de senha
 class UpdatePassword(SQLModel):
+    """Modelo usado para atualização de senha."""
+
     current_password: str = Field(min_length=8, max_length=40)
     new_password: str = Field(min_length=8, max_length=40)
 
 
-# database model, database table inferred from class name
+# Modelo de usuário para o banco de dados
 class User(UserBase, table=True):
+    """Modelo completo de usuário para armazenamento no banco de dados."""
+
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     hashed_password: str
     is_subscriber: bool = Field(default=False)
     stripe_customer_id: str | None = Field(default=None)
 
+    user_agent: str = Field(
+        default="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
+    )
+    sec_ch_ua: str = Field(
+        default='"Chromium";v="130", "Google Chrome";v="130", "Not?A_Brand";v="99"'
+    )
+    sec_ch_ua_platform: str = Field(default="Windows")
+
+    # Relacionamentos
     subscriptions: list["Subscription"] = Relationship(
         back_populates="user", cascade_delete=True
     )
     payments: list["Payment"] = Relationship(back_populates="user", cascade_delete=True)
+    credentials: list["Credentials"] = Relationship(
+        back_populates="user", cascade_delete=True
+    )
+    bot_sessions: list["BotSession"] = Relationship(
+        back_populates="user", cascade_delete=True
+    )
 
     def get_active_subscriptions(self) -> list["Subscription"]:
-        """
-        return active subscriptions
-        """
+        """Retorna as assinaturas ativas do usuário."""
         return [
             subscription
             for subscription in self.subscriptions
@@ -81,27 +124,39 @@ class User(UserBase, table=True):
         ]
 
 
-# Properties to return via API, id is always required
+# Modelo público de usuário para API
 class UserPublic(UserBase):
+    """Modelo de usuário para retorno via API."""
+
     id: uuid.UUID
 
 
+# Modelo para lista de usuários
 class UsersPublic(SQLModel):
+    """Modelo para retornar uma lista de usuários via API."""
+
     data: list[UserPublic]
     count: int
 
 
+# Modelo para benefícios de planos de assinatura
 class SubscriptionPlanBenefit(SQLModel, table=True):
+    """Modelo para benefícios incluídos em planos de assinatura."""
+
     __tablename__ = "subscription_plan_benefit"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     subscription_plan_id: uuid.UUID = Field(foreign_key="subscription_plan.id")
     name: str = Field(max_length=100)
 
+    # Relacionamentos
     subscription_plan: "SubscriptionPlan" = Relationship(back_populates="benefits")
 
 
+# Modelo base para planos de assinatura
 class SubscriptionPlanBase(SQLModel):
+    """Modelo base para planos de assinatura."""
+
     name: str
     price: float
     has_badge: bool = Field(default=False)
@@ -117,11 +172,17 @@ class SubscriptionPlanBase(SQLModel):
     metric_value: int = Field(default=1)
 
 
+# Modelo para criação de planos de assinatura
 class SubscriptionPlanCreate(SubscriptionPlanBase):
+    """Modelo para criação de planos de assinatura via API."""
+
     benefits: list["SubscriptionPlanBenefitPublic"] = []
 
 
+# Modelo para atualização de planos de assinatura
 class SubscriptionPlanUpdate(SQLModel):
+    """Modelo para atualização de planos de assinatura via API."""
+
     name: str | None = None
     price: float | None = None
     has_badge: bool | None = None
@@ -139,12 +200,16 @@ class SubscriptionPlanUpdate(SQLModel):
 
     @field_validator("metric_value")
     def check_metric_value(cls, value: int | None) -> int | None:
+        """Valida que o valor da métrica seja maior que zero."""
         if value is not None and value <= 0:
             raise ValueError("metric_value must be greater than 0")
         return value
 
 
+# Modelo completo de plano de assinatura
 class SubscriptionPlan(SQLModel, table=True):
+    """Modelo completo de plano de assinatura para armazenamento no banco de dados."""
+
     __tablename__ = "subscription_plan"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
@@ -166,6 +231,7 @@ class SubscriptionPlan(SQLModel, table=True):
     stripe_product_id: str | None = Field(default=None, index=True)
     stripe_price_id: str | None = Field(default=None, index=True)
 
+    # Relacionamentos
     benefits: list["SubscriptionPlanBenefit"] = Relationship(
         back_populates="subscription_plan", cascade_delete=True
     )
@@ -176,7 +242,10 @@ class SubscriptionPlan(SQLModel, table=True):
     checkout_sessions: list["CheckoutSession"] = Relationship(back_populates="plan")
 
 
+# Modelo base para assinaturas
 class SubscriptionBase(SQLModel):
+    """Modelo base para assinaturas."""
+
     user_id: uuid.UUID
     subscription_plan_id: uuid.UUID
     start_date: datetime
@@ -189,7 +258,10 @@ class SubscriptionBase(SQLModel):
     )
 
 
+# Modelo público de assinatura para API
 class SubscriptionPublic(SQLModel):
+    """Modelo de assinatura para retorno via API."""
+
     id: uuid.UUID
     user_id: uuid.UUID
     subscription_plan_id: uuid.UUID
@@ -203,15 +275,24 @@ class SubscriptionPublic(SQLModel):
     subscription_plan: SubscriptionPlan | None = None
 
 
+# Modelo estendido de assinatura pública
 class SubscriptionPublicExtended(SubscriptionPublic):
+    """Modelo estendido de assinatura para retorno via API com pagamentos."""
+
     payments: list["PaymentPublic"] = []
 
 
+# Modelo para criação de assinaturas
 class SubscriptionCreate(SubscriptionBase):
+    """Modelo para criação de assinaturas via API."""
+
     pass
 
 
+# Modelo para atualização de assinaturas
 class SubscriptionUpdate(SQLModel):
+    """Modelo para atualização de assinaturas via API."""
+
     user_id: uuid.UUID | None = None
     subscription_plan_id: uuid.UUID | None = None
     start_date: datetime | None = None
@@ -222,7 +303,10 @@ class SubscriptionUpdate(SQLModel):
     payment_recurrence_status: PaymentRecurrenceStatus | None = None
 
 
+# Modelo completo de assinatura para banco de dados
 class Subscription(SQLModel, table=True):
+    """Modelo completo de assinatura para armazenamento no banco de dados."""
+
     __tablename__ = "subscription"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
@@ -251,15 +335,17 @@ class Subscription(SQLModel, table=True):
 
     stripe_subscription_id: str | None = Field(default=None, index=True)
 
+    # Relacionamentos
     user: User = Relationship(back_populates="subscriptions")
     subscription_plan: SubscriptionPlan = Relationship(back_populates="subscriptions")
     payments: list["Payment"] = Relationship(back_populates="subscription")
-    bot_sessions: list["BotSession"] = Relationship(back_populates="subscription")
 
     def extend_subscription(self, plan: SubscriptionPlan | None = None) -> None:
         """
-        Extende a assinatura para um novo plano (caso fornecido) ou renova o atual.
-        Depois de renovar métricas, recalcula a data de término.
+        Estende a assinatura para um novo plano ou renova o atual.
+
+        Args:
+            plan: Novo plano de assinatura (opcional).
         """
         # Caso seja fornecido um plano diferente, atualiza o plano da assinatura
         if plan and plan != self.subscription_plan:
@@ -273,15 +359,12 @@ class Subscription(SQLModel, table=True):
 
     def renew_metrics(self) -> None:
         """
-        Renova as métricas da assinatura com base em self.subscription_plan.
+        Renova as métricas da assinatura com base no plano atual.
 
-        Regras genéricas:
-          1. Se o tipo de métrica do plano for diferente do atual,
-             zera o tipo para o novo e define o status como o valor base do plano.
-          2. Se o tipo de métrica for o mesmo, checa se a assinatura já expirou:
-             - Se estiver expirada, reseta o metric_status com o valor base do plano.
-             - Se ainda estiver ativa, soma o valor base do plano ao metric_status atual.
-          3. Garante que metric_status nunca fique negativo.
+        Regras:
+        1. Se o tipo de métrica do plano for diferente do atual, reseta para o novo tipo
+        2. Se for o mesmo tipo, verifica se já expirou para decidir como renovar
+        3. Garante que o valor de métrica nunca seja negativo
         """
         plan = self.subscription_plan
 
@@ -305,7 +388,7 @@ class Subscription(SQLModel, table=True):
     def calculate_end_date(self) -> None:
         """
         Calcula a data de término da assinatura baseado no tipo de métrica.
-        ATENÇÃO: Caso for renovar as métricas, fazer apenas APÓS a renovação das métricas.
+        ATENÇÃO: Executar apenas APÓS renovação das métricas.
         """
         if self.metric_type == SubscriptionMetric.DAY:
             self.end_date = self.start_date + timedelta(days=self.metric_status)
@@ -320,13 +403,10 @@ class Subscription(SQLModel, table=True):
 
     def need_to_deactivate(self) -> bool:
         """
-        Verifica se a assinatura precisa ser desativada baseado no tipo de métrica.
+        Verifica se a assinatura precisa ser desativada com base no tipo de métrica.
 
-        Retorna True se:
-          - Para métricas baseadas em tempo (DAY, WEEK, MONTH, YEAR), a data de término (end_date)
-            já tiver passado (considerando UTC).
-          - Para métrica APPLIES, o metric_status seja menor que 1 (por exemplo, sem créditos).
-        Caso contrário, retorna False.
+        Retorna:
+            True se precisar ser desativada, False caso contrário.
         """
         now_utc = datetime.now(timezone.utc)
 
@@ -341,7 +421,7 @@ class Subscription(SQLModel, table=True):
             if self.end_date is None or self.end_date < now_utc:
                 return True
 
-        # Métrica baseada em crédito
+        # Métrica baseada em crédito de aplicações
         elif self.metric_type == SubscriptionMetric.APPLIES:
             if self.metric_status < 1:
                 return True
@@ -349,7 +429,10 @@ class Subscription(SQLModel, table=True):
         return False
 
 
+# Modelo base para pagamentos
 class PaymentBase(SQLModel):
+    """Modelo base para pagamentos."""
+
     subscription_id: uuid.UUID | None = None
     user_id: uuid.UUID
     amount: float
@@ -360,11 +443,17 @@ class PaymentBase(SQLModel):
     transaction_id: str = Field(max_length=150)
 
 
+# Modelo para criação de pagamentos
 class PaymentCreate(PaymentBase):
+    """Modelo para criação de pagamentos via API."""
+
     pass
 
 
+# Modelo para atualização de pagamentos
 class PaymentUpdate(SQLModel):
+    """Modelo para atualização de pagamentos via API."""
+
     subscription_id: uuid.UUID | None = None
     user_id: uuid.UUID | None = None
     amount: float | None = None
@@ -376,7 +465,10 @@ class PaymentUpdate(SQLModel):
     payment_recurrence_status: PaymentRecurrenceStatus | None = None
 
 
+# Modelo completo de pagamento para banco de dados
 class Payment(SQLModel, table=True):
+    """Modelo completo de pagamento para armazenamento no banco de dados."""
+
     __tablename__ = "payment"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
@@ -391,11 +483,15 @@ class Payment(SQLModel, table=True):
     )  # e.g., Stripe, BoaCompra
     transaction_id: str = Field(index=True)
 
+    # Relacionamentos
     subscription: Subscription = Relationship(back_populates="payments")
     user: User = Relationship(back_populates="payments")
 
 
+# Modelo público de pagamento para API
 class PaymentPublic(SQLModel):
+    """Modelo de pagamento para retorno via API."""
+
     id: uuid.UUID
     subscription_id: uuid.UUID
     user_id: uuid.UUID
@@ -407,12 +503,18 @@ class PaymentPublic(SQLModel):
     transaction_id: str
 
 
+# Modelo para lista de pagamentos
 class PaymentsPublic(SQLModel):
+    """Modelo para retornar uma lista de pagamentos via API."""
+
     data: list[PaymentPublic]
     count: int
 
 
+# Modelo de sessão de checkout
 class CheckoutSession(SQLModel, table=True):
+    """Modelo para sessões de checkout de pagamento."""
+
     __tablename__ = "checkout_session"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
@@ -432,10 +534,14 @@ class CheckoutSession(SQLModel, table=True):
     expires_at: datetime = Field()
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
-    plan: "SubscriptionPlan" = Relationship(back_populates="checkout_sessions")
+    # Relacionamentos
+    plan: SubscriptionPlan = Relationship(back_populates="checkout_sessions")
 
 
+# Modelo para atualização de sessão de checkout
 class CheckoutSessionUpdate(SQLModel):
+    """Modelo para atualização de sessões de checkout via API."""
+
     payment_gateway: str | None = None
     session_id: str | None = None
     session_url: str | None = None
@@ -448,43 +554,64 @@ class CheckoutSessionUpdate(SQLModel):
     updated_at: datetime | None = None
 
 
+# Modelo público de sessão de checkout para API
 class CheckoutSessionPublic(SQLModel):
+    """Modelo de sessão de checkout para retorno via API."""
+
     id: uuid.UUID
     session_id: str
     session_url: str
     expires_at: datetime
 
 
-# Generic message
+# Modelo genérico para mensagens
 class Message(SQLModel):
+    """Modelo genérico para mensagens de resposta."""
+
     message: str
 
 
+# Modelo para mensagens de erro
 class ErrorMessage(SQLModel):
+    """Modelo para mensagens de erro."""
+
     detail: str
 
 
-# JSON payload containing access token
+# Modelo para tokens JWT
 class Token(SQLModel):
+    """Modelo para representar tokens JWT de autenticação."""
+
     access_token: str
     token_type: str = Field(default="bearer")
 
 
-# Contents of JWT token
+# Modelo para conteúdo do payload JWT
 class TokenPayload(SQLModel):
+    """Modelo para o payload contido em tokens JWT."""
+
     sub: str | None = Field(default=None)
 
 
+# Modelo para redefinição de senha
 class NewPassword(SQLModel):
+    """Modelo para redefinição de senha."""
+
     token: str
     new_password: str = Field(min_length=8, max_length=40)
 
 
+# Modelo público para benefícios de plano de assinatura
 class SubscriptionPlanBenefitPublic(SQLModel):
+    """Modelo público para benefícios de plano de assinatura."""
+
     name: str
 
 
+# Modelo público para planos de assinatura
 class SubscriptionPlanPublic(SQLModel):
+    """Modelo público completo para planos de assinatura."""
+
     id: uuid.UUID
     name: str
     price: float
@@ -503,171 +630,8 @@ class SubscriptionPlanPublic(SQLModel):
     benefits: list[SubscriptionPlanBenefitPublic] = []
 
 
+# Modelo para lista de planos de assinatura
 class SubscriptionPlansPublic(SQLModel):
+    """Modelo para retornar uma lista de planos de assinatura via API."""
+
     plans: list[SubscriptionPlanPublic] = []
-
-
-class BotSession(SQLModel, table=True):
-    __tablename__ = "bot_session"
-
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    subscription_id: uuid.UUID = Field(foreign_key="subscription.id")
-    status: str = Field(default="starting", max_length=10)
-
-    bot_config_id: uuid.UUID = Field(foreign_key="bot_config.id")
-
-    # Metrics
-    calculated_metrics: bool = False
-    total_time: int = 0  # in seconds
-    total_applied: int = 0
-    total_success: int = 0
-    total_failed: int = 0
-    success_rate: float = 0.0
-    average_time_per_apply: float = 0.0
-    average_time_per_success: float = 0.0
-    average_time_per_failed: float = 0.0
-    crashes_count: int = 0
-
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    finished_at: datetime | None = Field(nullable=True)
-
-    subscription: Subscription = Relationship(back_populates="bot_sessions")
-    bot_config: "BotConfig" = Relationship(back_populates="bot_sessions")
-    bot_applies: list["BotApply"] = Relationship(
-        back_populates="bot_session", cascade_delete=True
-    )
-    bot_events: list["BotEvent"] = Relationship(
-        back_populates="bot_session", cascade_delete=True
-    )
-    bot_notifications: list["BotNotification"] = Relationship(
-        back_populates="bot_session", cascade_delete=True
-    )
-
-    def update_metrics(self) -> None:
-        """
-        Atualiza as métricas da sessão, como total de aplicações, sucesso, falhas, taxa de sucesso e tempo médio por ação.
-        """
-        if not self.finished_at or not isinstance(self.finished_at, datetime):
-            raise ValueError("Session must be finished to calculate metrics")
-
-        self.total_applied = len(self.bot_applies)
-        self.total_success = len(
-            [apply for apply in self.bot_applies if apply.status == "success"]
-        )
-        self.total_failed = len(
-            [apply for apply in self.bot_applies if apply.status == "failed"]
-        )
-        self.success_rate = (
-            self.total_success / self.total_applied if self.total_applied > 0 else 0.0
-        )
-        self.total_time = int((self.finished_at - self.created_at).total_seconds())
-
-        total_time_applies = sum([apply.total_time for apply in self.bot_applies])
-        total_time_success = sum(
-            [
-                apply.total_time
-                for apply in self.bot_applies
-                if apply.status == "success"
-            ]
-        )
-        total_time_failed = sum(
-            [apply.total_time for apply in self.bot_applies if apply.status == "failed"]
-        )
-
-        self.average_time_per_apply = (
-            total_time_applies / self.total_applied if self.total_applied > 0 else 0.0
-        )
-        self.average_time_per_success = (
-            total_time_success / self.total_success if self.total_success > 0 else 0.0
-        )
-        self.average_time_per_failed = (
-            total_time_failed / self.total_failed if self.total_failed > 0 else 0.0
-        )
-
-
-class BotConfig(SQLModel, table=True):
-    __tablename__ = "bot_config"
-
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    cloud_provider: str = Field("https://br-se1.magaluobjects.com", max_length=50)
-
-    config_bucket: str = Field("configs", max_length=50)
-    config_yaml_key: str = Field(max_length=1000)
-    config_yaml_created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
-
-    resume_bucket: str = Field("resumes", max_length=50)
-    resume_yaml_key: str = Field(max_length=1000)
-    resume_yaml_created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
-
-    bot_sessions: list[BotSession] = Relationship(back_populates="bot_config")
-
-
-class BotApply(SQLModel, table=True):
-    __tablename__ = "bot_apply"
-
-    id: int = Field(primary_key=True)
-    session_id: uuid.UUID = Field(foreign_key="bot_session.id")
-    started_at: datetime
-    total_time: int  # in seconds
-    status: str = Field(
-        max_length=10
-    )  # Literal["awaiting", "started", "success", "failed"]
-
-    resume_bucket: str = Field(max_length=50)
-    resume_pdf: str | None = Field(max_length=100, nullable=True)
-
-    failed: bool = False
-    failed_reason: str | None = Field(max_length=10000, nullable=True)
-    company_name: str | None = Field(max_length=255, nullable=True)
-    linkedin_url: str | None = Field(max_length=255, nullable=True)
-
-    bot_session: BotSession = Relationship(back_populates="bot_applies")
-
-
-class BotEvent(SQLModel, table=True):
-    __tablename__ = "bot_event"
-
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    bot_session_id: uuid.UUID = Field(foreign_key="bot_session.id")
-    type: str = Field(max_length=50)  # notification, command, token_request, etc.
-    message: str = Field(max_length=1000)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-
-    bot_session: BotSession = Relationship(back_populates="bot_events")
-
-
-class BotNotification(SQLModel, table=True):
-    __tablename__ = "bot_notification"
-
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    bot_session_id: uuid.UUID = Field(foreign_key="bot_session.id")
-    title: str = Field(max_length=255)
-    message: str = Field(max_length=1000)
-
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    sent_at: datetime | None = Field(nullable=True)
-
-    bot_session: BotSession = Relationship(back_populates="bot_notifications")
-    notification_channels: list["BotNotificationChannel"] = Relationship(
-        back_populates="bot_notification"
-    )
-
-
-class BotNotificationChannel(SQLModel, table=True):
-    __tablename__ = "bot_notification_channel"
-
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    bot_notification_id: uuid.UUID = Field(foreign_key="bot_notification.id")
-    channel: str = Field(max_length=50)
-    status: str = Field(max_length=50)  # sent, failed, pending, etc.
-
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    sent_at: datetime | None = Field(nullable=True)
-
-    bot_notification: BotNotification = Relationship(
-        back_populates="notification_channels"
-    )

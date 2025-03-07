@@ -14,6 +14,7 @@ jobs:
       ENVIRONMENT: staging
       DOMAIN: ${{ secrets.DOMAIN_STAGING }}
       FRONTEND_HOST: ${{ secrets.FRONTEND_HOST_STAGING }}
+      BACKEND_HOST: ${{ secrets.BACKEND_HOST_STAGING }}
       STACK_NAME: ${{ secrets.STACK_NAME_STAGING }}
       SECRET_KEY: ${{ secrets.SECRET_KEY }}
       FIRST_SUPERUSER: ${{ secrets.FIRST_SUPERUSER }}

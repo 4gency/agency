@@ -1,7 +1,7 @@
 from datetime import timedelta
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import HTMLResponse
 from fastapi.security import OAuth2PasswordRequestForm
 
@@ -51,7 +51,9 @@ router = APIRouter()
     },
 )
 def login_access_token(
-    session: SessionDep, form_data: Annotated[OAuth2PasswordRequestForm, Depends()]
+    request: Request,
+    session: SessionDep,
+    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
 ) -> Token:
     """
     OAuth2 compatible token login, get an access token for future requests
@@ -68,6 +70,19 @@ def login_access_token(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user"
         )
+
+    # Atualizando os campos de user agent e client hints
+    user.user_agent = request.headers.get("User-Agent", user.user_agent)
+    user.sec_ch_ua = request.headers.get("Sec-CH-UA", user.sec_ch_ua)
+    user.sec_ch_ua_platform = request.headers.get(
+        "Sec-CH-UA-Platform", user.sec_ch_ua_platform
+    )
+
+    # Salva as alterações
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     return Token(
         access_token=security.create_access_token(

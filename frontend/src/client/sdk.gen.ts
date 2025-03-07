@@ -4,6 +4,32 @@ import type { CancelablePromise } from "./core/CancelablePromise"
 import { OpenAPI } from "./core/OpenAPI"
 import { request as __request } from "./core/request"
 import type {
+  GetSessionActionsData,
+  GetSessionActionsResponse,
+  CompleteActionData,
+  CompleteActionResponse,
+  GetSessionAppliesData,
+  GetSessionAppliesResponse,
+  GetAppliesSummaryData,
+  GetAppliesSummaryResponse,
+  GetApplyDetailsData,
+  GetApplyDetailsResponse,
+  CreateBotSessionData,
+  CreateBotSessionResponse,
+  GetBotSessionsData,
+  GetBotSessionsResponse,
+  GetBotSessionData,
+  GetBotSessionResponse,
+  DeleteBotSessionData,
+  DeleteBotSessionResponse,
+  StartBotSessionData,
+  StartBotSessionResponse,
+  StopBotSessionData,
+  StopBotSessionResponse,
+  PauseBotSessionData,
+  PauseBotSessionResponse,
+  ResumeBotSessionData,
+  ResumeBotSessionResponse,
   StripeSuccessData,
   StripeSuccessResponse,
   GetStripeCheckoutSessionByIdData,
@@ -26,6 +52,17 @@ import type {
   GetPlainTextResumeResponse,
   UpdatePlainTextResumeData,
   UpdatePlainTextResumeResponse,
+  GetUserCredentialsResponse,
+  CreateCredentialsData,
+  CreateCredentialsResponse,
+  UpdateCredentialsData,
+  UpdateCredentialsResponse,
+  DeleteCredentialsData,
+  DeleteCredentialsResponse,
+  GetSessionEventsData,
+  GetSessionEventsResponse,
+  GetSessionEventsSummaryData,
+  GetSessionEventsSummaryResponse,
   LoginAccessTokenData,
   LoginAccessTokenResponse,
   TestTokenResponse,
@@ -35,6 +72,11 @@ import type {
   ResetPasswordResponse,
   RecoverPasswordHtmlContentData,
   RecoverPasswordHtmlContentResponse,
+  GetAllActiveSessionsResponse,
+  GetSessionsStatusSummaryResponse,
+  GetKubernetesPodsResponse,
+  ForceStopSessionData,
+  ForceStopSessionResponse,
   ReadPaymentsByCurrentUserData,
   ReadPaymentsByCurrentUserResponse,
   ReadPaymentsByUserIdData,
@@ -86,6 +128,376 @@ import type {
   TestEmailResponse,
   HealthCheckResponse,
 } from "./types.gen"
+
+export class ActionsService {
+  /**
+   * Get Session Actions
+   * Get all actions for a specific bot session.
+   * @param data The data for the request.
+   * @param data.sessionId
+   * @param data.skip
+   * @param data.limit
+   * @param data.includeCompleted
+   * @returns UserActionsResponse Successful Response
+   * @throws ApiError
+   */
+  public static getSessionActions(
+    data: GetSessionActionsData,
+  ): CancelablePromise<GetSessionActionsResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/bots/sessions/{session_id}/actions",
+      path: {
+        session_id: data.sessionId,
+      },
+      query: {
+        skip: data.skip,
+        limit: data.limit,
+        include_completed: data.includeCompleted,
+      },
+      errors: {
+        401: "Authentication error",
+        403: "Permission error",
+        404: "Bot session not found",
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Complete Action
+   * Complete a user action with the provided response.
+   * @param data The data for the request.
+   * @param data.sessionId
+   * @param data.actionId
+   * @param data.requestBody
+   * @returns Message Successful Response
+   * @throws ApiError
+   */
+  public static completeAction(
+    data: CompleteActionData,
+  ): CancelablePromise<CompleteActionResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/bots/sessions/{session_id}/actions/{action_id}/complete",
+      path: {
+        session_id: data.sessionId,
+        action_id: data.actionId,
+      },
+      body: data.requestBody,
+      mediaType: "application/json",
+      errors: {
+        401: "Authentication error",
+        403: "Permission error",
+        404: "Action not found",
+        422: "Validation Error",
+      },
+    })
+  }
+}
+
+export class AppliesService {
+  /**
+   * Get Session Applies
+   * Get all job applications for a specific bot session.
+   * @param data The data for the request.
+   * @param data.sessionId
+   * @param data.skip
+   * @param data.limit
+   * @param data.requestBody
+   * @returns AppliesResponse Successful Response
+   * @throws ApiError
+   */
+  public static getSessionApplies(
+    data: GetSessionAppliesData,
+  ): CancelablePromise<GetSessionAppliesResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/bots/sessions/{session_id}/applies",
+      path: {
+        session_id: data.sessionId,
+      },
+      query: {
+        skip: data.skip,
+        limit: data.limit,
+      },
+      body: data.requestBody,
+      mediaType: "application/json",
+      errors: {
+        401: "Authentication error",
+        403: "Permission error",
+        404: "Bot session not found",
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Get Applies Summary
+   * Get a summary of job applications for a specific bot session.
+   * @param data The data for the request.
+   * @param data.sessionId
+   * @returns ApplySummary Successful Response
+   * @throws ApiError
+   */
+  public static getAppliesSummary(
+    data: GetAppliesSummaryData,
+  ): CancelablePromise<GetAppliesSummaryResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/bots/sessions/{session_id}/applies/summary",
+      path: {
+        session_id: data.sessionId,
+      },
+      errors: {
+        401: "Authentication error",
+        403: "Permission error",
+        404: "Bot session not found",
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Get Apply Details
+   * Get details of a specific job application.
+   * @param data The data for the request.
+   * @param data.sessionId
+   * @param data.applyId
+   * @returns ApplyPublic Successful Response
+   * @throws ApiError
+   */
+  public static getApplyDetails(
+    data: GetApplyDetailsData,
+  ): CancelablePromise<GetApplyDetailsResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/bots/sessions/{session_id}/applies/{apply_id}",
+      path: {
+        session_id: data.sessionId,
+        apply_id: data.applyId,
+      },
+      errors: {
+        401: "Authentication error",
+        403: "Permission error",
+        404: "Application not found",
+        422: "Validation Error",
+      },
+    })
+  }
+}
+
+export class BotsService {
+  /**
+   * Create Bot Session
+   * Create a new bot session.
+   * @param data The data for the request.
+   * @param data.requestBody
+   * @returns SessionPublic Successful Response
+   * @throws ApiError
+   */
+  public static createBotSession(
+    data: CreateBotSessionData,
+  ): CancelablePromise<CreateBotSessionResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/bots/sessions",
+      body: data.requestBody,
+      mediaType: "application/json",
+      errors: {
+        401: "Authentication error",
+        403: "Permission error",
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Get Bot Sessions
+   * Get all bot sessions for the current user.
+   * @param data The data for the request.
+   * @param data.skip
+   * @param data.limit
+   * @param data.requestBody
+   * @returns SessionsResponse Successful Response
+   * @throws ApiError
+   */
+  public static getBotSessions(
+    data: GetBotSessionsData = {},
+  ): CancelablePromise<GetBotSessionsResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/bots/sessions",
+      query: {
+        skip: data.skip,
+        limit: data.limit,
+      },
+      body: data.requestBody,
+      mediaType: "application/json",
+      errors: {
+        401: "Authentication error",
+        403: "Permission error",
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Get Bot Session
+   * Get a specific bot session.
+   * @param data The data for the request.
+   * @param data.sessionId
+   * @returns SessionPublic Successful Response
+   * @throws ApiError
+   */
+  public static getBotSession(
+    data: GetBotSessionData,
+  ): CancelablePromise<GetBotSessionResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/bots/sessions/{session_id}",
+      path: {
+        session_id: data.sessionId,
+      },
+      errors: {
+        401: "Authentication error",
+        403: "Permission error",
+        404: "Bot session not found",
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Delete Bot Session
+   * Delete a bot session.
+   * @param data The data for the request.
+   * @param data.sessionId
+   * @returns Message Successful Response
+   * @throws ApiError
+   */
+  public static deleteBotSession(
+    data: DeleteBotSessionData,
+  ): CancelablePromise<DeleteBotSessionResponse> {
+    return __request(OpenAPI, {
+      method: "DELETE",
+      url: "/api/v1/bots/sessions/{session_id}",
+      path: {
+        session_id: data.sessionId,
+      },
+      errors: {
+        401: "Authentication error",
+        403: "Permission error",
+        404: "Bot session not found",
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Start Bot Session
+   * Start a bot session.
+   * @param data The data for the request.
+   * @param data.sessionId
+   * @returns SessionPublic Successful Response
+   * @throws ApiError
+   */
+  public static startBotSession(
+    data: StartBotSessionData,
+  ): CancelablePromise<StartBotSessionResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/bots/sessions/{session_id}/start",
+      path: {
+        session_id: data.sessionId,
+      },
+      errors: {
+        401: "Authentication error",
+        403: "Permission error",
+        404: "Bot session not found",
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Stop Bot Session
+   * Stop a bot session.
+   * @param data The data for the request.
+   * @param data.sessionId
+   * @returns SessionPublic Successful Response
+   * @throws ApiError
+   */
+  public static stopBotSession(
+    data: StopBotSessionData,
+  ): CancelablePromise<StopBotSessionResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/bots/sessions/{session_id}/stop",
+      path: {
+        session_id: data.sessionId,
+      },
+      errors: {
+        401: "Authentication error",
+        403: "Permission error",
+        404: "Bot session not found",
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Pause Bot Session
+   * Pause a bot session.
+   * @param data The data for the request.
+   * @param data.sessionId
+   * @returns SessionPublic Successful Response
+   * @throws ApiError
+   */
+  public static pauseBotSession(
+    data: PauseBotSessionData,
+  ): CancelablePromise<PauseBotSessionResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/bots/sessions/{session_id}/pause",
+      path: {
+        session_id: data.sessionId,
+      },
+      errors: {
+        401: "Authentication error",
+        403: "Permission error",
+        404: "Bot session not found",
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Resume Bot Session
+   * Resume a bot session.
+   * @param data The data for the request.
+   * @param data.sessionId
+   * @returns SessionPublic Successful Response
+   * @throws ApiError
+   */
+  public static resumeBotSession(
+    data: ResumeBotSessionData,
+  ): CancelablePromise<ResumeBotSessionResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/bots/sessions/{session_id}/resume",
+      path: {
+        session_id: data.sessionId,
+      },
+      errors: {
+        401: "Authentication error",
+        403: "Permission error",
+        404: "Bot session not found",
+        422: "Validation Error",
+      },
+    })
+  }
+}
 
 export class CheckoutService {
   /**
@@ -380,6 +792,163 @@ export class ConfigsService {
   }
 }
 
+export class CredentialsService {
+  /**
+   * Get User Credentials
+   * Get all credentials for the current user.
+   * @returns CredentialsResponse Successful Response
+   * @throws ApiError
+   */
+  public static getUserCredentials(): CancelablePromise<GetUserCredentialsResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/credentials/",
+      errors: {
+        401: "Authentication error",
+      },
+    })
+  }
+
+  /**
+   * Create Credentials
+   * Create new LinkedIn credentials.
+   * @param data The data for the request.
+   * @param data.requestBody
+   * @returns CredentialsPublic Successful Response
+   * @throws ApiError
+   */
+  public static createCredentials(
+    data: CreateCredentialsData,
+  ): CancelablePromise<CreateCredentialsResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/credentials/",
+      body: data.requestBody,
+      mediaType: "application/json",
+      errors: {
+        400: "Validation error",
+        401: "Authentication error",
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Update Credentials
+   * Update LinkedIn credentials.
+   * @param data The data for the request.
+   * @param data.credentialsId
+   * @param data.requestBody
+   * @returns CredentialsPublic Successful Response
+   * @throws ApiError
+   */
+  public static updateCredentials(
+    data: UpdateCredentialsData,
+  ): CancelablePromise<UpdateCredentialsResponse> {
+    return __request(OpenAPI, {
+      method: "PUT",
+      url: "/api/v1/credentials/{credentials_id}",
+      path: {
+        credentials_id: data.credentialsId,
+      },
+      body: data.requestBody,
+      mediaType: "application/json",
+      errors: {
+        401: "Authentication error",
+        404: "Credentials not found",
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Delete Credentials
+   * Delete LinkedIn credentials.
+   * @param data The data for the request.
+   * @param data.credentialsId
+   * @returns Message Successful Response
+   * @throws ApiError
+   */
+  public static deleteCredentials(
+    data: DeleteCredentialsData,
+  ): CancelablePromise<DeleteCredentialsResponse> {
+    return __request(OpenAPI, {
+      method: "DELETE",
+      url: "/api/v1/credentials/{credentials_id}",
+      path: {
+        credentials_id: data.credentialsId,
+      },
+      errors: {
+        401: "Authentication error",
+        404: "Credentials not found",
+        422: "Validation Error",
+      },
+    })
+  }
+}
+
+export class EventsService {
+  /**
+   * Get Session Events
+   * Get all events for a specific bot session.
+   * @param data The data for the request.
+   * @param data.sessionId
+   * @param data.skip
+   * @param data.limit
+   * @param data.eventType
+   * @returns EventsResponse Successful Response
+   * @throws ApiError
+   */
+  public static getSessionEvents(
+    data: GetSessionEventsData,
+  ): CancelablePromise<GetSessionEventsResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/bots/sessions/{session_id}/events",
+      path: {
+        session_id: data.sessionId,
+      },
+      query: {
+        skip: data.skip,
+        limit: data.limit,
+        event_type: data.eventType,
+      },
+      errors: {
+        401: "Authentication error",
+        403: "Permission error",
+        404: "Bot session not found",
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Get Session Events Summary
+   * Get a summary of events for a specific bot session.
+   * @param data The data for the request.
+   * @param data.sessionId
+   * @returns EventSummary Successful Response
+   * @throws ApiError
+   */
+  public static getSessionEventsSummary(
+    data: GetSessionEventsSummaryData,
+  ): CancelablePromise<GetSessionEventsSummaryResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/bots/sessions/{session_id}/events/summary",
+      path: {
+        session_id: data.sessionId,
+      },
+      errors: {
+        401: "Authentication error",
+        403: "Permission error",
+        404: "Bot session not found",
+        422: "Validation Error",
+      },
+    })
+  }
+}
+
 export class LoginService {
   /**
    * Login Access Token
@@ -486,6 +1055,85 @@ export class LoginService {
         400: "User not found",
         401: "Authentication error",
         403: "Permission error",
+        422: "Validation Error",
+      },
+    })
+  }
+}
+
+export class MonitoringService {
+  /**
+   * Get All Active Sessions
+   * Get all active bot sessions (admin only).
+   * @returns ActiveSessionsResponse Successful Response
+   * @throws ApiError
+   */
+  public static getAllActiveSessions(): CancelablePromise<GetAllActiveSessionsResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/monitoring/sessions",
+      errors: {
+        401: "Authentication error",
+        403: "Permission error",
+      },
+    })
+  }
+
+  /**
+   * Get Sessions Status Summary
+   * Get sessions status summary (admin only).
+   * @returns SystemHealthResponse Successful Response
+   * @throws ApiError
+   */
+  public static getSessionsStatusSummary(): CancelablePromise<GetSessionsStatusSummaryResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/monitoring/sessions/status",
+      errors: {
+        401: "Authentication error",
+        403: "Permission error",
+      },
+    })
+  }
+
+  /**
+   * Get Kubernetes Pods
+   * Get Kubernetes pods status (admin only).
+   * @returns KubernetesPodsResponse Successful Response
+   * @throws ApiError
+   */
+  public static getKubernetesPods(): CancelablePromise<GetKubernetesPodsResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/monitoring/kubernetes/pods",
+      errors: {
+        401: "Authentication error",
+        403: "Permission error",
+      },
+    })
+  }
+
+  /**
+   * Force Stop Session
+   * Force stop a bot session (admin only).
+   * @param data The data for the request.
+   * @param data.sessionId
+   * @returns Message Successful Response
+   * @throws ApiError
+   */
+  public static forceStopSession(
+    data: ForceStopSessionData,
+  ): CancelablePromise<ForceStopSessionResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/monitoring/sessions/{session_id}/force-stop",
+      path: {
+        session_id: data.sessionId,
+      },
+      errors: {
+        401: "Authentication error",
+        403: "Permission error",
+        404: "Bot session not found",
         422: "Validation Error",
       },
     })

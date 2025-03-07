@@ -85,6 +85,7 @@ services:
     environment:
       - DOMAIN=${DOMAIN}
       - FRONTEND_HOST=${FRONTEND_HOST?Variable not set}
+      - BACKEND_HOST=${BACKEND_HOST?Variable not set}
       - ENVIRONMENT=${ENVIRONMENT}
       - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS}
       - SECRET_KEY=${SECRET_KEY?Variable not set}
@@ -111,6 +112,10 @@ services:
       - S3_ACCESS_KEY_ID=${S3_ACCESS_KEY_ID}
       - S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY}
       - S3_CONFIGS_BUCKET=${S3_CONFIGS_BUCKET}
+      - KUBERNETES_IN_CLUSTER=${KUBERNETES_IN_CLUSTER}
+      - KUBERNETES_NAMESPACE=${KUBERNETES_NAMESPACE}
+      - KUBERNETES_BOT_PREFIX=${KUBERNETES_BOT_PREFIX}
+      - BOT_IMAGE=${BOT_IMAGE}
 
   backend:
     image: '${DOCKER_IMAGE_BACKEND?Variable not set}:${TAG-latest}'
@@ -132,6 +137,7 @@ services:
     environment:
       - DOMAIN=${DOMAIN}
       - FRONTEND_HOST=${FRONTEND_HOST?Variable not set}
+      - BACKEND_HOST=${BACKEND_HOST?Variable not set}
       - ENVIRONMENT=${ENVIRONMENT}
       - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS}
       - SECRET_KEY=${SECRET_KEY?Variable not set}
@@ -158,6 +164,10 @@ services:
       - S3_ACCESS_KEY_ID=${S3_ACCESS_KEY_ID}
       - S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY}
       - S3_CONFIGS_BUCKET=${S3_CONFIGS_BUCKET}
+      - KUBERNETES_IN_CLUSTER=${KUBERNETES_IN_CLUSTER}
+      - KUBERNETES_NAMESPACE=${KUBERNETES_NAMESPACE}
+      - KUBERNETES_BOT_PREFIX=${KUBERNETES_BOT_PREFIX}
+      - BOT_IMAGE=${BOT_IMAGE}
 
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/utils/health-check/"]
