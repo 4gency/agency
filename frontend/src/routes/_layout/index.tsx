@@ -35,15 +35,16 @@ import {
   HStack,
   Center,
   Spinner,
+  Tooltip
 } from "@chakra-ui/react";
 import { createFileRoute } from "@tanstack/react-router";
-import { FiUsers, FiActivity, FiBriefcase, FiAlertTriangle, FiLock } from "react-icons/fi";
+import { FiUsers, FiActivity, FiBriefcase, FiAlertTriangle, FiLock, FiRefreshCw } from "react-icons/fi";
 import { CheckIcon } from "@chakra-ui/icons";
 
 import useAuth from "../../hooks/useAuth";
 import { CredentialsManager, BotSessionManager, SessionDetails } from "../../components/BotManagement";
 import useSubscriptions from "../../hooks/userSubscriptions";
-import { SubscriptionPlansService, type SubscriptionPlanPublic } from "../../client";
+import { BotsService, SubscriptionPlansService, type SubscriptionPlanPublic, type UserDashboardStats } from "../../client";
 
 export const Route = createFileRoute("/_layout/")({
   component: Dashboard,
@@ -56,6 +57,8 @@ function Dashboard() {
   const [selectedCredentialId, setSelectedCredentialId] = useState<string | null>(null);
   const [subscriptionPlans, setSubscriptionPlans] = useState<SubscriptionPlanPublic[]>([]);
   const [loadingPlans, setLoadingPlans] = useState<boolean>(true);
+  const [dashboardStats, setDashboardStats] = useState<UserDashboardStats | null>(null);
+  const [loadingStats, setLoadingStats] = useState<boolean>(true);
   
   const { 
     isOpen: isSessionDetailsOpen, 
@@ -72,6 +75,23 @@ function Dashboard() {
     }
   }, [isSubscriber]);
 
+  // Fetch dashboard statistics
+  useEffect(() => {
+    fetchDashboardStats();
+  }, []);
+
+  const fetchDashboardStats = async () => {
+    setLoadingStats(true);
+    try {
+      const stats = await BotsService.getUserDashboardStats();
+      setDashboardStats(stats);
+    } catch (error) {
+      console.error("Error fetching dashboard stats:", error);
+    } finally {
+      setLoadingStats(false);
+    }
+  };
+
   const fetchSubscriptionPlans = async () => {
     setLoadingPlans(true);
     try {
@@ -86,13 +106,15 @@ function Dashboard() {
     }
   };
 
-  // Mock stats for demo
-  const stats = {
-    totalApplications: 256,
-    successfulApplications: 178,
-    failedApplications: 35,
-    pendingApplications: 43,
-    successRate: 69.5
+  // Use real stats from API if available, otherwise use empty values
+  const stats = dashboardStats || {
+    total_applications: 0,
+    successful_applications: 0,
+    failed_applications: 0,
+    pending_applications: 0,
+    success_rate: 0,
+    failure_rate: 0,
+    timestamp: ''
   };
 
   const handleViewSessionDetails = (sessionId: string) => {
@@ -185,76 +207,131 @@ function Dashboard() {
     );
   };
 
+  const formatTimestamp = (timestamp: string) => {
+    if (!timestamp) return '';
+    const date = new Date(timestamp);
+    return date.toLocaleString();
+  };
+
   // Dashboard content - to be blurred if not subscribed
   const DashboardContent = () => (
     <>
       {/* Stats Overview Section */}
-      <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={6} mb={8}>
+      <Flex justify="space-between" align="center" mb={4}>
+        <Heading size="md">Your Application Stats</Heading>
+        <HStack>
+          {loadingStats ? (
+            <Spinner size="sm" color="teal.500" />
+          ) : (
+            <>
+              <Tooltip label={`Last updated: ${formatTimestamp(stats.timestamp)}`}>
+                <Text fontSize="xs" color="gray.500">
+                  Last updated: {formatTimestamp(stats.timestamp)}
+                </Text>
+              </Tooltip>
+              <Button 
+                size="sm" 
+                leftIcon={<FiRefreshCw />} 
+                onClick={fetchDashboardStats} 
+                isLoading={loadingStats}
+              >
+                Refresh
+              </Button>
+            </>
+          )}
+        </HStack>
+      </Flex>
+
+      <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={4} mb={6}>
         <Card>
           <CardBody>
-            <Stat>
-              <Flex justify="space-between">
-                <Box>
-                  <StatLabel>Total Applications</StatLabel>
-                  <StatNumber>{stats.totalApplications}</StatNumber>
-                  <StatHelpText>Across all sessions</StatHelpText>
-                </Box>
-                <Box>
-                  <Icon as={FiBriefcase} boxSize={10} color="teal.400" />
-                </Box>
-              </Flex>
-            </Stat>
+            {loadingStats ? (
+              <Center p={4}>
+                <Spinner color="teal.500" />
+              </Center>
+            ) : (
+              <Stat>
+                <Flex justify="space-between">
+                  <Box>
+                    <StatLabel>Total Applications</StatLabel>
+                    <StatNumber>{stats.total_applications}</StatNumber>
+                    <StatHelpText>Across all sessions</StatHelpText>
+                  </Box>
+                  <Box>
+                    <Icon as={FiActivity} boxSize={10} color="teal.400" />
+                  </Box>
+                </Flex>
+              </Stat>
+            )}
           </CardBody>
         </Card>
 
         <Card>
           <CardBody>
-            <Stat>
-              <Flex justify="space-between">
-                <Box>
-                  <StatLabel>Successful</StatLabel>
-                  <StatNumber>{stats.successfulApplications}</StatNumber>
-                  <StatHelpText>Success Rate: {stats.successRate}%</StatHelpText>
-                </Box>
-                <Box>
-                  <Icon as={FiActivity} boxSize={10} color="green.400" />
-                </Box>
-              </Flex>
-            </Stat>
+            {loadingStats ? (
+              <Center p={4}>
+                <Spinner color="teal.500" />
+              </Center>
+            ) : (
+              <Stat>
+                <Flex justify="space-between">
+                  <Box>
+                    <StatLabel>Successful</StatLabel>
+                    <StatNumber>{stats.successful_applications}</StatNumber>
+                    <StatHelpText>Success Rate: {stats.success_rate}%</StatHelpText>
+                  </Box>
+                  <Box>
+                    <Icon as={FiBriefcase} boxSize={10} color="green.400" />
+                  </Box>
+                </Flex>
+              </Stat>
+            )}
           </CardBody>
         </Card>
 
         <Card>
           <CardBody>
-            <Stat>
-              <Flex justify="space-between">
-                <Box>
-                  <StatLabel>Failed</StatLabel>
-                  <StatNumber>{stats.failedApplications}</StatNumber>
-                  <StatHelpText>Failure Rate: {100 - stats.successRate}%</StatHelpText>
-                </Box>
-                <Box>
-                  <Icon as={FiAlertTriangle} boxSize={10} color="red.400" />
-                </Box>
-              </Flex>
-            </Stat>
+            {loadingStats ? (
+              <Center p={4}>
+                <Spinner color="teal.500" />
+              </Center>
+            ) : (
+              <Stat>
+                <Flex justify="space-between">
+                  <Box>
+                    <StatLabel>Failed</StatLabel>
+                    <StatNumber>{stats.failed_applications}</StatNumber>
+                    <StatHelpText>Failure Rate: {stats.failure_rate}%</StatHelpText>
+                  </Box>
+                  <Box>
+                    <Icon as={FiAlertTriangle} boxSize={10} color="red.400" />
+                  </Box>
+                </Flex>
+              </Stat>
+            )}
           </CardBody>
         </Card>
 
         <Card>
           <CardBody>
-            <Stat>
-              <Flex justify="space-between">
-                <Box>
-                  <StatLabel>Pending</StatLabel>
-                  <StatNumber>{stats.pendingApplications}</StatNumber>
-                  <StatHelpText>Awaiting Responses</StatHelpText>
-                </Box>
-                <Box>
-                  <Icon as={FiUsers} boxSize={10} color="blue.400" />
-                </Box>
-              </Flex>
-            </Stat>
+            {loadingStats ? (
+              <Center p={4}>
+                <Spinner color="teal.500" />
+              </Center>
+            ) : (
+              <Stat>
+                <Flex justify="space-between">
+                  <Box>
+                    <StatLabel>Pending</StatLabel>
+                    <StatNumber>{stats.pending_applications}</StatNumber>
+                    <StatHelpText>Awaiting Responses</StatHelpText>
+                  </Box>
+                  <Box>
+                    <Icon as={FiUsers} boxSize={10} color="blue.400" />
+                  </Box>
+                </Flex>
+              </Stat>
+            )}
           </CardBody>
         </Card>
       </SimpleGrid>
