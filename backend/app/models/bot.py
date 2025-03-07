@@ -462,3 +462,20 @@ class WebhookEvent(SQLModel):
 
     event_type: str
     data: dict[str, Any]
+
+
+# ======================================================
+# MODELO DE RESPOSTA PARA ESTATÍSTICAS DO DASHBOARD
+# ======================================================
+
+
+class UserDashboardStats(SQLModel):
+    """Estatísticas do usuário para o dashboard."""
+
+    total_applications: int
+    successful_applications: int
+    success_rate: float
+    failed_applications: int
+    failure_rate: float
+    pending_applications: int
+    timestamp: str
