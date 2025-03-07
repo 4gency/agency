@@ -4,7 +4,7 @@ from uuid import UUID
 
 from fastapi import HTTPException
 from fastapi import status as http_status
-from sqlmodel import Session, or_, select, func
+from sqlmodel import Session, func, or_, select
 
 from app.models.bot import BotApply, BotApplyStatus, BotSession
 from app.models.core import User
@@ -134,14 +134,14 @@ class ApplyService:
                 query = query.where(or_(*status_conditions))
 
         # Primeiro obtém o total com os filtros aplicados (sem paginação)
-        filtered_count_query = select(func.count()).select_from(
-            query.subquery()
-        )
+        filtered_count_query = select(func.count()).select_from(query.subquery())
         total = self.db.exec(filtered_count_query).one() or 0
-        
+
         # Adiciona ordenação e paginação
-        paginated_query = query.order_by(BotApply.created_at.desc()).offset(skip).limit(limit)  # type: ignore
-        
+        paginated_query = (
+            query.order_by(BotApply.created_at.desc()).offset(skip).limit(limit)
+        )  # type: ignore
+
         # Executa a consulta
         applies = self.db.exec(paginated_query).all() or []
 
@@ -199,7 +199,7 @@ class ApplyService:
     ) -> tuple[int, dict[str, int], dict[str, int], int, list[BotApply]]:
         """
         Get a summary of job applications for a specific bot session.
-        
+
         Returns:
             - total_applies: Total number of applications
             - status_counts: Dictionary with counts by status
@@ -232,10 +232,7 @@ class ApplyService:
         ).all()
 
         # Process applies to create summary data
-        status_counts: dict[str, int] = {
-            "success": 0,
-            "failed": 0
-        }
+        status_counts: dict[str, int] = {"success": 0, "failed": 0}
         company_counts: dict[str, int] = {}
         total_time = 0
 
@@ -260,7 +257,13 @@ class ApplyService:
         # Get the latest applies (limiting to 5)
         latest_applies = applies[:5] if applies else []
 
-        return len(applies), status_counts, company_counts, total_time, cast(list[BotApply], latest_applies)
+        return (
+            len(applies),
+            status_counts,
+            company_counts,
+            total_time,
+            cast(list[BotApply], latest_applies),
+        )
 
     def update_apply_status(
         self, apply_id: int, status: BotApplyStatus, failed_reason: str | None = None

@@ -98,9 +98,13 @@ def get_applies_summary(
     apply_service = ApplyService(session)
 
     try:
-        total_applies, status_counts, company_counts, total_time, latest_applies = (
-            apply_service.get_applies_summary(session_id=session_id, user=user)
-        )
+        (
+            total_applies,
+            status_counts,
+            company_counts,
+            total_time,
+            latest_applies,
+        ) = apply_service.get_applies_summary(session_id=session_id, user=user)
     except HTTPException as e:
         raise e
 

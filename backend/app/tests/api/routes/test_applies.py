@@ -159,9 +159,11 @@ def test_get_session_applies_with_filter(
 
     # Deve haver pelo menos um item na resposta
     assert len(applies_data["items"]) > 0, "Nenhum item retornado"
-    
+
     # Verificar que pelo menos um item com status 'failed' está na resposta
-    failed_items = [a for a in applies_data["items"] if a["status"] == BotApplyStatus.FAILED.value]
+    failed_items = [
+        a for a in applies_data["items"] if a["status"] == BotApplyStatus.FAILED.value
+    ]
     assert len(failed_items) > 0, "Nenhum item com status 'failed' encontrado"
 
     # Limpa os dados criados para o teste
