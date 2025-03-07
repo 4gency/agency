@@ -3,7 +3,6 @@ from datetime import datetime, timezone
 
 import stripe
 from fastapi import HTTPException, status
-from sqlalchemy.orm.session import SessionTransaction
 from sqlmodel import Session, select
 
 from app.core.config import settings
@@ -189,12 +188,6 @@ class NotFound(HTTPException):
 class AlreadyProcessed(HTTPException):
     def __init__(self, detail: str) -> None:
         super().__init__(status_code=status.HTTP_409_CONFLICT, detail=detail)
-
-
-def _begin_transaction(session: Session) -> SessionTransaction:
-    if session.in_transaction():
-        return session.begin_nested()
-    return session.begin()
 
 
 # --------------------------------------------------
@@ -523,16 +516,15 @@ def handle_success_callback(
     try:
         stripe_sess = stripe.checkout.Session.retrieve(checkout.session_id)
         if stripe_sess.payment_status == "paid":
-            with _begin_transaction(session):
-                if checkout.status != "complete":
-                    checkout.status = "complete"
-                    checkout.payment_status = "paid"
-                    checkout.updated_at = datetime.now(timezone.utc)
-                    session.add(checkout)
-                    logger.info(
-                        "Success callback: CheckoutSession %s marcado como complete",
-                        checkout.session_id,
-                    )
+            if checkout.status != "complete":
+                checkout.status = "complete"
+                checkout.payment_status = "paid"
+                checkout.updated_at = datetime.now(timezone.utc)
+                session.add(checkout)
+                logger.info(
+                    "Success callback: CheckoutSession %s marcado como complete",
+                    checkout.session_id,
+                )
             return {"message": "Success callback processed"}
         else:
             logger.error(
@@ -553,41 +545,41 @@ def handle_checkout_session(session: Session, event: stripe.Event) -> None:
     ou delegando ao cancelamento (para 'unpaid').
     """
     try:
-        with _begin_transaction(session):
-            checkout_obj = event["data"]["object"]
-            checkout_session_id = checkout_obj.get("id")
-            payment_status = checkout_obj.get("payment_status")
+        checkout_obj = event["data"]["object"]
+        checkout_session_id = checkout_obj.get("id")
+        payment_status = checkout_obj.get("payment_status")
 
-            checkout = session.exec(
-                select(CheckoutSession).where(
-                    CheckoutSession.session_id == checkout_session_id
-                )
-            ).first()
-            if not checkout:
-                logger.error(
-                    "CheckoutSession não encontrado para session_id: %s",
+        checkout = session.exec(
+            select(CheckoutSession).where(
+                CheckoutSession.session_id == checkout_session_id
+            )
+        ).first()
+        if not checkout:
+            logger.error(
+                "CheckoutSession não encontrado para session_id: %s",
+                checkout_session_id,
+            )
+            raise Exception("CheckoutSession not found.")
+
+        if payment_status == "paid":
+            if checkout.status != "complete":
+                checkout.status = "complete"
+                checkout.payment_status = "paid"
+                checkout.updated_at = datetime.now(timezone.utc)
+                session.add(checkout)
+                session.commit()
+                logger.info(
+                    "CheckoutSession %s marcado como complete (payment_status paid)",
                     checkout_session_id,
                 )
-                raise Exception("CheckoutSession not found.")
-
-            if payment_status == "paid":
-                if checkout.status != "complete":
-                    checkout.status = "complete"
-                    checkout.payment_status = "paid"
-                    checkout.updated_at = datetime.now(timezone.utc)
-                    session.add(checkout)
-                    logger.info(
-                        "CheckoutSession %s marcado como complete (payment_status paid)",
-                        checkout_session_id,
-                    )
-            elif payment_status == "unpaid":
-                handle_cancel_callback(session, checkout)
-            else:
-                logger.warning(
-                    "Status de pagamento desconhecido (%s) para CheckoutSession %s",
-                    payment_status,
-                    checkout_session_id,
-                )
+        elif payment_status == "unpaid":
+            handle_cancel_callback(session, checkout)
+        else:
+            logger.warning(
+                "Status de pagamento desconhecido (%s) para CheckoutSession %s",
+                payment_status,
+                checkout_session_id,
+            )
 
     except Exception as e:
         session.rollback()
@@ -610,14 +602,12 @@ def handle_cancel_callback(
             return {"message": "Already processed"}
 
         if stripe_sess.payment_status != "paid":
-            with _begin_transaction(session):
-                checkout.status = "canceled"
-                checkout.payment_status = "unpaid"
-                checkout.updated_at = datetime.now(timezone.utc)
-                session.add(checkout)
-                logger.info(
-                    "CheckoutSession %s marcado como canceled", checkout.session_id
-                )
+            checkout.status = "canceled"
+            checkout.payment_status = "unpaid"
+            checkout.updated_at = datetime.now(timezone.utc)
+            session.add(checkout)
+            session.commit()
+            logger.info("CheckoutSession %s marcado como canceled", checkout.session_id)
             return {"message": "Cancel callback processed"}
         else:
             logger.info(
@@ -816,65 +806,64 @@ def handle_invoice_payment_succeeded(session: Session, event: stripe.Event) -> N
     criar/atualizar a Subscription e registrar o Payment.
     """
     try:
-        with _begin_transaction(session):
-            # Recupera os dados da Stripe
-            stripe_invoice = stripe.Invoice.retrieve(event["data"]["object"]["id"])
-            stripe_subscription = stripe.Subscription.retrieve(
-                stripe_invoice.subscription  # type: ignore
+        # Recupera os dados da Stripe
+        stripe_invoice = stripe.Invoice.retrieve(event["data"]["object"]["id"])
+        stripe_subscription = stripe.Subscription.retrieve(
+            stripe_invoice.subscription  # type: ignore
+        )
+        stripe_plan = stripe.Plan.retrieve(str(stripe_subscription.plan.id))  # type: ignore
+
+        if not all([stripe_subscription, stripe_plan]):
+            logger.error("Subscription ou Plan não encontrados na Stripe.")
+            raise Exception("Subscription or Plan not found.")
+
+        # Busca o usuário no banco de dados
+        user = session.exec(
+            select(User).where(User.stripe_customer_id == stripe_invoice.customer)
+        ).first()
+        if not user:
+            logger.error(
+                "User não encontrado para stripe_customer_id: %s",
+                stripe_invoice.customer,
             )
-            stripe_plan = stripe.Plan.retrieve(str(stripe_subscription.plan.id))  # type: ignore
+            raise Exception("User not found.")
 
-            if not all([stripe_subscription, stripe_plan]):
-                logger.error("Subscription ou Plan não encontrados na Stripe.")
-                raise Exception("Subscription or Plan not found.")
+        # Busca o SubscriptionPlan associado
+        plan = session.exec(
+            select(SubscriptionPlan).where(
+                SubscriptionPlan.stripe_product_id == stripe_plan.product
+            )
+        ).first()
+        if not plan:
+            logger.error(
+                "SubscriptionPlan não encontrada para plan_id: %s",
+                stripe_plan.product,
+            )
+            raise Exception("SubscriptionPlan not found.")
 
-            # Busca o usuário no banco de dados
-            user = session.exec(
-                select(User).where(User.stripe_customer_id == stripe_invoice.customer)
-            ).first()
-            if not user:
-                logger.error(
-                    "User não encontrado para stripe_customer_id: %s",
-                    stripe_invoice.customer,
-                )
-                raise Exception("User not found.")
-
-            # Busca o SubscriptionPlan associado
-            plan = session.exec(
-                select(SubscriptionPlan).where(
-                    SubscriptionPlan.stripe_product_id == stripe_plan.product
-                )
-            ).first()
-            if not plan:
-                logger.error(
-                    "SubscriptionPlan não encontrada para plan_id: %s",
-                    stripe_plan.product,
-                )
-                raise Exception("SubscriptionPlan not found.")
-
-            # Busca a Subscription existente, se houver
-            subscription = session.exec(
-                select(Subscription).where(
-                    Subscription.stripe_subscription_id == stripe_subscription.id
-                )
-            ).first()
-            try:
-                # Processa o pagamento e a subscription com a função reutilizável
-                process_invoice_payment_succeeded(
-                    session=session,
-                    stripe_invoice=stripe_invoice,
-                    stripe_subscription=stripe_subscription,
-                    user=user,
-                    plan=plan,
-                    subscription=subscription,
-                )
-            except AlreadyProcessed as e:
-                logger.info("Evento já processado: %s", str(e))
-            except Exception as e:
-                logger.exception(
-                    "Erro no processamento de invoice.payment_succeeded: %s", str(e)
-                )
-                raise e
+        # Busca a Subscription existente, se houver
+        subscription = session.exec(
+            select(Subscription).where(
+                Subscription.stripe_subscription_id == stripe_subscription.id
+            )
+        ).first()
+        try:
+            # Processa o pagamento e a subscription com a função reutilizável
+            process_invoice_payment_succeeded(
+                session=session,
+                stripe_invoice=stripe_invoice,
+                stripe_subscription=stripe_subscription,
+                user=user,
+                plan=plan,
+                subscription=subscription,
+            )
+        except AlreadyProcessed as e:
+            logger.info("Evento já processado: %s", str(e))
+        except Exception as e:
+            logger.exception(
+                "Erro no processamento de invoice.payment_succeeded: %s", str(e)
+            )
+            raise e
     except Exception as e:
         session.rollback()
         logger.exception(
@@ -889,30 +878,27 @@ def handle_checkout_session_expired(session: Session, event: stripe.Event) -> No
     Marca a CheckoutSession como 'expired' e 'unpaid'.
     """
     try:
-        with _begin_transaction(session):
-            checkout_obj = event["data"]["object"]
-            checkout_session_id = checkout_obj.get("id")
+        checkout_obj = event["data"]["object"]
+        checkout_session_id = checkout_obj.get("id")
 
-            checkout = session.exec(
-                select(CheckoutSession).where(
-                    CheckoutSession.session_id == checkout_session_id
-                )
-            ).first()
-            if not checkout:
-                logger.error(
-                    "CheckoutSession não encontrado para session_id: %s",
-                    checkout_session_id,
-                )
-                raise Exception("CheckoutSession not found.")
+        checkout = session.exec(
+            select(CheckoutSession).where(
+                CheckoutSession.session_id == checkout_session_id
+            )
+        ).first()
+        if not checkout:
+            logger.error(
+                "CheckoutSession não encontrado para session_id: %s",
+                checkout_session_id,
+            )
+            raise Exception("CheckoutSession not found.")
 
-            if checkout.status != "complete":
-                checkout.status = "expired"
-                checkout.payment_status = "unpaid"
-                checkout.updated_at = datetime.now(timezone.utc)
-                session.add(checkout)
-                logger.info(
-                    "CheckoutSession %s marcado como expired", checkout.session_id
-                )
+        if checkout.status != "complete":
+            checkout.status = "expired"
+            checkout.payment_status = "unpaid"
+            checkout.updated_at = datetime.now(timezone.utc)
+            session.add(checkout)
+            logger.info("CheckoutSession %s marcado como expired", checkout.session_id)
     except Exception as e:
         session.rollback()
         logger.exception(
@@ -929,30 +915,27 @@ def handle_checkout_session_async_payment_failed(
     Marca a CheckoutSession como 'failed' e 'unpaid'.
     """
     try:
-        with _begin_transaction(session):
-            checkout_obj = event["data"]["object"]
-            checkout_session_id = checkout_obj.get("id")
+        checkout_obj = event["data"]["object"]
+        checkout_session_id = checkout_obj.get("id")
 
-            checkout = session.exec(
-                select(CheckoutSession).where(
-                    CheckoutSession.session_id == checkout_session_id
-                )
-            ).first()
-            if not checkout:
-                logger.error(
-                    "CheckoutSession não encontrado para session_id: %s",
-                    checkout_session_id,
-                )
-                raise Exception("CheckoutSession not found.")
+        checkout = session.exec(
+            select(CheckoutSession).where(
+                CheckoutSession.session_id == checkout_session_id
+            )
+        ).first()
+        if not checkout:
+            logger.error(
+                "CheckoutSession não encontrado para session_id: %s",
+                checkout_session_id,
+            )
+            raise Exception("CheckoutSession not found.")
 
-            if checkout.status != "complete":
-                checkout.status = "failed"
-                checkout.payment_status = "unpaid"
-                checkout.updated_at = datetime.now(timezone.utc)
-                session.add(checkout)
-                logger.info(
-                    "CheckoutSession %s marcado como failed", checkout.session_id
-                )
+        if checkout.status != "complete":
+            checkout.status = "failed"
+            checkout.payment_status = "unpaid"
+            checkout.updated_at = datetime.now(timezone.utc)
+            session.add(checkout)
+            logger.info("CheckoutSession %s marcado como failed", checkout.session_id)
     except Exception as e:
         session.rollback()
         logger.exception(
@@ -968,48 +951,45 @@ def handle_charge_dispute_created(session: Session, event: stripe.Event) -> None
     Marca a Subscription como 'disputed' e 'unpaid'.
     """
     try:
-        with _begin_transaction(session):
-            charge_obj = event["data"]["object"]
-            payment_intent_id = charge_obj.get("payment_intent")
+        charge_obj = event["data"]["object"]
+        payment_intent_id = charge_obj.get("payment_intent")
 
-            payment = session.exec(
-                select(Payment).where(Payment.transaction_id == payment_intent_id)
-            ).first()
-            if not payment:
-                logger.error(
-                    "Payment não encontrado para transaction_id: %s",
-                    payment_intent_id,
-                )
-                raise Exception("Payment not found.")
-
-            subscription = session.exec(
-                select(Subscription).where(Subscription.id == payment.subscription_id)
-            ).first()
-            if not subscription:
-                logger.error(
-                    "Subscription não encontrada para payment_id: %s",
-                    payment.id,
-                )
-                raise Exception("Subscription not found.")
-
-            if subscription.is_active:
-                subscription.is_active = False
-                subscription.updated_at = datetime.now(timezone.utc)
-                session.add(subscription)
-                logger.info("Subscription %s marcada como disputed", subscription.id)
-
-            user = session.exec(select(User).where(User.id == payment.user_id)).first()
-
-            if not user:
-                raise Exception("User not found")
-
-            user.is_active = False
-            session.add(user)
-            session.commit()
-
-            logger.exception(
-                "Subscription %s marcada como disputed!!!!!", subscription.id
+        payment = session.exec(
+            select(Payment).where(Payment.transaction_id == payment_intent_id)
+        ).first()
+        if not payment:
+            logger.error(
+                "Payment não encontrado para transaction_id: %s",
+                payment_intent_id,
             )
+            raise Exception("Payment not found.")
+
+        subscription = session.exec(
+            select(Subscription).where(Subscription.id == payment.subscription_id)
+        ).first()
+        if not subscription:
+            logger.error(
+                "Subscription não encontrada para payment_id: %s",
+                payment.id,
+            )
+            raise Exception("Subscription not found.")
+
+        if subscription.is_active:
+            subscription.is_active = False
+            subscription.updated_at = datetime.now(timezone.utc)
+            session.add(subscription)
+            logger.info("Subscription %s marcada como disputed", subscription.id)
+
+        user = session.exec(select(User).where(User.id == payment.user_id)).first()
+
+        if not user:
+            raise Exception("User not found")
+
+        user.is_active = False
+        session.add(user)
+        session.commit()
+
+        logger.exception("Subscription %s marcada como disputed!!!!!", subscription.id)
     except Exception as e:
         session.rollback()
         logger.exception("Falha no processamento de charge.dispute.created: %s", str(e))

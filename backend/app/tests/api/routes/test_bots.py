@@ -1,0 +1,399 @@
+import uuid
+from datetime import datetime, timezone
+
+from fastapi.testclient import TestClient
+from sqlmodel import Session
+
+from app.core.config import settings
+from app.models.bot import BotSession, BotSessionStatus, BotStyleChoice, Credentials
+
+
+def test_create_bot_session(
+    client: TestClient, normal_subscriber_token_headers: dict[str, str], db: Session
+) -> None:
+    """Test creating a bot session as a subscriber."""
+    # Primeiro, cria uma credencial para usar nos testes
+    credentials = Credentials(
+        user_id=uuid.uuid4(),  # Este UUID será substituído pelo do usuário real
+        email="test_cred@example.com",
+        password="testpassword",
+    )
+    db.add(credentials)
+    db.commit()
+    db.refresh(credentials)
+
+    data = {
+        "credentials_id": str(credentials.id),
+        "applies_limit": 100,
+        "style": BotStyleChoice.DEFAULT.value,
+    }
+
+    r = client.post(
+        f"{settings.API_V1_STR}/bots/sessions",
+        headers=normal_subscriber_token_headers,
+        json=data,
+    )
+
+    assert r.status_code == 200
+    created_session = r.json()
+    assert created_session["credentials_id"] == str(credentials.id)
+    assert created_session["applies_limit"] == 100
+    assert created_session["status"] == BotSessionStatus.STARTING.value
+
+    # Verificar se foi realmente criado no banco de dados
+    session_in_db = db.get(BotSession, uuid.UUID(created_session["id"]))
+    assert session_in_db is not None
+    assert session_in_db.status == BotSessionStatus.STARTING
+
+    # Limpa a sessão criada para o teste
+    db.delete(session_in_db)
+    db.commit()
+
+    # Limpa as credenciais criadas para o teste
+    db.delete(credentials)
+    db.commit()
+
+
+def test_create_bot_session_not_subscriber(
+    client: TestClient, normal_user_token_headers: dict[str, str], db: Session
+) -> None:
+    """Test that non-subscribers can't create a bot session."""
+    # Primeiro, cria uma credencial para usar nos testes
+    credentials = Credentials(
+        user_id=uuid.uuid4(), email="test_cred2@example.com", password="testpassword"
+    )
+    db.add(credentials)
+    db.commit()
+    db.refresh(credentials)
+
+    data = {
+        "credentials_id": str(credentials.id),
+        "applies_limit": 100,
+        "style": BotStyleChoice.DEFAULT.value,
+    }
+
+    r = client.post(
+        f"{settings.API_V1_STR}/bots/sessions",
+        headers=normal_user_token_headers,
+        json=data,
+    )
+
+    assert r.status_code == 403
+    assert r.json() == {"detail": "The user is not a subscriber"}
+
+    # Limpa as credenciais criadas para o teste
+    db.delete(credentials)
+    db.commit()
+
+
+def test_get_bot_sessions(
+    client: TestClient, normal_subscriber_token_headers: dict[str, str], db: Session
+) -> None:
+    """Test getting all bot sessions for the current user."""
+    # Criar credenciais para teste
+    credentials = Credentials(
+        user_id=uuid.uuid4(), email="test_cred3@example.com", password="testpassword"
+    )
+    db.add(credentials)
+    db.commit()
+    db.refresh(credentials)
+
+    # Criar uma sessão para o usuário
+    bot_session = BotSession(
+        user_id=uuid.uuid4(),  # Será substituído pelo ID real do usuário
+        credentials_id=credentials.id,
+        applies_limit=150,
+        status=BotSessionStatus.RUNNING,
+        created_at=datetime.now(timezone.utc),
+    )
+    db.add(bot_session)
+    db.commit()
+    db.refresh(bot_session)
+
+    r = client.get(
+        f"{settings.API_V1_STR}/bots/sessions",
+        headers=normal_subscriber_token_headers,
+    )
+
+    assert r.status_code == 200
+    sessions = r.json()
+    assert "total" in sessions
+    assert "items" in sessions
+
+    # Limpa os dados criados para o teste
+    db.delete(bot_session)
+    db.delete(credentials)
+    db.commit()
+
+
+def test_get_bot_session_by_id(
+    client: TestClient, normal_subscriber_token_headers: dict[str, str], db: Session
+) -> None:
+    """Test getting a specific bot session by ID."""
+    # Criar credenciais para teste
+    credentials = Credentials(
+        user_id=uuid.uuid4(), email="test_cred4@example.com", password="testpassword"
+    )
+    db.add(credentials)
+    db.commit()
+    db.refresh(credentials)
+
+    # Criar uma sessão para o usuário
+    bot_session = BotSession(
+        user_id=uuid.uuid4(),  # Será substituído pelo ID real do usuário
+        credentials_id=credentials.id,
+        applies_limit=200,
+        status=BotSessionStatus.RUNNING,
+        created_at=datetime.now(timezone.utc),
+    )
+    db.add(bot_session)
+    db.commit()
+    db.refresh(bot_session)
+
+    r = client.get(
+        f"{settings.API_V1_STR}/bots/sessions/{bot_session.id}",
+        headers=normal_subscriber_token_headers,
+    )
+
+    assert r.status_code == 200
+    session_data = r.json()
+    assert session_data["id"] == str(bot_session.id)
+    assert session_data["status"] == BotSessionStatus.RUNNING.value
+
+    # Limpa os dados criados para o teste
+    db.delete(bot_session)
+    db.delete(credentials)
+    db.commit()
+
+
+def test_get_bot_session_not_found(
+    client: TestClient, normal_subscriber_token_headers: dict[str, str]
+) -> None:
+    """Test getting a non-existent bot session."""
+    non_existent_id = uuid.uuid4()
+    r = client.get(
+        f"{settings.API_V1_STR}/bots/sessions/{non_existent_id}",
+        headers=normal_subscriber_token_headers,
+    )
+
+    assert r.status_code == 404
+    assert r.json() == {"detail": "Bot session not found"}
+
+
+def test_start_bot_session(
+    client: TestClient, normal_subscriber_token_headers: dict[str, str], db: Session
+) -> None:
+    """Test starting a bot session."""
+    # Criar credenciais para teste
+    credentials = Credentials(
+        user_id=uuid.uuid4(), email="test_cred5@example.com", password="testpassword"
+    )
+    db.add(credentials)
+    db.commit()
+    db.refresh(credentials)
+
+    # Criar uma sessão para o usuário
+    bot_session = BotSession(
+        user_id=uuid.uuid4(),  # Será substituído pelo ID real do usuário
+        credentials_id=credentials.id,
+        applies_limit=200,
+        status=BotSessionStatus.STARTING,
+        created_at=datetime.now(timezone.utc),
+    )
+    db.add(bot_session)
+    db.commit()
+    db.refresh(bot_session)
+
+    r = client.post(
+        f"{settings.API_V1_STR}/bots/sessions/{bot_session.id}/start",
+        headers=normal_subscriber_token_headers,
+    )
+
+    assert r.status_code == 200
+    session_data = r.json()
+    assert session_data["id"] == str(bot_session.id)
+    assert session_data["status"] == BotSessionStatus.RUNNING.value
+
+    # Verificar se foi atualizado no banco de dados
+    db.refresh(bot_session)
+    assert bot_session.status == BotSessionStatus.RUNNING
+
+    # Limpa os dados criados para o teste
+    db.delete(bot_session)
+    db.delete(credentials)
+    db.commit()
+
+
+def test_stop_bot_session(
+    client: TestClient, normal_subscriber_token_headers: dict[str, str], db: Session
+) -> None:
+    """Test stopping a bot session."""
+    # Criar credenciais para teste
+    credentials = Credentials(
+        user_id=uuid.uuid4(), email="test_cred6@example.com", password="testpassword"
+    )
+    db.add(credentials)
+    db.commit()
+    db.refresh(credentials)
+
+    # Criar uma sessão para o usuário
+    bot_session = BotSession(
+        user_id=uuid.uuid4(),  # Será substituído pelo ID real do usuário
+        credentials_id=credentials.id,
+        applies_limit=200,
+        status=BotSessionStatus.RUNNING,
+        created_at=datetime.now(timezone.utc),
+    )
+    db.add(bot_session)
+    db.commit()
+    db.refresh(bot_session)
+
+    r = client.post(
+        f"{settings.API_V1_STR}/bots/sessions/{bot_session.id}/stop",
+        headers=normal_subscriber_token_headers,
+    )
+
+    assert r.status_code == 200
+    session_data = r.json()
+    assert session_data["id"] == str(bot_session.id)
+    assert session_data["status"] == BotSessionStatus.STOPPING.value
+
+    # Verificar se foi atualizado no banco de dados
+    db.refresh(bot_session)
+    assert bot_session.status == BotSessionStatus.STOPPING
+
+    # Limpa os dados criados para o teste
+    db.delete(bot_session)
+    db.delete(credentials)
+    db.commit()
+
+
+def test_pause_bot_session(
+    client: TestClient, normal_subscriber_token_headers: dict[str, str], db: Session
+) -> None:
+    """Test pausing a bot session."""
+    # Criar credenciais para teste
+    credentials = Credentials(
+        user_id=uuid.uuid4(), email="test_cred7@example.com", password="testpassword"
+    )
+    db.add(credentials)
+    db.commit()
+    db.refresh(credentials)
+
+    # Criar uma sessão para o usuário
+    bot_session = BotSession(
+        user_id=uuid.uuid4(),  # Será substituído pelo ID real do usuário
+        credentials_id=credentials.id,
+        applies_limit=200,
+        status=BotSessionStatus.RUNNING,
+        created_at=datetime.now(timezone.utc),
+    )
+    db.add(bot_session)
+    db.commit()
+    db.refresh(bot_session)
+
+    r = client.post(
+        f"{settings.API_V1_STR}/bots/sessions/{bot_session.id}/pause",
+        headers=normal_subscriber_token_headers,
+    )
+
+    assert r.status_code == 200
+    session_data = r.json()
+    assert session_data["id"] == str(bot_session.id)
+    assert session_data["status"] == BotSessionStatus.PAUSED.value
+
+    # Verificar se foi atualizado no banco de dados
+    db.refresh(bot_session)
+    assert bot_session.status == BotSessionStatus.PAUSED
+
+    # Limpa os dados criados para o teste
+    db.delete(bot_session)
+    db.delete(credentials)
+    db.commit()
+
+
+def test_resume_bot_session(
+    client: TestClient, normal_subscriber_token_headers: dict[str, str], db: Session
+) -> None:
+    """Test resuming a bot session."""
+    # Criar credenciais para teste
+    credentials = Credentials(
+        user_id=uuid.uuid4(), email="test_cred8@example.com", password="testpassword"
+    )
+    db.add(credentials)
+    db.commit()
+    db.refresh(credentials)
+
+    # Criar uma sessão para o usuário
+    bot_session = BotSession(
+        user_id=uuid.uuid4(),  # Será substituído pelo ID real do usuário
+        credentials_id=credentials.id,
+        applies_limit=200,
+        status=BotSessionStatus.PAUSED,
+        created_at=datetime.now(timezone.utc),
+    )
+    db.add(bot_session)
+    db.commit()
+    db.refresh(bot_session)
+
+    r = client.post(
+        f"{settings.API_V1_STR}/bots/sessions/{bot_session.id}/resume",
+        headers=normal_subscriber_token_headers,
+    )
+
+    assert r.status_code == 200
+    session_data = r.json()
+    assert session_data["id"] == str(bot_session.id)
+    assert session_data["status"] == BotSessionStatus.RUNNING.value
+
+    # Verificar se foi atualizado no banco de dados
+    db.refresh(bot_session)
+    assert bot_session.status == BotSessionStatus.RUNNING
+
+    # Limpa os dados criados para o teste
+    db.delete(bot_session)
+    db.delete(credentials)
+    db.commit()
+
+
+def test_delete_bot_session(
+    client: TestClient, normal_subscriber_token_headers: dict[str, str], db: Session
+) -> None:
+    """Test deleting a bot session."""
+    # Criar credenciais para teste
+    credentials = Credentials(
+        user_id=uuid.uuid4(), email="test_cred9@example.com", password="testpassword"
+    )
+    db.add(credentials)
+    db.commit()
+    db.refresh(credentials)
+
+    # Criar uma sessão para o usuário
+    bot_session = BotSession(
+        user_id=uuid.uuid4(),  # Será substituído pelo ID real do usuário
+        credentials_id=credentials.id,
+        applies_limit=200,
+        status=BotSessionStatus.STOPPED,
+        created_at=datetime.now(timezone.utc),
+    )
+    db.add(bot_session)
+    db.commit()
+    db.refresh(bot_session)
+
+    session_id = bot_session.id
+
+    r = client.delete(
+        f"{settings.API_V1_STR}/bots/sessions/{session_id}",
+        headers=normal_subscriber_token_headers,
+    )
+
+    assert r.status_code == 200
+    assert r.json() == {"message": "Bot session deleted successfully"}
+
+    # Verificar se foi excluído do banco de dados
+    deleted_session = db.get(BotSession, session_id)
+    assert deleted_session is None
+
+    # Limpa as credenciais criadas para o teste
+    db.delete(credentials)
+    db.commit()
