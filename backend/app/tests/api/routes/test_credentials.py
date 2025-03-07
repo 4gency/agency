@@ -1,24 +1,23 @@
 import uuid
 
-from app.tests.utils.user import get_user_from_token_header
 from fastapi.testclient import TestClient
-from sqlmodel import Session, select
+from sqlmodel import Session
 
 from app.core.config import settings
 from app.models.bot import Credentials
-from app.models.core import User
+from app.tests.utils.user import get_user_from_token_header
 from app.tests.utils.utils import random_email, random_lower_string
 
 
 def test_get_user_credentials(
-    client: TestClient, normal_user_token_headers: dict[str, str], db: Session
+    client: TestClient, normal_user_token_headers: dict[str, str]
 ) -> None:
     """Test getting all credentials for the current user."""
     r = client.get(
         f"{settings.API_V1_STR}/credentials/",
         headers=normal_user_token_headers,
     )
-    
+
     assert r.status_code == 200, f"Response: {r.text}"
     data = r.json()
     assert "total" in data
@@ -32,33 +31,32 @@ def test_create_credentials(
     """Test creating new credentials."""
     # Obtém o usuário a partir do token
     user = get_user_from_token_header(db, normal_user_token_headers, client)
-    
+
     email = random_email()
     password = random_lower_string()
-    
-    data = {
-        "email": email,
-        "password": password
-    }
-    
+
+    data = {"email": email, "password": password}
+
     r = client.post(
         f"{settings.API_V1_STR}/credentials/",
         headers=normal_user_token_headers,
         json=data,
     )
-    
+
     assert r.status_code == 200, f"Response: {r.text}"
     created_credentials = r.json()
     assert "id" in created_credentials
     assert created_credentials["email"] != email  # Deve retornar a versão ofuscada
-    
+
     # Verifique se foi criado no banco de dados
     cred_id = uuid.UUID(created_credentials["id"])
     credentials_in_db = db.get(Credentials, cred_id)
     assert credentials_in_db is not None
     assert credentials_in_db.email == email
-    assert credentials_in_db.user_id == user.id  # Verificar se o usuário correto foi associado
-    
+    assert (
+        credentials_in_db.user_id == user.id
+    )  # Verificar se o usuário correto foi associado
+
     # Limpa as credenciais criadas para o teste
     db.delete(credentials_in_db)
     db.commit()
@@ -70,40 +68,35 @@ def test_update_credentials(
     """Test updating credentials."""
     # Obtém o usuário a partir do token
     user = get_user_from_token_header(db, normal_user_token_headers, client)
-    
+
     # Criar credenciais para atualizar
     credentials = Credentials(
-        user_id=user.id,  
-        email="update_test@example.com",
-        password="original_password"
+        user_id=user.id, email="update_test@example.com", password="original_password"
     )
     db.add(credentials)
     db.commit()
     db.refresh(credentials)
-    
+
     # Novos dados
     new_email = random_email()
     new_password = random_lower_string()
-    
-    data = {
-        "email": new_email,
-        "password": new_password
-    }
-    
+
+    data = {"email": new_email, "password": new_password}
+
     r = client.put(
         f"{settings.API_V1_STR}/credentials/{credentials.id}",
         headers=normal_user_token_headers,
         json=data,
     )
-    
+
     assert r.status_code == 200, f"Response: {r.text}"
     updated_credentials = r.json()
     assert updated_credentials["id"] == str(credentials.id)
-    
+
     # Verifique se foi atualizado no banco de dados
     db.refresh(credentials)
     assert credentials.email == new_email
-    
+
     # Limpa as credenciais criadas para o teste
     db.delete(credentials)
     db.commit()
@@ -114,18 +107,15 @@ def test_update_credentials_not_found(
 ) -> None:
     """Test updating non-existent credentials."""
     non_existent_id = uuid.uuid4()
-    
-    data = {
-        "email": random_email(),
-        "password": random_lower_string()
-    }
-    
+
+    data = {"email": random_email(), "password": random_lower_string()}
+
     r = client.put(
         f"{settings.API_V1_STR}/credentials/{non_existent_id}",
         headers=normal_user_token_headers,
         json=data,
     )
-    
+
     assert r.status_code == 404, f"Response: {r.text}"
     assert r.json() == {"detail": "Credentials not found"}
 
@@ -136,27 +126,25 @@ def test_delete_credentials(
     """Test deleting credentials."""
     # Obtém o usuário a partir do token
     user = get_user_from_token_header(db, normal_user_token_headers, client)
-    
+
     # Criar credenciais para excluir
     credentials = Credentials(
-        user_id=user.id,  
-        email="delete_test@example.com",
-        password="delete_password"
+        user_id=user.id, email="delete_test@example.com", password="delete_password"
     )
     db.add(credentials)
     db.commit()
     db.refresh(credentials)
-    
+
     credentials_id = credentials.id
-    
+
     r = client.delete(
         f"{settings.API_V1_STR}/credentials/{credentials_id}",
         headers=normal_user_token_headers,
     )
-    
+
     assert r.status_code == 200, f"Response: {r.text}"
     assert r.json() == {"message": "Credentials deleted successfully"}
-    
+
     # Verifique se foi excluído do banco de dados
     deleted_credentials = db.get(Credentials, credentials_id)
     assert deleted_credentials is None
@@ -167,11 +155,11 @@ def test_delete_credentials_not_found(
 ) -> None:
     """Test deleting non-existent credentials."""
     non_existent_id = uuid.uuid4()
-    
+
     r = client.delete(
         f"{settings.API_V1_STR}/credentials/{non_existent_id}",
         headers=normal_user_token_headers,
     )
-    
+
     assert r.status_code == 404, f"Response: {r.text}"
     assert r.json() == {"detail": "Credentials not found"}

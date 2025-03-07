@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timezone
 
 from fastapi.testclient import TestClient
-from sqlmodel import Session, select
+from sqlmodel import Session
 
 from app.core.config import settings
 from app.models.bot import (
@@ -12,8 +12,7 @@ from app.models.bot import (
     BotSessionStatus,
     Credentials,
 )
-from app.models.core import User
-from app.tests.utils.utils import random_email, random_lower_string
+from app.tests.utils.user import get_user_from_token_header
 
 
 def test_get_session_applies(
@@ -22,24 +21,22 @@ def test_get_session_applies(
     """Test getting applies for a bot session."""
     # Obtém o usuário a partir do token
     user = get_user_from_token_header(db, normal_subscriber_token_headers, client)
-    
+
     # Criar credenciais para teste
     credentials = Credentials(
-        user_id=user.id,  
-        email="test_applies@example.com",
-        password="testpassword"
+        user_id=user.id, email="test_applies@example.com", password="testpassword"
     )
     db.add(credentials)
     db.commit()
     db.refresh(credentials)
-    
+
     # Criar uma sessão para o usuário
     bot_session = BotSession(
-        user_id=user.id,  
+        user_id=user.id,
         credentials_id=credentials.id,
         applies_limit=150,
         status=BotSessionStatus.RUNNING,
-        created_at=datetime.now(timezone.utc)
+        created_at=datetime.now(timezone.utc),
     )
     db.add(bot_session)
     db.commit()
@@ -95,24 +92,24 @@ def test_get_session_applies_with_filter(
     """Test getting applies for a bot session with status filter."""
     # Obtém o usuário a partir do token
     user = get_user_from_token_header(db, normal_subscriber_token_headers, client)
-    
+
     # Criar credenciais para teste
     credentials = Credentials(
-        user_id=user.id,  
+        user_id=user.id,
         email="test_applies_filter@example.com",
-        password="testpassword"
+        password="testpassword",
     )
     db.add(credentials)
     db.commit()
     db.refresh(credentials)
-    
+
     # Criar uma sessão para o usuário
     bot_session = BotSession(
-        user_id=user.id,  
+        user_id=user.id,
         credentials_id=credentials.id,
         applies_limit=150,
         status=BotSessionStatus.RUNNING,
-        created_at=datetime.now(timezone.utc)
+        created_at=datetime.now(timezone.utc),
     )
     db.add(bot_session)
     db.commit()
@@ -186,12 +183,10 @@ def test_get_apply_details(
     """Test getting details of a specific apply."""
     # Obtém o usuário a partir do token
     user = get_user_from_token_header(db, normal_subscriber_token_headers, client)
-    
+
     # Criar credenciais para teste
     credentials = Credentials(
-        user_id=user.id,  
-        email="test_apply_details@example.com",
-        password="testpassword"
+        user_id=user.id, email="test_apply_details@example.com", password="testpassword"
     )
     db.add(credentials)
     db.commit()
@@ -199,11 +194,11 @@ def test_get_apply_details(
 
     # Criar uma sessão para o usuário
     bot_session = BotSession(
-        user_id=user.id,  
+        user_id=user.id,
         credentials_id=credentials.id,
         applies_limit=150,
         status=BotSessionStatus.RUNNING,
-        created_at=datetime.now(timezone.utc)
+        created_at=datetime.now(timezone.utc),
     )
     db.add(bot_session)
     db.commit()
@@ -247,12 +242,12 @@ def test_get_apply_details_not_found(
     """Test getting details of a non-existent apply."""
     # Obtém o usuário a partir do token
     user = get_user_from_token_header(db, normal_subscriber_token_headers, client)
-    
+
     # Criar credenciais para teste
     credentials = Credentials(
-        user_id=user.id,  
+        user_id=user.id,
         email="test_apply_notfound@example.com",
-        password="testpassword"
+        password="testpassword",
     )
     db.add(credentials)
     db.commit()
@@ -260,11 +255,11 @@ def test_get_apply_details_not_found(
 
     # Criar uma sessão para o usuário
     bot_session = BotSession(
-        user_id=user.id,  
+        user_id=user.id,
         credentials_id=credentials.id,
         applies_limit=150,
         status=BotSessionStatus.RUNNING,
-        created_at=datetime.now(timezone.utc)
+        created_at=datetime.now(timezone.utc),
     )
     db.add(bot_session)
     db.commit()
@@ -293,12 +288,12 @@ def test_get_applies_summary(
     """Test getting a summary of applies for a bot session."""
     # Obtém o usuário a partir do token
     user = get_user_from_token_header(db, normal_subscriber_token_headers, client)
-    
+
     # Criar credenciais para teste
     credentials = Credentials(
-        user_id=user.id,  
+        user_id=user.id,
         email="test_applies_summary@example.com",
-        password="testpassword"
+        password="testpassword",
     )
     db.add(credentials)
     db.commit()
@@ -306,11 +301,11 @@ def test_get_applies_summary(
 
     # Criar uma sessão para o usuário
     bot_session = BotSession(
-        user_id=user.id,  
+        user_id=user.id,
         credentials_id=credentials.id,
         applies_limit=150,
         status=BotSessionStatus.RUNNING,
-        created_at=datetime.now(timezone.utc)
+        created_at=datetime.now(timezone.utc),
     )
     db.add(bot_session)
     db.commit()

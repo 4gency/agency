@@ -70,7 +70,10 @@ def authentication_subscriber_token_from_email(
 
     return user_authentication_headers(client=client, email=email, password=password)
 
-def get_user_from_token_header(db: Session, headers: dict[str, str], client: TestClient) -> User:
+
+def get_user_from_token_header(
+    db: Session, headers: dict[str, str], client: TestClient
+) -> User:
     """Extrai o usuário do banco a partir do token de autenticação."""
     r = client.get(f"{settings.API_V1_STR}/users/me", headers=headers)
     current_user = r.json()
@@ -79,5 +82,5 @@ def get_user_from_token_header(db: Session, headers: dict[str, str], client: Tes
 
     assert user is not None
     assert user.id
-    
+
     return user
