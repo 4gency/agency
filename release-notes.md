@@ -1,5 +1,7 @@
 ## Latest Changes
 
+* Frontend features. PR [#57](https://github.com/4gency/agency/pull/57) by [@gustavosett](https://github.com/gustavosett).
+
 ### Features
 
 * Dashboard feature. PR [#56](https://github.com/4gency/agency/pull/56) by [@gustavosett](https://github.com/gustavosett).
