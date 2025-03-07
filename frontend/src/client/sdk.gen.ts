@@ -30,6 +30,7 @@ import type {
   PauseBotSessionResponse,
   ResumeBotSessionData,
   ResumeBotSessionResponse,
+  GetUserDashboardStatsResponse,
   StripeSuccessData,
   StripeSuccessResponse,
   GetStripeCheckoutSessionByIdData,
@@ -474,7 +475,7 @@ export class BotsService {
 
   /**
    * Resume Bot Session
-   * Resume a bot session.
+   * Resume a paused bot session.
    * @param data The data for the request.
    * @param data.sessionId
    * @returns SessionPublic Successful Response
@@ -494,6 +495,31 @@ export class BotsService {
         403: "Permission error",
         404: "Bot session not found",
         422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Get User Dashboard Stats
+   * Get user dashboard statistics.
+   *
+   * Returns aggregated statistics across all user's bot sessions, including:
+   * - Total applications
+   * - Successful applications
+   * - Success rate
+   * - Failed applications
+   * - Failure rate
+   * - Pending applications
+   * @returns UserDashboardStats Successful Response
+   * @throws ApiError
+   */
+  public static getUserDashboardStats(): CancelablePromise<GetUserDashboardStatsResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/bots/dashboard/stats",
+      errors: {
+        401: "Authentication error",
+        403: "Permission error",
       },
     })
   }
