@@ -9,7 +9,7 @@ import {
 } from "@chakra-ui/react"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import type React from "react"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { ConfigsService, SubscriptionsService } from "../../client/sdk.gen"
 import type { GetPlainTextResumeResponse } from "../../client/types.gen"
@@ -304,9 +304,6 @@ const LoadingSkeleton: React.FC = () => (
 // Main component
 export const ResumePage: React.FC = () => {
   const showToast = useCustomToast()
-  const [subscriptionId, setSubscriptionId] = useState<string>("")
-  const [isLoadingSubscription, setIsLoadingSubscription] =
-    useState<boolean>(true)
   const [_scrollPosition, setScrollPosition] = useState<number>(0)
 
   // Form setup
@@ -333,47 +330,42 @@ export const ResumePage: React.FC = () => {
     },
   })
 
-  // Set subscription ID when data is available
-  useEffect(() => {
-    if (subscriptions && subscriptions.length > 0) {
-      setSubscriptionId(subscriptions[0].id)
-      setIsLoadingSubscription(false)
-    }
-  }, [subscriptions])
+  // Check if user has an active subscription
+  const hasActiveSubscription = useMemo(() => {
+    return subscriptions && subscriptions.length > 0;
+  }, [subscriptions]);
 
-  // Fetch resume data
   const { data: resumeData, isLoading: isLoadingResume } = useQuery({
-    queryKey: ["plainTextResume", subscriptionId],
+    queryKey: ["plainTextResume"],
     queryFn: async () => {
-      if (!subscriptionId) {
+      if (!hasActiveSubscription) {
         return null
       }
-      return await ConfigsService.getPlainTextResume({ subscriptionId })
+      return await ConfigsService.getPlainTextResume()
     },
-    enabled: !!subscriptionId && !isLoadingSubscription,
+    enabled: hasActiveSubscription && !isLoadingSubscriptions,
     retry: false,
   })
 
   // Handle resume fetch error
   useEffect(() => {
-    if (!isLoadingResume && !resumeData && subscriptionId) {
+    if (!isLoadingResume && !resumeData && hasActiveSubscription) {
       showToast(
         "Error fetching resume",
         "There was an error loading your resume data.",
         "error",
       )
     }
-  }, [isLoadingResume, resumeData, subscriptionId, showToast])
+  }, [isLoadingResume, resumeData, hasActiveSubscription, showToast])
 
   // Update resume mutation
   const updateResumeMutation = useMutation({
     mutationFn: async (data: ResumeForm) => {
-      if (!subscriptionId) {
-        throw new Error("No subscription ID available")
+      if (!hasActiveSubscription) {
+        throw new Error("No active subscription available")
       }
       const apiData = transformFormToApiData(data)
       return await ConfigsService.updatePlainTextResume({
-        subscriptionId,
         requestBody: apiData,
       })
     },
@@ -431,7 +423,7 @@ export const ResumePage: React.FC = () => {
   }
 
   const isLoading =
-    isLoadingSubscriptions || isLoadingSubscription || isLoadingResume
+    isLoadingSubscriptions || isLoadingResume
 
   return (
     <Container
@@ -521,7 +513,7 @@ export const ResumePage: React.FC = () => {
               <Button
                 type="submit"
                 isLoading={isSubmitting || updateResumeMutation.isPending}
-                isDisabled={!isDirty || !subscriptionId}
+                isDisabled={!isDirty || !hasActiveSubscription}
               >
                 Save Resume
               </Button>

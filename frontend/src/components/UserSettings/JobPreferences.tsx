@@ -25,7 +25,7 @@ import {
 } from "@chakra-ui/react"
 import { useMutation } from "@tanstack/react-query"
 import type React from "react"
-import { useEffect, useLayoutEffect, useRef, useState } from "react"
+import { useEffect, useLayoutEffect, useRef, useState, useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { type ApiError, type ConfigPublic, ConfigsService } from "../../client"
 
@@ -295,12 +295,16 @@ const LoadingSkeleton = () => {
 
 const JobPreferencesPage: React.FC = () => {
   const { data: subscriptions, isLoading } = useSubscriptions()
-  const [selectedSubId, setSelectedSubId] = useState<string>("")
   const [scrollPosition, setScrollPosition] = useState<number>(0)
   const [isDataLoaded, setIsDataLoaded] = useState<boolean>(false)
   const [containerHeight, setContainerHeight] = useState<number | null>(null)
   const pageContainerRef = useRef<HTMLDivElement>(null)
   const showToast = useCustomToast()
+
+  // Check if user has an active subscription
+  const hasActiveSubscription = useMemo(() => {
+    return subscriptions && subscriptions.length > 0;
+  }, [subscriptions]);
 
   // Default form data for first render
   const defaultFormValues: JobPreferencesForm = {
@@ -325,17 +329,10 @@ const JobPreferencesPage: React.FC = () => {
     reset,
     watch,
     setValue,
-    formState: { isSubmitting },
+    formState: { isSubmitting, isDirty },
   } = useForm<JobPreferencesForm>({
     defaultValues: defaultFormValues,
   })
-
-  // Automatically select the first subscription when data is loaded
-  useEffect(() => {
-    if (subscriptions && subscriptions.length > 0 && !selectedSubId) {
-      setSelectedSubId(subscriptions[0].id)
-    }
-  }, [subscriptions, selectedSubId])
 
   // Adicionar um useLayoutEffect para garantir que a página não role após o carregamento dos dados
   useLayoutEffect(() => {
@@ -348,9 +345,9 @@ const JobPreferencesPage: React.FC = () => {
     }
   }, [isDataLoaded, scrollPosition])
 
-  /** When a subscription is selected, fetch the config and populate the form. */
+  /** When the component loads and user has an active subscription, fetch the config and populate the form. */
   useEffect(() => {
-    if (selectedSubId) {
+    if (hasActiveSubscription) {
       setIsDataLoaded(false)
 
       // Captura a altura atual do container antes de buscar os dados
@@ -364,7 +361,7 @@ const JobPreferencesPage: React.FC = () => {
       const currentScrollPosition = window.scrollY
       setScrollPosition(currentScrollPosition)
 
-      ConfigsService.getConfig({ subscriptionId: selectedSubId })
+      ConfigsService.getConfig()
         .then((config) => {
           // Transform API config -> form shape
           const transformed = transformToForm(config)
@@ -405,13 +402,12 @@ const JobPreferencesPage: React.FC = () => {
           setContainerHeight(null) // Remover a altura fixa em caso de erro
         })
     }
-  }, [selectedSubId, reset, showToast])
+  }, [hasActiveSubscription, reset, showToast])
 
   /** Save preferences (PUT) */
   const mutation = useMutation({
     mutationFn: (data: ConfigPublic) =>
       ConfigsService.updateConfig({
-        subscriptionId: selectedSubId,
         requestBody: data,
       }),
     onSuccess: () => {
@@ -425,8 +421,8 @@ const JobPreferencesPage: React.FC = () => {
 
   /** Handle form submit */
   const onSubmit = (data: JobPreferencesForm) => {
-    if (!selectedSubId) {
-      showToast("Attention", "No subscription available.", "error")
+    if (!hasActiveSubscription) {
+      showToast("Attention", "No active subscription available.", "error")
       return
     }
     // Convert form data -> API shape
@@ -474,8 +470,6 @@ const JobPreferencesPage: React.FC = () => {
     )
   }
 
-  const hasSubscriptions = subscriptions && subscriptions.length > 0
-
   return (
     <Container
       maxW={{ base: "full", md: "60%" }}
@@ -489,8 +483,8 @@ const JobPreferencesPage: React.FC = () => {
         Job Preferences
       </Heading>
 
-      {!hasSubscriptions ? (
-        <Text>No subscriptions available.</Text>
+      {!hasActiveSubscription ? (
+        <Text>No active subscription available.</Text>
       ) : (
         <Box as="form" onSubmit={handleSubmit(onSubmit)}>
           {/* Remote */}
@@ -697,10 +691,12 @@ const JobPreferencesPage: React.FC = () => {
           />
 
           <Button
-            mt={6}
             type="submit"
-            isDisabled={!hasSubscriptions}
-            isLoading={isSubmitting || mutation.status === "pending"}
+            colorScheme="blue"
+            isLoading={isSubmitting}
+            isDisabled={!isDirty || !hasActiveSubscription}
+            mt={4}
+            width="100%"
           >
             Save Preferences
           </Button>
