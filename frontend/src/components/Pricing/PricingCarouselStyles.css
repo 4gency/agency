@@ -74,12 +74,12 @@ body {
   height: 20px;
   content: '•';
   text-align: center;
-  color: #CBD5E0;
+  color: #e0e0cb;
   opacity: 0.5;
 }
 
 .slick-dots li.slick-active button:before {
-  color: #4FD1C5;
+  color: #00766C;
   opacity: 1;
 }
 
