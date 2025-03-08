@@ -1,12 +1,11 @@
-from typing import List, Optional, ClassVar, Dict, Any
 import json
+from typing import Any, ClassVar
 from uuid import UUID
 
 from pydantic import BaseModel, model_validator
 from sqlalchemy import ForeignKey
-from sqlmodel import Field, SQLModel, JSON, Column
-
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
+from sqlmodel import JSON, Column, Field, SQLModel
 
 
 class ExperienceLevel(BaseModel):
@@ -17,7 +16,7 @@ class ExperienceLevel(BaseModel):
     director: bool = True
     executive: bool = True
 
-    def dict(self) -> Dict[str, Any]:
+    def dict(self) -> dict[str, Any]:
         return self.model_dump()
 
 
@@ -30,7 +29,7 @@ class JobTypes(BaseModel):
     other: bool = True
     volunteer: bool = True
 
-    def dict(self) -> Dict[str, Any]:
+    def dict(self) -> dict[str, Any]:
         return self.model_dump()
 
 
@@ -50,7 +49,7 @@ class Date(BaseModel):
             self.month = self.week = self.hours = False
         return self
 
-    def dict(self) -> Dict[str, Any]:
+    def dict(self) -> dict[str, Any]:
         return self.model_dump()
 
 
@@ -62,23 +61,23 @@ class ConfigPublic(BaseModel):
     experience_level: ExperienceLevel = ExperienceLevel()
     job_types: JobTypes = JobTypes()
     date: Date = Date(all_time=True)
-    positions: List[str] = [
+    positions: list[str] = [
         "Developer",
     ]
-    locations: List[str] = [
+    locations: list[str] = [
         "USA",
     ]
 
     apply_once_at_company: bool = True
     distance: int = 100
 
-    company_blacklist: List[str] = [
+    company_blacklist: list[str] = [
         "Wayfair",
     ]
-    title_blacklist: List[str] = [
+    title_blacklist: list[str] = [
         "DBA",
     ]
-    location_blacklist: List[str] = [
+    location_blacklist: list[str] = [
         "Brazil",
     ]
 
@@ -89,7 +88,7 @@ class ConfigPublic(BaseModel):
 class Config(SQLModel, table=True):
     __tablename__: ClassVar[str] = "job_preferences"
 
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
     user_id: UUID = Field(
         sa_column=Column(
             PGUUID(as_uuid=True),
@@ -106,39 +105,34 @@ class Config(SQLModel, table=True):
     hybrid: bool = True
     onsite: bool = True
 
-    experience_level: Dict[str, Any] = Field(
-        default_factory=lambda: json.loads(ExperienceLevel().model_dump_json()), 
-        sa_column=Column(JSON)
+    experience_level: dict[str, Any] = Field(
+        default_factory=lambda: json.loads(ExperienceLevel().model_dump_json()),
+        sa_column=Column(JSON),
     )
-    job_types: Dict[str, Any] = Field(
-        default_factory=lambda: json.loads(JobTypes().model_dump_json()), 
-        sa_column=Column(JSON)
+    job_types: dict[str, Any] = Field(
+        default_factory=lambda: json.loads(JobTypes().model_dump_json()),
+        sa_column=Column(JSON),
     )
-    date: Dict[str, Any] = Field(
-        default_factory=lambda: json.loads(Date(all_time=True).model_dump_json()), 
-        sa_column=Column(JSON)
+    date: dict[str, Any] = Field(
+        default_factory=lambda: json.loads(Date(all_time=True).model_dump_json()),
+        sa_column=Column(JSON),
     )
-    positions: List[str] = Field(
-        default_factory=lambda: ["Developer"], 
-        sa_column=Column(JSON)
+    positions: list[str] = Field(
+        default_factory=lambda: ["Developer"], sa_column=Column(JSON)
     )
-    locations: List[str] = Field(
-        default_factory=lambda: ["USA"], 
-        sa_column=Column(JSON)
+    locations: list[str] = Field(
+        default_factory=lambda: ["USA"], sa_column=Column(JSON)
     )
 
     apply_once_at_company: bool = True
     distance: int = 100
 
-    company_blacklist: List[str] = Field(
-        default_factory=lambda: ["Wayfair"], 
-        sa_column=Column(JSON)
+    company_blacklist: list[str] = Field(
+        default_factory=lambda: ["Wayfair"], sa_column=Column(JSON)
     )
-    title_blacklist: List[str] = Field(
-        default_factory=lambda: ["DBA"], 
-        sa_column=Column(JSON)
+    title_blacklist: list[str] = Field(
+        default_factory=lambda: ["DBA"], sa_column=Column(JSON)
     )
-    location_blacklist: List[str] = Field(
-        default_factory=lambda: ["Brazil"], 
-        sa_column=Column(JSON)
+    location_blacklist: list[str] = Field(
+        default_factory=lambda: ["Brazil"], sa_column=Column(JSON)
     )

@@ -1,7 +1,6 @@
-import uuid
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, status
 
 from app.api.deps import CurrentUser, SessionDep
 from app.models.core import ErrorMessage

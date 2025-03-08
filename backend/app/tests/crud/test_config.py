@@ -1,10 +1,4 @@
-import uuid
-from collections.abc import Generator
-from typing import Any
-
-import pytest
-from sqlmodel import Session, SQLModel, create_engine
-from sqlalchemy.pool import StaticPool
+from sqlmodel import Session
 
 from app.models.crud.config import (
     create_config,
@@ -17,9 +11,10 @@ from app.models.crud.config import (
     update_config,
     update_resume,
 )
-from app.models.preference import Config, ConfigPublic, ExperienceLevel, JobTypes, Date
+from app.models.preference import Config, ConfigPublic, Date, ExperienceLevel, JobTypes
 from app.models.resume import PlainTextResume, PlainTextResumePublic
 from app.tests.utils.user import create_random_user
+
 
 # ------------------------------------------------------------------------------
 # Tests for Config (Job Preferences) CRUD
@@ -44,7 +39,7 @@ def test_update_config(db: Session) -> None:
     # Get from database to ensure it's properly loaded
     config = get_config(session=db, user_id=user.id)
     assert config is not None
-    
+
     # Create the base objects for the update
     experience_level = ExperienceLevel()
     job_types = JobTypes()
@@ -106,9 +101,7 @@ def test_update_resume(db: Session) -> None:
         interests=["Coding", "Music"]
         # Additional fields can be updated as needed.
     )
-    update_resume(
-        session=db, resume_instance=resume, resume_in=updated_resume_data
-    )
+    update_resume(session=db, resume_instance=resume, resume_in=updated_resume_data)
 
     fetched_resume = get_resume(session=db, user_id=user.id)
     assert fetched_resume is not None
@@ -120,9 +113,7 @@ def test_update_resume(db: Session) -> None:
 #
 def test_create_user_default_config(db: Session) -> None:
     user = create_random_user(db)
-    config = create_user_default_config(
-        user_id=user.id, session=db
-    )
+    config = create_user_default_config(user_id=user.id, session=db)
     assert config.user_id == user.id
 
     fetched_config = get_config(session=db, user_id=user.id)
@@ -131,9 +122,7 @@ def test_create_user_default_config(db: Session) -> None:
 
 def test_create_user_default_resume(db: Session) -> None:
     user = create_random_user(db)
-    resume = create_user_default_resume(
-        user_id=user.id, session=db
-    )
+    resume = create_user_default_resume(user_id=user.id, session=db)
     assert resume.user_id == user.id
 
     fetched_resume = get_resume(session=db, user_id=user.id)
@@ -142,9 +131,7 @@ def test_create_user_default_resume(db: Session) -> None:
 
 def test_create_user_default_configs(db: Session) -> None:
     user = create_random_user(db)
-    config, resume = create_user_default_configs(
-        user_id=user.id, session=db
-    )
+    config, resume = create_user_default_configs(user_id=user.id, session=db)
     assert config.user_id == user.id
     assert resume.user_id == user.id
 

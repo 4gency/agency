@@ -602,14 +602,16 @@ def test_payments_me(
     assert payments
     assert payments["data"]
     assert len(payments["data"]) >= 1, "Should have at least one payment"
-    
+
     # Verifique se o pagamento que acabamos de criar está entre os retornados
     found_payment = False
     for payment_data in payments["data"]:
-        if (payment_data["amount"] == 10.0 and 
-            payment_data["currency"].lower() == "usd" and
-            payment_data["subscription_id"] == str(subscription.id)):
+        if (
+            payment_data["amount"] == 10.0
+            and payment_data["currency"].lower() == "usd"
+            and payment_data["subscription_id"] == str(subscription.id)
+        ):
             found_payment = True
             break
-    
+
     assert found_payment, "The payment we just created should be in the results"
