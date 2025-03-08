@@ -906,28 +906,18 @@ export type StripeCancelData = {
 
 export type StripeCancelResponse = Message
 
-export type GetConfigData = {
-  subscriptionId: string
-}
-
 export type GetConfigResponse = ConfigPublic
 
 export type UpdateConfigData = {
   requestBody: ConfigPublic
-  subscriptionId: string
 }
 
 export type UpdateConfigResponse = unknown
-
-export type GetPlainTextResumeData = {
-  subscriptionId: string
-}
 
 export type GetPlainTextResumeResponse = PlainTextResumePublic
 
 export type UpdatePlainTextResumeData = {
   requestBody: PlainTextResumePublic
-  subscriptionId: string
 }
 
 export type UpdatePlainTextResumeResponse = unknown

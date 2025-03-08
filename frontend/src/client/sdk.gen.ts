@@ -45,11 +45,9 @@ import type {
   StripeWebhookResponse,
   StripeCancelData,
   StripeCancelResponse,
-  GetConfigData,
   GetConfigResponse,
   UpdateConfigData,
   UpdateConfigResponse,
-  GetPlainTextResumeData,
   GetPlainTextResumeResponse,
   UpdatePlainTextResumeData,
   UpdatePlainTextResumeResponse,
@@ -709,34 +707,23 @@ export class CheckoutService {
 export class ConfigsService {
   /**
    * Get Config
-   * @param data The data for the request.
-   * @param data.subscriptionId
    * @returns ConfigPublic Successful Response
    * @throws ApiError
    */
-  public static getConfig(
-    data: GetConfigData,
-  ): CancelablePromise<GetConfigResponse> {
+  public static getConfig(): CancelablePromise<GetConfigResponse> {
     return __request(OpenAPI, {
       method: "GET",
-      url: "/api/v1/configs/{subscription_id}/job-preferences",
-      path: {
-        subscription_id: data.subscriptionId,
-      },
+      url: "/api/v1/configs/job-preferences",
       errors: {
         401: "Authentication error",
-        403: "Permission error",
         404: "Resource not found",
-        422: "Validation Error",
       },
     })
   }
 
   /**
    * Update Config
-   * Update config.
    * @param data The data for the request.
-   * @param data.subscriptionId
    * @param data.requestBody
    * @returns unknown Successful Response
    * @returns unknown Successful Response
@@ -747,15 +734,11 @@ export class ConfigsService {
   ): CancelablePromise<UpdateConfigResponse> {
     return __request(OpenAPI, {
       method: "PATCH",
-      url: "/api/v1/configs/{subscription_id}/job-preferences",
-      path: {
-        subscription_id: data.subscriptionId,
-      },
+      url: "/api/v1/configs/job-preferences",
       body: data.requestBody,
       mediaType: "application/json",
       errors: {
         401: "Authentication error",
-        403: "Permission error",
         404: "Resource not found",
         422: "Validation Error",
       },
@@ -764,35 +747,25 @@ export class ConfigsService {
 
   /**
    * Get Plain Text Resume
-   * @param data The data for the request.
-   * @param data.subscriptionId
    * @returns PlainTextResumePublic Successful Response
    * @throws ApiError
    */
-  public static getPlainTextResume(
-    data: GetPlainTextResumeData,
-  ): CancelablePromise<GetPlainTextResumeResponse> {
+  public static getPlainTextResume(): CancelablePromise<GetPlainTextResumeResponse> {
     return __request(OpenAPI, {
       method: "GET",
-      url: "/api/v1/configs/{subscription_id}/resume",
-      path: {
-        subscription_id: data.subscriptionId,
-      },
+      url: "/api/v1/configs/resume",
       errors: {
         401: "Authentication error",
-        403: "Permission error",
         404: "Resource not found",
-        422: "Validation Error",
       },
     })
   }
 
   /**
    * Update Plain Text Resume
-   * Update plain text resume.
    * @param data The data for the request.
-   * @param data.subscriptionId
    * @param data.requestBody
+   * @returns unknown Successful Response
    * @returns unknown Successful Response
    * @throws ApiError
    */
@@ -801,18 +774,13 @@ export class ConfigsService {
   ): CancelablePromise<UpdatePlainTextResumeResponse> {
     return __request(OpenAPI, {
       method: "PATCH",
-      url: "/api/v1/configs/{subscription_id}/resume",
-      path: {
-        subscription_id: data.subscriptionId,
-      },
+      url: "/api/v1/configs/resume",
       body: data.requestBody,
       mediaType: "application/json",
       errors: {
         401: "Authentication error",
-        403: "Permission error",
         404: "Resource not found",
         422: "Validation Error",
-        500: "Successful Response",
       },
     })
   }
