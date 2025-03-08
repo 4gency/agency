@@ -2,8 +2,9 @@ import {
   FormControl,
   FormLabel,
   Input,
-  Select,
   SimpleGrid,
+  Text,
+  Flex,
 } from "@chakra-ui/react"
 import type { UseFormRegister } from "react-hook-form"
 import type { ResumeForm } from "../types"
@@ -18,9 +19,12 @@ const SalaryExpectationSection: React.FC<SalaryExpectationSectionProps> = ({
 }) => {
   return (
     <SectionContainer title="Salary Expectation">
-      <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
+      <Text fontSize="sm" color="gray.500" mb={3}>
+        Please provide your expected annual salary range in USD.
+      </Text>
+      <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
         <FormControl>
-          <FormLabel>Minimum</FormLabel>
+          <FormLabel>Minimum (USD/year)</FormLabel>
           <Input
             type="number"
             placeholder="Minimum salary"
@@ -31,7 +35,7 @@ const SalaryExpectationSection: React.FC<SalaryExpectationSectionProps> = ({
         </FormControl>
 
         <FormControl>
-          <FormLabel>Maximum</FormLabel>
+          <FormLabel>Maximum (USD/year)</FormLabel>
           <Input
             type="number"
             placeholder="Maximum salary"
@@ -39,25 +43,6 @@ const SalaryExpectationSection: React.FC<SalaryExpectationSectionProps> = ({
               valueAsNumber: true,
             })}
           />
-        </FormControl>
-
-        <FormControl>
-          <FormLabel>Currency</FormLabel>
-          <Select
-            placeholder="Select currency"
-            {...register("salary_expectation.currency")}
-          >
-            <option value="USD">USD - United States Dollar</option>
-            <option value="EUR">EUR - Euro</option>
-            <option value="GBP">GBP - British Pound</option>
-            <option value="CAD">CAD - Canadian Dollar</option>
-            <option value="AUD">AUD - Australian Dollar</option>
-            <option value="JPY">JPY - Japanese Yen</option>
-            <option value="CHF">CHF - Swiss Franc</option>
-            <option value="CNY">CNY - Chinese Yuan</option>
-            <option value="INR">INR - Indian Rupee</option>
-            <option value="BRL">BRL - Brazilian Real</option>
-          </Select>
         </FormControl>
       </SimpleGrid>
     </SectionContainer>

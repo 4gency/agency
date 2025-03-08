@@ -1,11 +1,24 @@
 import {
+  Alert,
+  AlertIcon,
+  AlertDescription,
+  Box,
   Button,
+  ButtonGroup,
+  Card,
+  CardBody,
+  CardHeader,
   Container,
   Divider,
   Flex,
+  FormControl,
+  FormErrorMessage,
+  FormLabel,
   Heading,
   Skeleton,
   Stack,
+  Text,
+  useColorModeValue,
 } from "@chakra-ui/react"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import type React from "react"
@@ -21,7 +34,6 @@ import AvailabilitySection from "./ResumeSections/AvailabilitySection"
 import EducationSection from "./ResumeSections/EducationSection"
 import InterestsSection from "./ResumeSections/InterestsSection"
 import LanguagesSection from "./ResumeSections/LanguagesSection"
-// Import all section components
 import PersonalInformationSection from "./ResumeSections/PersonalInformationSection"
 import ProjectsSection from "./ResumeSections/ProjectsSection"
 import SalaryExpectationSection from "./ResumeSections/SalaryExpectationSection"
@@ -44,7 +56,6 @@ const defaultValues: ResumeForm = {
   salary_expectation: {
     minimum: undefined,
     maximum: undefined,
-    currency: "",
   },
   work_preference: {
     remote: false,
@@ -115,6 +126,18 @@ const transformApiResponseToFormData = (
         )
       }
 
+      // Parse salary range from string to min/max numbers
+      let minimum: number | undefined = undefined
+      let maximum: number | undefined = undefined
+      
+      if (apiData.salary_expectations?.salary_range_usd) {
+        const range = apiData.salary_expectations.salary_range_usd.split('-');
+        if (range.length === 2) {
+          minimum = parseInt(range[0].trim().replace(/\D/g, ''));
+          maximum = parseInt(range[1].trim().replace(/\D/g, ''));
+        }
+      }
+
       return {
         personal_information: {
           name: apiData.personal_information.name || "",
@@ -175,21 +198,8 @@ const transformApiResponseToFormData = (
           : [],
         availability: apiData.availability?.notice_period || "",
         salary_expectation: {
-          minimum: apiData.salary_expectations?.salary_range_usd
-            ? Number.parseInt(
-                apiData.salary_expectations.salary_range_usd
-                  .split("-")[0]
-                  ?.replace(/\D/g, ""),
-              ) || undefined
-            : undefined,
-          maximum: apiData.salary_expectations?.salary_range_usd
-            ? Number.parseInt(
-                apiData.salary_expectations.salary_range_usd
-                  .split("-")[1]
-                  ?.replace(/\D/g, ""),
-              ) || undefined
-            : undefined,
-          currency: "USD",
+          minimum: minimum,
+          maximum: maximum,
         },
         work_preference: {
           remote: apiData.work_preferences?.remote_work || false,
@@ -308,6 +318,8 @@ export const ResumePage: React.FC = () => {
   const [_scrollPosition, setScrollPosition] = useState<number>(0)
   const [isCreatingNew, setIsCreatingNew] = useState<boolean>(false)
   const [formKey, setFormKey] = useState<number>(0) // Add a key to force re-render when needed
+  const cardBg = useColorModeValue("white", "gray.700")
+  const headerBg = useColorModeValue("gray.50", "gray.800")
 
   // Form setup
   const {
@@ -331,7 +343,7 @@ export const ResumePage: React.FC = () => {
       return await SubscriptionsService.getUserSubscriptions({
         onlyActive: true,
       })
-    },
+    }
   })
 
   // Check if user has an active subscription
@@ -341,7 +353,7 @@ export const ResumePage: React.FC = () => {
     return hasSubscription;
   }, [subscriptions]);
 
-  // Fetch resume data with better initialization and error handling
+  // Fetch resume data with better error handling
   const { data: resumeData, isLoading: isLoadingResume, error: resumeError, refetch: refetchResume } = useQuery({
     queryKey: ["plainTextResume"],
     queryFn: async () => {
@@ -521,96 +533,101 @@ export const ResumePage: React.FC = () => {
 
   // Return with the form key to force re-renders when needed
   return (
-    <Container
-      maxW={{ base: "full", md: "60%" }}
-      ml={{ base: 0, md: 0 }}
-      pb="100px"
-      key={formKey}
-    >
+    <Container maxW="full">
       <Heading size="lg" textAlign={{ base: "center", md: "left" }} py={12}>
         Resume
       </Heading>
+      {!hasActiveSubscription ? (
+        <Alert status="warning" mb={4}>
+          <AlertIcon />
+          <AlertDescription>
+            You need an active subscription to create or edit your resume.
+          </AlertDescription>
+        </Alert>
+      ) : null}
 
       {isLoading ? (
         <LoadingSkeleton />
       ) : (
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <Stack spacing={8}>
-            <PersonalInformationSection register={register} errors={errors} />
+        <form onSubmit={handleSubmit(onSubmit)} style={{ marginBottom: '3rem' }}>
+          <Stack spacing={8} mb={12}>
+            <Card variant="outline" p={4}>
+              <PersonalInformationSection register={register} errors={errors} />
+            </Card>
 
-            <Divider />
+            <Card variant="outline" p={4}>
+              <EducationSection
+                register={register}
+                errors={errors}
+                control={control}
+                watch={watch}
+              />
+            </Card>
 
-            <EducationSection
-              register={register}
-              errors={errors}
-              control={control}
-              watch={watch}
-            />
+            <Card variant="outline" p={4}>
+              <WorkExperienceSection
+                register={register}
+                errors={errors}
+                control={control}
+                watch={watch}
+              />
+            </Card>
 
-            <Divider />
+            <Card variant="outline" p={4}>
+              <ProjectsSection
+                register={register}
+                errors={errors}
+                control={control}
+                watch={watch}
+              />
+            </Card>
 
-            <WorkExperienceSection
-              register={register}
-              errors={errors}
-              control={control}
-              watch={watch}
-            />
+            <Card variant="outline" p={4}>
+              <SkillsSection
+                setValue={updateField}
+                getValues={getValues}
+                watch={watch}
+              />
+            </Card>
 
-            <Divider />
+            <Card variant="outline" p={4}>
+              <LanguagesSection
+                register={register}
+                errors={errors}
+                control={control}
+              />
+            </Card>
 
-            <ProjectsSection
-              register={register}
-              errors={errors}
-              control={control}
-              watch={watch}
-            />
+            <Card variant="outline" p={4}>
+              <AvailabilitySection register={register} />
+            </Card>
 
-            <Divider />
+            <Card variant="outline" p={4}>
+              <SalaryExpectationSection register={register} />
+            </Card>
 
-            <SkillsSection
-              setValue={updateField}
-              getValues={getValues}
-              watch={watch}
-            />
+            <Card variant="outline" p={4}>
+              <WorkPreferenceSection register={register} />
+            </Card>
 
-            <Divider />
-
-            <LanguagesSection
-              register={register}
-              errors={errors}
-              control={control}
-            />
-
-            <Divider />
-
-            <AvailabilitySection register={register} />
-
-            <Divider />
-
-            <SalaryExpectationSection register={register} />
-
-            <Divider />
-
-            <WorkPreferenceSection register={register} />
-
-            <Divider />
-
-            <InterestsSection
-              setValue={updateField}
-              getValues={getValues}
-              watch={watch}
-            />
-
-            <Flex justify="flex-end" mt={6}>
-              <Button
-                type="submit"
-                isLoading={isSubmitting || updateResumeMutation.isPending}
-                isDisabled={!hasActiveSubscription}
-              >
-                {isCreatingNew ? "Create Resume" : "Save Resume"}
-              </Button>
-            </Flex>
+            <Card variant="outline" p={4}>
+              <InterestsSection
+                setValue={updateField}
+                getValues={getValues}
+                watch={watch}
+              />
+            </Card>
           </Stack>
+          <ButtonGroup spacing={4} mt={4}>
+            <Button
+              type="submit"
+              variant="primary"
+              isLoading={isSubmitting || updateResumeMutation.isPending}
+              isDisabled={!hasActiveSubscription}
+            >
+              {isCreatingNew ? "Create Resume" : "Save Resume"}
+            </Button>
+          </ButtonGroup>
         </form>
       )}
     </Container>
