@@ -13,6 +13,7 @@ import { useEffect, useState, useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { ConfigsService, SubscriptionsService } from "../../client/sdk.gen"
 import type { GetPlainTextResumeResponse } from "../../client/types.gen"
+import { ApiError } from "../../client"
 import useCustomToast from "../../hooks/useCustomToast"
 import type { ResumeForm } from "./types"
 
@@ -305,6 +306,8 @@ const LoadingSkeleton: React.FC = () => (
 export const ResumePage: React.FC = () => {
   const showToast = useCustomToast()
   const [_scrollPosition, setScrollPosition] = useState<number>(0)
+  const [isCreatingNew, setIsCreatingNew] = useState<boolean>(false)
+  const [formKey, setFormKey] = useState<number>(0) // Add a key to force re-render when needed
 
   // Form setup
   const {
@@ -324,6 +327,7 @@ export const ResumePage: React.FC = () => {
   const { data: subscriptions, isLoading: isLoadingSubscriptions } = useQuery({
     queryKey: ["subscriptions"],
     queryFn: async () => {
+      console.log("Fetching subscriptions...");
       return await SubscriptionsService.getUserSubscriptions({
         onlyActive: true,
       })
@@ -332,55 +336,119 @@ export const ResumePage: React.FC = () => {
 
   // Check if user has an active subscription
   const hasActiveSubscription = useMemo(() => {
-    return subscriptions && subscriptions.length > 0;
+    const hasSubscription = subscriptions && subscriptions.length > 0;
+    console.log("Has active subscription:", hasSubscription);
+    return hasSubscription;
   }, [subscriptions]);
 
-  const { data: resumeData, isLoading: isLoadingResume } = useQuery({
+  // Fetch resume data with better initialization and error handling
+  const { data: resumeData, isLoading: isLoadingResume, error: resumeError, refetch: refetchResume } = useQuery({
     queryKey: ["plainTextResume"],
     queryFn: async () => {
-      if (!hasActiveSubscription) {
-        return null
+      console.log("Executing resume fetch...");
+      try {
+        const result = await ConfigsService.getPlainTextResume();
+        console.log("Resume fetch successful");
+        return result;
+      } catch (error) {
+        const apiError = error as ApiError;
+        console.log("Resume fetch error:", apiError.status, apiError.message);
+        if (apiError.status === 404) {
+          setIsCreatingNew(true);
+        }
+        throw error;
       }
-      return await ConfigsService.getPlainTextResume()
     },
-    enabled: hasActiveSubscription && !isLoadingSubscriptions,
-    retry: false,
-  })
+    // Don't condition the query on subscription status to avoid race conditions
+    enabled: true,
+    retry: 1,
+    refetchOnWindowFocus: false,
+    staleTime: 30000, // 30 seconds
+  });
 
-  // Handle resume fetch error
+  // When component mounts, ensure a fetch attempt is made
   useEffect(() => {
-    if (!isLoadingResume && !resumeData && hasActiveSubscription) {
-      showToast(
-        "Error fetching resume",
-        "There was an error loading your resume data.",
-        "error",
-      )
-    }
-  }, [isLoadingResume, resumeData, hasActiveSubscription, showToast])
+    // Force a refetch on component mount to ensure data is loaded
+    refetchResume();
+  }, [refetchResume]);
 
-  // Update resume mutation
+  // Handle resume fetch error - only show actual errors, not 404
+  useEffect(() => {
+    // If loading or data exists, do nothing
+    if (isLoadingResume || resumeData) return;
+    
+    // If we have an active subscription but no resume data
+    if (hasActiveSubscription && !resumeData) {
+      const apiError = resumeError as ApiError;
+      
+      // Only show a message for 404 if we haven't shown it already
+      if (apiError && apiError.status === 404) {
+        if (!isCreatingNew) {
+          setIsCreatingNew(true);
+          showToast(
+            "Resume not found",
+            "Please fill out the form to create your resume.",
+            "success",
+          )
+        }
+      } else if (apiError) {
+        // Real errors
+        console.error("Resume fetch error:", apiError);
+        showToast(
+          "Error fetching resume",
+          "There was an error loading your resume data.",
+          "error",
+        )
+      }
+    }
+  }, [isLoadingResume, resumeData, hasActiveSubscription, resumeError, showToast, isCreatingNew])
+
+  // Update resume mutation with better error handling
   const updateResumeMutation = useMutation({
     mutationFn: async (data: ResumeForm) => {
       if (!hasActiveSubscription) {
         throw new Error("No active subscription available")
       }
-      const apiData = transformFormToApiData(data)
-      return await ConfigsService.updatePlainTextResume({
-        requestBody: apiData,
-      })
+      
+      try {
+        const apiData = transformFormToApiData(data)
+        const result = await ConfigsService.updatePlainTextResume({
+          requestBody: apiData,
+        })
+        
+        // If we were creating a new resume, we're now editing
+        if (isCreatingNew) {
+          setIsCreatingNew(false)
+        }
+        
+        return result
+      } catch (error) {
+        console.error("Error saving resume:", error)
+        throw error
+      }
     },
     onSuccess: () => {
       showToast(
-        "Resume updated",
-        "Your resume has been successfully updated.",
+        isCreatingNew ? "Resume created" : "Resume updated",
+        isCreatingNew 
+          ? "Your resume has been successfully created." 
+          : "Your resume has been successfully updated.",
         "success",
       )
+      
+      // Force a re-render of the form with the current data
+      setFormKey(prevKey => prevKey + 1)
     },
     onError: (error: Error) => {
-      console.error("Error updating resume:", error)
+      console.error("Resume mutation error:", error)
+      const apiError = error as ApiError
+      const errorDetail = apiError.body ? 
+        (apiError.body as any).detail || apiError.message : 
+        "An unexpected error occurred."
+      
       showToast(
-        "Error updating resume",
-        "There was an error saving your resume data.",
+        "Error saving resume",
+        errorDetail,
         "error",
       )
     },
@@ -389,47 +457,75 @@ export const ResumePage: React.FC = () => {
   // Parse and set form data when API response is received
   useEffect(() => {
     if (resumeData) {
-      // Store current scroll position before form data is set
-      const currentScrollPosition = window.scrollY
-      setScrollPosition(currentScrollPosition)
+      try {
+        // Store current scroll position before form data is set
+        const currentScrollPosition = window.scrollY
+        setScrollPosition(currentScrollPosition)
 
-      const formData = transformApiResponseToFormData(resumeData)
+        const formData = transformApiResponseToFormData(resumeData)
 
-      // Use reset with callback para garantir conclusão da atualização
-      reset(formData, {
-        keepDirty: false,
-        keepErrors: false,
-        keepDefaultValues: false,
-        keepValues: false,
-        keepIsSubmitted: false,
-        keepTouched: false,
-        keepIsValid: false,
-        keepSubmitCount: false,
-      })
-
-      // Usar um timeout mais longo para garantir que o DOM tenha tempo de renderizar completamente
-      setTimeout(() => {
-        window.scrollTo({
-          top: currentScrollPosition,
-          behavior: "auto",
+        // Reset form with fetched data
+        reset(formData, {
+          keepDirty: false,
+          keepErrors: false,
+          keepDefaultValues: false,
+          keepValues: false,
+          keepIsSubmitted: false,
+          keepTouched: false,
+          keepIsValid: false,
+          keepSubmitCount: false,
         })
-      }, 100)
-    }
-  }, [resumeData, reset])
 
-  // Form submission handler
+        // Restore scroll position
+        setTimeout(() => {
+          window.scrollTo({
+            top: currentScrollPosition,
+            behavior: "auto",
+          })
+        }, 100)
+      } catch (error) {
+        console.error("Error processing resume data:", error)
+        showToast(
+          "Error processing data",
+          "There was an error processing your resume data.",
+          "error",
+        )
+      }
+    }
+  }, [resumeData, reset, showToast])
+
+  // Form submission handler with better error handling
   const onSubmit = (data: ResumeForm) => {
-    updateResumeMutation.mutate(data)
+    try {
+      updateResumeMutation.mutate(data)
+    } catch (error) {
+      console.error("Form submission error:", error)
+      showToast(
+        "Submission error",
+        "There was an error submitting the form.",
+        "error",
+      )
+    }
   }
 
-  const isLoading =
-    isLoadingSubscriptions || isLoadingResume
+  const isLoading = isLoadingSubscriptions || isLoadingResume
 
+  // Ensure all form fields correctly mark the form as dirty
+  const updateField = (field: any, value: any) => {
+    setValue(field, value, { 
+      shouldDirty: true,
+      shouldTouch: true,
+      shouldValidate: true 
+    });
+  }
+
+  // Return with the form key to force re-renders when needed
   return (
     <Container
       maxW={{ base: "full", md: "60%" }}
       ml={{ base: 0, md: 0 }}
       pb="100px"
+      key={formKey}
     >
       <Heading size="lg" textAlign={{ base: "center", md: "left" }} py={12}>
         Resume
@@ -472,9 +568,7 @@ export const ResumePage: React.FC = () => {
             <Divider />
 
             <SkillsSection
-              setValue={(field, value) => {
-                setValue(field, value, { shouldDirty: true })
-              }}
+              setValue={updateField}
               getValues={getValues}
               watch={watch}
             />
@@ -502,9 +596,7 @@ export const ResumePage: React.FC = () => {
             <Divider />
 
             <InterestsSection
-              setValue={(field, value) => {
-                setValue(field, value, { shouldDirty: true })
-              }}
+              setValue={updateField}
               getValues={getValues}
               watch={watch}
             />
@@ -513,9 +605,9 @@ export const ResumePage: React.FC = () => {
               <Button
                 type="submit"
                 isLoading={isSubmitting || updateResumeMutation.isPending}
-                isDisabled={!isDirty || !hasActiveSubscription}
+                isDisabled={!hasActiveSubscription}
               >
-                Save Resume
+                {isCreatingNew ? "Create Resume" : "Save Resume"}
               </Button>
             </Flex>
           </Stack>

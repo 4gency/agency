@@ -23,15 +23,14 @@ import {
   Text,
   useColorModeValue, // <--- importamos esse hook
 } from "@chakra-ui/react"
-import { useMutation } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import type React from "react"
 import { useEffect, useLayoutEffect, useRef, useState, useMemo } from "react"
 import { useForm } from "react-hook-form"
-import { type ApiError, type ConfigPublic, ConfigsService } from "../../client"
+import { type ApiError, type ConfigPublic, ConfigsService, SubscriptionsService } from "../../client"
 
 import { AddIcon } from "@chakra-ui/icons"
 import useCustomToast from "../../hooks/useCustomToast"
-import useSubscriptions from "../../hooks/userSubscriptions"
 
 /* ----------------------------- TYPES & UTILS ----------------------------- */
 
@@ -294,17 +293,30 @@ const LoadingSkeleton = () => {
 /* --------------------------- MAIN COMPONENT --------------------------- */
 
 const JobPreferencesPage: React.FC = () => {
-  const { data: subscriptions, isLoading } = useSubscriptions()
-  const [scrollPosition, setScrollPosition] = useState<number>(0)
-  const [isDataLoaded, setIsDataLoaded] = useState<boolean>(false)
-  const [containerHeight, setContainerHeight] = useState<number | null>(null)
-  const pageContainerRef = useRef<HTMLDivElement>(null)
-  const showToast = useCustomToast()
+  const { data: subscriptions, isLoading: isLoadingSubscriptions } = useQuery({
+    queryKey: ["subscriptions"],
+    queryFn: async () => {
+      console.log("Fetching subscriptions for preferences...");
+      return await SubscriptionsService.getUserSubscriptions({
+        onlyActive: true,
+      })
+    },
+  })
 
   // Check if user has an active subscription
   const hasActiveSubscription = useMemo(() => {
-    return subscriptions && subscriptions.length > 0;
+    const hasSubscription = subscriptions && subscriptions.length > 0;
+    console.log("Has active subscription for preferences:", hasSubscription);
+    return hasSubscription;
   }, [subscriptions]);
+
+  const [scrollPosition, setScrollPosition] = useState<number>(0)
+  const [isDataLoaded, setIsDataLoaded] = useState<boolean>(false)
+  const [containerHeight, setContainerHeight] = useState<number | null>(null)
+  const [isCreatingNew, setIsCreatingNew] = useState<boolean>(false)
+  const [formKey, setFormKey] = useState<number>(0) // Add a key to force re-render when needed
+  const pageContainerRef = useRef<HTMLDivElement>(null)
+  const showToast = useCustomToast()
 
   // Default form data for first render
   const defaultFormValues: JobPreferencesForm = {
@@ -345,24 +357,29 @@ const JobPreferencesPage: React.FC = () => {
     }
   }, [isDataLoaded, scrollPosition])
 
-  /** When the component loads and user has an active subscription, fetch the config and populate the form. */
-  useEffect(() => {
-    if (hasActiveSubscription) {
-      setIsDataLoaded(false)
+  // Fetch config using React Query directly for better consistency
+  const { refetch: refetchConfig } = useQuery({
+    queryKey: ["jobPreferences"],
+    queryFn: async () => {
+      console.log("Executing job preferences fetch...");
+      try {
+        setIsDataLoaded(false);
+        
+        // Captura a altura atual do container antes de buscar os dados
+        if (pageContainerRef.current) {
+          setContainerHeight(
+            pageContainerRef.current.getBoundingClientRect().height,
+          )
+        }
 
-      // Captura a altura atual do container antes de buscar os dados
-      if (pageContainerRef.current) {
-        setContainerHeight(
-          pageContainerRef.current.getBoundingClientRect().height,
-        )
-      }
-
-      // Store current scroll position before updating form
-      const currentScrollPosition = window.scrollY
-      setScrollPosition(currentScrollPosition)
-
-      ConfigsService.getConfig()
-        .then((config) => {
+        // Store current scroll position before updating form
+        const currentScrollPosition = window.scrollY
+        setScrollPosition(currentScrollPosition)
+        
+        const config = await ConfigsService.getConfig();
+        console.log("Job preferences fetch successful");
+        
+        try {
           // Transform API config -> form shape
           const transformed = transformToForm(config)
 
@@ -377,6 +394,11 @@ const JobPreferencesPage: React.FC = () => {
             keepIsValid: false,
             keepSubmitCount: false,
           })
+
+          // Reset creating new flag if we successfully loaded config
+          if (isCreatingNew) {
+            setIsCreatingNew(false)
+          }
 
           // Usar múltiplos timeouts para garantir que o DOM seja atualizado completamente
           setTimeout(() => {
@@ -394,40 +416,112 @@ const JobPreferencesPage: React.FC = () => {
             setIsDataLoaded(true)
             setContainerHeight(null) // Remover a altura fixa após o carregamento
           }, 300)
-        })
-        .catch((err: ApiError) => {
-          const detail = (err.body as any)?.detail || err.message
+        } catch (error) {
+          console.error("Error processing config data:", error)
+          setIsDataLoaded(true)
+          setContainerHeight(null)
+          showToast(
+            "Error processing preferences",
+            "There was an error processing your preference data.",
+            "error"
+          )
+        }
+        
+        return config;
+      } catch (err) {
+        const apiError = err as ApiError;
+        console.log("Job preferences fetch error:", apiError.status, apiError.message);
+        
+        // Em caso de 404, não é erro - apenas não existe config ainda
+        if (apiError.status === 404) {
+          setIsDataLoaded(true)
+          setContainerHeight(null)
+          if (!isCreatingNew) {
+            setIsCreatingNew(true)
+            showToast(
+              "Job preferences not found",
+              "Please fill out the form to create your job preferences.",
+              "success"
+            )
+          }
+        } else {
+          console.error("Error fetching preferences:", apiError)
+          const detail = (apiError.body as any)?.detail || apiError.message
           showToast("Error fetching preferences", String(detail), "error")
           setIsDataLoaded(true)
           setContainerHeight(null) // Remover a altura fixa em caso de erro
-        })
-    }
-  }, [hasActiveSubscription, reset, showToast])
+        }
+        
+        throw apiError;
+      }
+    },
+    enabled: true,
+    retry: 1,
+    refetchOnWindowFocus: false,
+    staleTime: 30000, // 30 seconds
+  });
 
-  /** Save preferences (PUT) */
+  // Ensure we fetch data when component mounts
+  useEffect(() => {
+    // Force a refetch on component mount to ensure data is loaded
+    refetchConfig();
+  }, [refetchConfig]);
+
+  /** Save preferences with better error handling */
   const mutation = useMutation({
-    mutationFn: (data: ConfigPublic) =>
-      ConfigsService.updateConfig({
-        requestBody: data,
-      }),
+    mutationFn: (data: ConfigPublic) => {
+      try {
+        return ConfigsService.updateConfig({
+          requestBody: data,
+        })
+      } catch (error) {
+        console.error("Error in mutation:", error)
+        throw error
+      }
+    },
     onSuccess: () => {
-      showToast("Success", "Preferences updated!", "success")
+      showToast(
+        isCreatingNew ? "Preferences created" : "Preferences updated", 
+        isCreatingNew 
+          ? "Your preferences have been successfully created." 
+          : "Your preferences have been successfully updated.", 
+        "success"
+      )
+      
+      // If we were creating, we're now editing
+      if (isCreatingNew) {
+        setIsCreatingNew(false)
+      }
+      
+      // Force a re-render of the form
+      setFormKey(prevKey => prevKey + 1)
     },
     onError: (err: ApiError) => {
+      console.error("Mutation error:", err)
       const detail = (err.body as any)?.detail || err.message
-      showToast("Error updating preferences", String(detail), "error")
+      showToast("Error saving preferences", String(detail), "error")
     },
   })
 
-  /** Handle form submit */
+  /** Handle form submit with better error handling */
   const onSubmit = (data: JobPreferencesForm) => {
-    if (!hasActiveSubscription) {
-      showToast("Attention", "No active subscription available.", "error")
-      return
+    try {
+      if (!hasActiveSubscription) {
+        showToast("Attention", "No active subscription available.", "error")
+        return
+      }
+      
+      // Convert form data -> API shape
+      const payload = transformFromForm(data)
+      mutation.mutate(payload)
+    } catch (error) {
+      console.error("Form submission error:", error)
+      showToast(
+        "Submission error", 
+        "An error occurred while processing your form submission.", 
+        "error"
+      )
     }
-    // Convert form data -> API shape
-    const payload = transformFromForm(data)
-    mutation.mutate(payload)
   }
 
   /** Watch local state for array-based fields to keep form in sync. */
@@ -459,7 +553,16 @@ const JobPreferencesPage: React.FC = () => {
     { value: "volunteer", label: "Volunteer" },
   ]
 
-  if (isLoading) {
+  // Ensure all form fields correctly mark the form as dirty
+  const updateField = (field: any, value: any) => {
+    setValue(field, value, { 
+      shouldDirty: true,
+      shouldTouch: true,
+      shouldValidate: true 
+    });
+  }
+
+  if (isLoadingSubscriptions) {
     return (
       <Container maxW={{ base: "full", md: "60%" }} ml={{ base: 0, md: 0 }}>
         <Heading size="lg" textAlign={{ base: "center", md: "left" }} py={12}>
@@ -472,12 +575,12 @@ const JobPreferencesPage: React.FC = () => {
 
   return (
     <Container
-      maxW={{ base: "full", md: "60%" }}
-      ml={{ base: 0, md: 0 }}
-      pb="100px"
-      ref={pageContainerRef}
-      h={containerHeight ? `${containerHeight}px` : "auto"}
+      maxW={{ base: "container.md", lg: "container.lg" }}
+      p={4}
       position="relative"
+      h={containerHeight ? `${containerHeight}px` : "auto"}
+      ref={pageContainerRef}
+      key={formKey}
     >
       <Heading size="lg" textAlign={{ base: "center", md: "left" }} py={12}>
         Job Preferences
@@ -506,7 +609,7 @@ const JobPreferencesPage: React.FC = () => {
                   ? "#00655D"
                   : useColorModeValue("gray.100", "gray.700"),
               }}
-              onClick={() => setValue("remote", !watch("remote"))}
+              onClick={() => updateField("remote", !watch("remote"))}
             >
               {watch("remote") ? "Remote Allowed" : "Remote Not Allowed"}
             </Button>
@@ -531,7 +634,7 @@ const JobPreferencesPage: React.FC = () => {
                   ? "#00655D"
                   : useColorModeValue("gray.100", "gray.700"),
               }}
-              onClick={() => setValue("hybrid", !watch("hybrid"))}
+              onClick={() => updateField("hybrid", !watch("hybrid"))}
             >
               {watch("hybrid") ? "Hybrid Allowed" : "Hybrid Not Allowed"}
             </Button>
@@ -556,7 +659,7 @@ const JobPreferencesPage: React.FC = () => {
                   ? "#00655D"
                   : useColorModeValue("gray.100", "gray.700"),
               }}
-              onClick={() => setValue("onsite", !watch("onsite"))}
+              onClick={() => updateField("onsite", !watch("onsite"))}
             >
               {watch("onsite") ? "Onsite Allowed" : "Onsite Not Allowed"}
             </Button>
@@ -568,7 +671,7 @@ const JobPreferencesPage: React.FC = () => {
             <MultiSelectToggle
               options={experienceOptions}
               selected={experienceLevels}
-              onChange={(values) => setValue("experience_levels", values)}
+              onChange={(values) => updateField("experience_levels", values)}
             />
           </FormControl>
 
@@ -578,7 +681,7 @@ const JobPreferencesPage: React.FC = () => {
             <MultiSelectToggle
               options={jobTypeOptions}
               selected={jobTypes}
-              onChange={(values) => setValue("job_types", values)}
+              onChange={(values) => updateField("job_types", values)}
             />
           </FormControl>
 
@@ -587,7 +690,7 @@ const JobPreferencesPage: React.FC = () => {
             <FormLabel>Posting Date</FormLabel>
             <RadioGroup
               value={watch("posting_date")}
-              onChange={(val) => setValue("posting_date", val)}
+              onChange={(val) => updateField("posting_date", val)}
             >
               <Flex direction="column" gap={2}>
                 <Radio value="all_time">All time</Radio>
@@ -620,7 +723,7 @@ const JobPreferencesPage: React.FC = () => {
                   : useColorModeValue("gray.100", "gray.700"),
               }}
               onClick={() =>
-                setValue(
+                updateField(
                   "apply_once_at_company",
                   !watch("apply_once_at_company"),
                 )
@@ -640,7 +743,7 @@ const JobPreferencesPage: React.FC = () => {
               max={200}
               step={10}
               value={watch("distance")}
-              onChange={(val) => setValue("distance", val)}
+              onChange={(val) => updateField("distance", val)}
             >
               <SliderTrack>
                 <SliderFilledTrack />
@@ -654,7 +757,7 @@ const JobPreferencesPage: React.FC = () => {
           <ArrayInput
             label="Positions"
             items={positions}
-            onChange={(newItems) => setValue("positions", newItems)}
+            onChange={(newItems) => updateField("positions", newItems)}
             placeholder="e.g. Developer, Frontend"
           />
 
@@ -662,7 +765,7 @@ const JobPreferencesPage: React.FC = () => {
           <ArrayInput
             label="Locations"
             items={locations}
-            onChange={(newItems) => setValue("locations", newItems)}
+            onChange={(newItems) => updateField("locations", newItems)}
             placeholder="e.g. USA, Canada"
           />
 
@@ -670,7 +773,7 @@ const JobPreferencesPage: React.FC = () => {
           <ArrayInput
             label="Company Blacklist"
             items={companyBlacklist}
-            onChange={(newItems) => setValue("company_blacklist", newItems)}
+            onChange={(newItems) => updateField("company_blacklist", newItems)}
             placeholder="e.g. Gupy, Lever"
           />
 
@@ -678,7 +781,7 @@ const JobPreferencesPage: React.FC = () => {
           <ArrayInput
             label="Title Blacklist"
             items={titleBlacklist}
-            onChange={(newItems) => setValue("title_blacklist", newItems)}
+            onChange={(newItems) => updateField("title_blacklist", newItems)}
             placeholder="e.g. Senior, Jr"
           />
 
@@ -686,7 +789,7 @@ const JobPreferencesPage: React.FC = () => {
           <ArrayInput
             label="Location Blacklist"
             items={locationBlacklist}
-            onChange={(newItems) => setValue("location_blacklist", newItems)}
+            onChange={(newItems) => updateField("location_blacklist", newItems)}
             placeholder="e.g. Brazil, Mexico"
           />
 
@@ -694,11 +797,11 @@ const JobPreferencesPage: React.FC = () => {
             type="submit"
             colorScheme="blue"
             isLoading={isSubmitting}
-            isDisabled={!isDirty || !hasActiveSubscription}
+            isDisabled={!hasActiveSubscription}
             mt={4}
             width="100%"
           >
-            Save Preferences
+            {isCreatingNew ? "Create Preferences" : "Save Preferences"}
           </Button>
         </Box>
       )}
