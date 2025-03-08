@@ -19,25 +19,6 @@ services:
       - POSTGRES_USER=${POSTGRES_USER?Variable not set}
       - POSTGRES_DB=${POSTGRES_DB?Variable not set}
 
-  mongodb:
-    image: mongo
-    restart: always
-    healthcheck:
-      test: echo "try { rs.status() } catch (err) { rs.initiate({_id:'rs0',members:[{_id:0,host:'mongodb:27017',priority:1},{_id:1,host:'mongodb_secondary:27017',priority:0.5}]}) }" | mongosh --quiet
-      interval: 10s
-      timeout: 10s
-      retries: 5
-      start_period: 40s
-
-    volumes:
-      - app-db-nosql:/data/db
-    env_file:
-      - .env
-    environment:
-      - MONGO_INITDB_ROOT_USERNAME=${MONGODB_USER?Variable not set}
-      - MONGO_INITDB_ROOT_PASSWORD=${MONGODB_PASSWORD?Variable not set}
-      - MONGO_INITDB_DATABASE=${MONGODB_DB?Variable not set}
-
   adminer:
     image: adminer
     restart: always
@@ -77,8 +58,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      mongodb:
-        condition: service_healthy
     command: bash prestart.sh
     env_file:
       - .env
@@ -100,11 +79,6 @@ services:
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER?Variable not set}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Variable not set}
-      - MONGODB_SERVER=mongodb
-      - MONGODB_PORT=${MONGODB_PORT? Variable not set}
-      - MONGODB_DB=${MONGODB_DB? Variable not set}
-      - MONGODB_USER=${MONGODB_USER? Variable not set}
-      - MONGODB_PASSWORD=${MONGODB_PASSWORD? Variable not set}
       - SENTRY_DSN=${SENTRY_DSN}
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
       - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
@@ -125,9 +99,6 @@ services:
       - default
     depends_on:
       db:
-        condition: service_healthy
-        restart: true
-      mongodb:
         condition: service_healthy
         restart: true
       prestart:
@@ -152,11 +123,6 @@ services:
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER?Variable not set}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Variable not set}
-      - MONGODB_SERVER=mongodb
-      - MONGODB_PORT=${MONGODB_PORT? Variable not set}
-      - MONGODB_DB=${MONGODB_DB? Variable not set}
-      - MONGODB_USER=${MONGODB_USER? Variable not set}
-      - MONGODB_PASSWORD=${MONGODB_PASSWORD? Variable not set}
       - SENTRY_DSN=${SENTRY_DSN}
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
       - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}

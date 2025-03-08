@@ -55,11 +55,6 @@ services:
     ports:
       - "8080:8080"
 
-  mongodb:
-    restart: "no"
-    ports:
-      - "27017:27017"
-
   backend:
     restart: "no"
     ports:

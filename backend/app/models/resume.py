@@ -1,10 +1,16 @@
 import datetime
+import json
+from typing import Dict, List, Optional, ClassVar, Any
+from uuid import UUID
 
-from odmantic import EmbeddedModel, Field, Model
 from pydantic import BaseModel, EmailStr
+from sqlalchemy import ForeignKey
+from sqlmodel import Field, SQLModel, JSON, Column
+
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
 
 
-class PersonalInformation(EmbeddedModel):
+class PersonalInformation(BaseModel):
     name: str = "John"
     surname: str = "Doe"
     date_of_birth: str = (
@@ -21,56 +27,56 @@ class PersonalInformation(EmbeddedModel):
     linkedin: str = "https://linkedin.com/in/john_doe"
 
 
-class EducationDetails(EmbeddedModel):
+class EducationDetails(BaseModel):
     education_level: str = "Bachelor's Degree"
     institution: str = "University of New York"
     field_of_study: str = "Computer Science"
     final_evaluation_grade: str = "A"
     start_date: str = "2018"
     year_of_completion: str = "2022"
-    exam: list[str] = ["GRE", "TOEFL"]
+    exam: List[str] = ["GRE", "TOEFL"]
 
 
-class ExperienceDetail(EmbeddedModel):
+class ExperienceDetail(BaseModel):
     position: str = "Software Engineer"
     company: str = "Google"
     employment_period: str = "2020 - 2022"
     location: str = "New York"
     industry: str = "Technology"
-    key_responsibilities: list[str] = ["Developed new features", "Fixed bugs"]
-    skills_acquired: list[str] = ["Python", "Django", "React"]
+    key_responsibilities: List[str] = ["Developed new features", "Fixed bugs"]
+    skills_acquired: List[str] = ["Python", "Django", "React"]
 
 
-class Project(EmbeddedModel):
+class Project(BaseModel):
     name: str = "My awesome CRUD app"
     description: str = "A CRUD app that does CRUD operations"
     link: str = "www.myawesomecrud.com"
 
 
-class Achievement(EmbeddedModel):
+class Achievement(BaseModel):
     name: str = "Employee of the month"
     description: str = "Awarded for being the best employee"
 
 
-class Certification(EmbeddedModel):
+class Certification(BaseModel):
     name: str = "Python Certification"
     description: str = "Certified Python Developer"
 
 
-class Language(EmbeddedModel):
+class Language(BaseModel):
     language: str = "English"
     proficiency: str = "Native"
 
 
-class Availability(EmbeddedModel):
+class Availability(BaseModel):
     notice_period: str = "1 month"
 
 
-class SalaryExpectations(EmbeddedModel):
+class SalaryExpectations(BaseModel):
     salary_range_usd: str = "90000 - 110000"
 
 
-class SelfIdentification(EmbeddedModel):
+class SelfIdentification(BaseModel):
     gender: str = "Male"
     pronouns: str = "He/Him"
     veteran: bool = False
@@ -78,7 +84,7 @@ class SelfIdentification(EmbeddedModel):
     ethnicity: str = "Hispanic"
 
 
-class LegalAuthorization(EmbeddedModel):
+class LegalAuthorization(BaseModel):
     eu_work_authorization: bool = False
     us_work_authorization: bool = False
     requires_us_visa: bool = False
@@ -97,7 +103,7 @@ class LegalAuthorization(EmbeddedModel):
     requires_uk_sponsorship: bool = False
 
 
-class WorkPreferences(EmbeddedModel):
+class WorkPreferences(BaseModel):
     remote_work: bool = True
     in_person_work: bool = True
     open_to_relocation: bool = True
@@ -106,64 +112,98 @@ class WorkPreferences(EmbeddedModel):
     willing_to_undergo_background_checks: bool = True
 
 
-class PlainTextResumePublic(BaseModel, extra="ignore"):
+class PlainTextResumePublic(BaseModel):
     personal_information: PersonalInformation = PersonalInformation()
-    education_details: list[EducationDetails] = [
+    education_details: List[EducationDetails] = [
         EducationDetails(),
     ]
-    experience_details: list[ExperienceDetail] = [
+    experience_details: List[ExperienceDetail] = [
         ExperienceDetail(),
     ]
-    projects: list[Project] = [
+    projects: List[Project] = [
         Project(),
     ]
-    achievements: list[Achievement] = [
+    achievements: List[Achievement] = [
         Achievement(),
     ]
-    certifications: list[Certification] = [
+    certifications: List[Certification] = [
         Certification(),
     ]
-    languages: list[Language] = [
+    languages: List[Language] = [
         Language(),
     ]
-    interests: list[str] = ["Reading", "Swimming"]
+    interests: List[str] = ["Reading", "Swimming"]
     availability: Availability = Availability()
     salary_expectations: SalaryExpectations = SalaryExpectations()
     self_identification: SelfIdentification = SelfIdentification()
     legal_authorization: LegalAuthorization = LegalAuthorization()
     work_preferences: WorkPreferences = WorkPreferences()
 
+    class Config:
+        extra = "ignore"
 
-class PlainTextResume(Model):
-    subscription_id: str = Field(index=True, unique=True)
-    user_id: str
 
-    personal_information: PersonalInformation = PersonalInformation()
-    education_details: list[EducationDetails] = [
-        EducationDetails(),
-    ]
-    experience_details: list[ExperienceDetail] = [
-        ExperienceDetail(),
-    ]
-    projects: list[Project] = [
-        Project(),
-    ]
-    achievements: list[Achievement] = [
-        Achievement(),
-    ]
-    certifications: list[Certification] = [
-        Certification(),
-    ]
-    languages: list[Language] = [
-        Language(),
-    ]
-    interests: list[str] = ["Reading", "Swimming"]
-    availability: Availability = Availability()
-    salary_expectations: SalaryExpectations = SalaryExpectations()
-    self_identification: SelfIdentification = SelfIdentification()
-    legal_authorization: LegalAuthorization = LegalAuthorization()
-    work_preferences: WorkPreferences = WorkPreferences()
+class PlainTextResume(SQLModel, table=True):
+    __tablename__: ClassVar[str] = "plain_text_resumes"
 
-    model_config = {
-        "collection": "plain_text_resumes",  # type: ignore[typeddict-unknown-key]
-    }
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: UUID = Field(
+        sa_column=Column(
+            PGUUID(as_uuid=True),
+            ForeignKey("user.id", ondelete="CASCADE"),
+            nullable=False,
+        )
+    )
+
+    personal_information: Dict[str, Any] = Field(
+        default_factory=lambda: json.loads(PersonalInformation().model_dump_json()), 
+        sa_column=Column(JSON)
+    )
+    education_details: List[Dict[str, Any]] = Field(
+        default_factory=lambda: [json.loads(EducationDetails().model_dump_json())], 
+        sa_column=Column(JSON)
+    )
+    experience_details: List[Dict[str, Any]] = Field(
+        default_factory=lambda: [json.loads(ExperienceDetail().model_dump_json())], 
+        sa_column=Column(JSON)
+    )
+    projects: List[Dict[str, Any]] = Field(
+        default_factory=lambda: [json.loads(Project().model_dump_json())], 
+        sa_column=Column(JSON)
+    )
+    achievements: List[Dict[str, Any]] = Field(
+        default_factory=lambda: [json.loads(Achievement().model_dump_json())], 
+        sa_column=Column(JSON)
+    )
+    certifications: List[Dict[str, Any]] = Field(
+        default_factory=lambda: [json.loads(Certification().model_dump_json())], 
+        sa_column=Column(JSON)
+    )
+    languages: List[Dict[str, Any]] = Field(
+        default_factory=lambda: [json.loads(Language().model_dump_json())], 
+        sa_column=Column(JSON)
+    )
+    interests: List[str] = Field(
+        default_factory=lambda: ["Reading", "Swimming"], 
+        sa_column=Column(JSON)
+    )
+    availability: Dict[str, Any] = Field(
+        default_factory=lambda: json.loads(Availability().model_dump_json()), 
+        sa_column=Column(JSON)
+    )
+    salary_expectations: Dict[str, Any] = Field(
+        default_factory=lambda: json.loads(SalaryExpectations().model_dump_json()), 
+        sa_column=Column(JSON)
+    )
+    self_identification: Dict[str, Any] = Field(
+        default_factory=lambda: json.loads(SelfIdentification().model_dump_json()), 
+        sa_column=Column(JSON)
+    )
+    legal_authorization: Dict[str, Any] = Field(
+        default_factory=lambda: json.loads(LegalAuthorization().model_dump_json()), 
+        sa_column=Column(JSON)
+    )
+    work_preferences: Dict[str, Any] = Field(
+        default_factory=lambda: json.loads(WorkPreferences().model_dump_json()), 
+        sa_column=Column(JSON)
+    )
