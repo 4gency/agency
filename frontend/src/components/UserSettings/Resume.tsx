@@ -318,6 +318,7 @@ export const ResumePage: React.FC = () => {
   const [_scrollPosition, setScrollPosition] = useState<number>(0)
   const [isCreatingNew, setIsCreatingNew] = useState<boolean>(false)
   const [formKey, setFormKey] = useState<number>(0) // Add a key to force re-render when needed
+  const [hasShownNotFoundMessage, setHasShownNotFoundMessage] = useState<boolean>(false)
   const cardBg = useColorModeValue("white", "gray.700")
   const headerBg = useColorModeValue("gray.50", "gray.800")
 
@@ -367,27 +368,29 @@ export const ResumePage: React.FC = () => {
         console.log("Resume fetch error:", apiError.status, apiError.message);
         if (apiError.status === 404) {
           setIsCreatingNew(true);
-          showToast(
-            "Resume not found",
-            "Please fill out the form to create your resume.",
-            "success"
-          )
+          // Não mostrar toast aqui, deixar para o useEffect
         }
         throw error;
       }
     },
     // Don't condition the query on subscription status to avoid race conditions
     enabled: true,
-    retry: 1,
+    retry: false, // Não tentar novamente automaticamente
     refetchOnWindowFocus: false,
-    staleTime: 30000, // 30 seconds
+    staleTime: 60000, // 1 minuto
   });
 
-  // When component mounts, ensure a fetch attempt is made
+  // Reset form data when resume data is loaded or cleared
   useEffect(() => {
-    // Force a refetch on component mount to ensure data is loaded
-    refetchResume();
-  }, [refetchResume]);
+    if (resumeData) {
+      // If we successfully load data, we're editing an existing resume
+      setIsCreatingNew(false);
+      
+      // Transform API data to form format
+      const formData = transformApiResponseToFormData(resumeData);
+      reset(formData);
+    }
+  }, [resumeData, reset]);
 
   // Handle resume fetch error - only show actual errors, not 404
   useEffect(() => {
@@ -398,8 +401,18 @@ export const ResumePage: React.FC = () => {
     if (hasActiveSubscription && !resumeData) {
       const apiError = resumeError as ApiError;
       
-      // Only show error messages for non-404 errors now
-      if (apiError && apiError.status !== 404 && apiError) {
+      // Show message for 404 only if we haven't shown it already
+      if (apiError && apiError.status === 404) {
+        if (!hasShownNotFoundMessage) {
+          setIsCreatingNew(true);
+          setHasShownNotFoundMessage(true);
+          showToast(
+            "Resume not found",
+            "Please fill out the form to create your resume.",
+            "success"
+          )
+        }
+      } else if (apiError) {
         // Real errors
         console.error("Resume fetch error:", apiError);
         showToast(
@@ -409,7 +422,7 @@ export const ResumePage: React.FC = () => {
         )
       }
     }
-  }, [hasActiveSubscription, isLoadingResume, resumeData, resumeError, showToast]);
+  }, [hasActiveSubscription, isLoadingResume, resumeData, resumeError, showToast, isCreatingNew, hasShownNotFoundMessage]);
 
   // Update resume mutation with better error handling
   const updateResumeMutation = useMutation({
