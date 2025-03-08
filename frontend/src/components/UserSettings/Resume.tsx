@@ -367,6 +367,11 @@ export const ResumePage: React.FC = () => {
         console.log("Resume fetch error:", apiError.status, apiError.message);
         if (apiError.status === 404) {
           setIsCreatingNew(true);
+          showToast(
+            "Resume not found",
+            "Please fill out the form to create your resume.",
+            "success"
+          )
         }
         throw error;
       }
@@ -393,27 +398,18 @@ export const ResumePage: React.FC = () => {
     if (hasActiveSubscription && !resumeData) {
       const apiError = resumeError as ApiError;
       
-      // Only show a message for 404 if we haven't shown it already
-      if (apiError && apiError.status === 404) {
-        if (!isCreatingNew) {
-          setIsCreatingNew(true);
-          showToast(
-            "Resume not found",
-            "Please fill out the form to create your resume.",
-            "success",
-          )
-        }
-      } else if (apiError) {
+      // Only show error messages for non-404 errors now
+      if (apiError && apiError.status !== 404 && apiError) {
         // Real errors
         console.error("Resume fetch error:", apiError);
         showToast(
           "Error fetching resume",
-          "There was an error loading your resume data.",
-          "error",
+          apiError.message || "An error occurred while fetching your resume.",
+          "error"
         )
       }
     }
-  }, [isLoadingResume, resumeData, hasActiveSubscription, resumeError, showToast, isCreatingNew])
+  }, [hasActiveSubscription, isLoadingResume, resumeData, resumeError, showToast]);
 
   // Update resume mutation with better error handling
   const updateResumeMutation = useMutation({
@@ -550,7 +546,7 @@ export const ResumePage: React.FC = () => {
         <LoadingSkeleton />
       ) : (
         <form onSubmit={handleSubmit(onSubmit)} style={{ marginBottom: '3rem' }}>
-          <Stack spacing={8} mb={12}>
+          <Stack spacing={8}>
             <Card variant="outline" p={4}>
               <PersonalInformationSection register={register} errors={errors} />
             </Card>

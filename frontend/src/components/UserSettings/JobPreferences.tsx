@@ -9,15 +9,25 @@ import {
   CardBody,
   CardHeader,
   Container,
+  Divider,
   Flex,
   FormControl,
+  FormErrorMessage,
   FormLabel,
   Heading,
   HStack,
   IconButton,
   Input,
+  InputGroup,
+  InputRightElement,
+  NumberDecrementStepper,
+  NumberIncrementStepper,
+  NumberInput,
+  NumberInputField,
+  NumberInputStepper,
   Radio,
   RadioGroup,
+  Select,
   Skeleton,
   SkeletonText,
   Slider,
@@ -25,11 +35,15 @@ import {
   SliderThumb,
   SliderTrack,
   Stack,
+  Switch,
   Tag,
   TagCloseButton,
   TagLabel,
   Text,
   useColorModeValue,
+  VStack,
+  Wrap,
+  WrapItem,
 } from "@chakra-ui/react"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import type React from "react"
@@ -577,7 +591,7 @@ const JobPreferencesPage: React.FC = () => {
         <LoadingSkeleton />
       ) : (
         <form onSubmit={handleSubmit(onSubmit)} style={{ marginBottom: '3rem' }}>
-          <Stack spacing={6} mb={12}>
+          <Stack spacing={6}>
             <Card variant="outline" p={4}>
               <FormControl mb={4}>
                 <FormLabel>Work Location Preferences</FormLabel>
