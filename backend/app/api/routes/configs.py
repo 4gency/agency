@@ -52,12 +52,12 @@ def get_config(
 ) -> Any:
     config = config_crud.get_config(
         session=session,
-        user_id=str(user.id),
+        user_id=user.id,
     )
 
     if not config:
         config = config_crud.create_user_default_config(
-            user_id=str(user.id),
+            user_id=user.id,
             session=session,
         )
 
@@ -105,12 +105,12 @@ def get_plain_text_resume(
 ) -> Any:
     resume = config_crud.get_resume(
         session=session,
-        user_id=str(user.id),
+        user_id=user.id,
     )
 
     if not resume:
         resume = config_crud.create_user_default_resume(
-            user_id=str(user.id),
+            user_id=user.id,
             session=session,
         )
 
@@ -163,12 +163,12 @@ def update_config(
 ) -> Any:
     config = config_crud.get_config(
         session=session,
-        user_id=str(user.id),
+        user_id=user.id,
     )
 
     if not config:
         config = config_crud.create_user_default_config(
-            user_id=str(user.id),
+            user_id=user.id,
             session=session,
         )
 
@@ -227,12 +227,12 @@ def update_plain_text_resume(
 ) -> Any:
     resume = config_crud.get_resume(
         session=session,
-        user_id=str(user.id),
+        user_id=user.id,
     )
 
     if not resume:
         resume = config_crud.create_user_default_resume(
-            user_id=str(user.id),
+            user_id=user.id,
             session=session,
         )
 

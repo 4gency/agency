@@ -37,8 +37,8 @@ def test_update_config(db: Session) -> None:
     create_config(session=db, config=config)
 
     # Get from database to ensure it's properly loaded
-    config = get_config(session=db, user_id=user.id)
-    assert config is not None
+    config_result = get_config(session=db, user_id=user.id)
+    assert config_result is not None
 
     # Create the base objects for the update
     experience_level = ExperienceLevel()
@@ -93,8 +93,8 @@ def test_update_resume(db: Session) -> None:
     create_resume(session=db, resume=resume)
 
     # Get from database to ensure it's properly loaded
-    resume = get_resume(session=db, user_id=user.id)
-    assert resume is not None
+    resume_result = get_resume(session=db, user_id=user.id)
+    assert resume_result is not None
 
     # Prepare an update via PlainTextResumePublic (e.g., updating interests).
     updated_resume_data = PlainTextResumePublic(

@@ -1,5 +1,4 @@
 import datetime
-import json
 from typing import Any, ClassVar
 from uuid import UUID
 
@@ -159,27 +158,39 @@ class PlainTextResume(SQLModel, table=True):
         sa_column=Column(JSON),
     )
     education_details: list[dict[str, Any]] = Field(
-        default_factory=lambda: [EducationDetails().model_dump(),],
+        default_factory=lambda: [
+            EducationDetails().model_dump(),
+        ],
         sa_column=Column(JSON),
     )
     experience_details: list[dict[str, Any]] = Field(
-        default_factory=lambda: [ExperienceDetail().model_dump(),],
+        default_factory=lambda: [
+            ExperienceDetail().model_dump(),
+        ],
         sa_column=Column(JSON),
     )
     projects: list[dict[str, Any]] = Field(
-        default_factory=lambda: [Project().model_dump(),],
+        default_factory=lambda: [
+            Project().model_dump(),
+        ],
         sa_column=Column(JSON),
     )
     achievements: list[dict[str, Any]] = Field(
-        default_factory=lambda: [Achievement().model_dump(),],
+        default_factory=lambda: [
+            Achievement().model_dump(),
+        ],
         sa_column=Column(JSON),
     )
     certifications: list[dict[str, Any]] = Field(
-        default_factory=lambda: [Certification().model_dump(),],
+        default_factory=lambda: [
+            Certification().model_dump(),
+        ],
         sa_column=Column(JSON),
     )
     languages: list[dict[str, Any]] = Field(
-        default_factory=lambda: [Language().model_dump(),],
+        default_factory=lambda: [
+            Language().model_dump(),
+        ],
         sa_column=Column(JSON),
     )
     interests: list[str] = Field(
