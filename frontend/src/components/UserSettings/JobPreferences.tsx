@@ -6,28 +6,15 @@ import {
   Button,
   ButtonGroup,
   Card,
-  CardBody,
-  CardHeader,
   Container,
-  Divider,
   Flex,
   FormControl,
-  FormErrorMessage,
   FormLabel,
   Heading,
-  HStack,
   IconButton,
   Input,
-  InputGroup,
-  InputRightElement,
-  NumberDecrementStepper,
-  NumberIncrementStepper,
-  NumberInput,
-  NumberInputField,
-  NumberInputStepper,
   Radio,
   RadioGroup,
-  Select,
   Skeleton,
   SkeletonText,
   Slider,
@@ -35,19 +22,14 @@ import {
   SliderThumb,
   SliderTrack,
   Stack,
-  Switch,
   Tag,
   TagCloseButton,
   TagLabel,
-  Text,
   useColorModeValue,
-  VStack,
-  Wrap,
-  WrapItem,
 } from "@chakra-ui/react"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import type React from "react"
-import { useEffect, useLayoutEffect, useRef, useState, useMemo } from "react"
+import { useEffect, useLayoutEffect, useState, useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { type ApiError, type ConfigPublic, ConfigsService, SubscriptionsService } from "../../client"
 
@@ -301,22 +283,16 @@ const JobPreferencesPage: React.FC = () => {
     },
   })
 
-  // Check if user has an active subscription
   const hasActiveSubscription = useMemo(() => {
     const hasSubscription = subscriptions && subscriptions.length > 0;
-    console.log("Has active subscription for preferences:", hasSubscription);
+    console.log("Has active subscription:", hasSubscription);
     return hasSubscription;
   }, [subscriptions]);
 
   const [scrollPosition, setScrollPosition] = useState<number>(0)
   const [isDataLoaded, setIsDataLoaded] = useState<boolean>(false)
-  const [containerHeight, setContainerHeight] = useState<number | null>(null)
   const [isCreatingNew, setIsCreatingNew] = useState<boolean>(false)
-  const [formKey, setFormKey] = useState<number>(0) // Add a key to force re-render when needed
-  const pageContainerRef = useRef<HTMLDivElement>(null)
   const showToast = useCustomToast()
-  const cardBg = useColorModeValue("white", "gray.700")
-  const headerBg = useColorModeValue("gray.50", "gray.800")
 
   // Default form data for first render
   const defaultFormValues: JobPreferencesForm = {
@@ -335,13 +311,13 @@ const JobPreferencesPage: React.FC = () => {
     location_blacklist: [],
   }
 
+  // Form setup with React Hook Form
   const {
-    register,
     handleSubmit,
     reset,
     watch,
     setValue,
-    formState: { isSubmitting, isDirty },
+    formState: { isSubmitting },
   } = useForm<JobPreferencesForm>({
     defaultValues: defaultFormValues,
   })
@@ -365,16 +341,8 @@ const JobPreferencesPage: React.FC = () => {
       try {
         setIsDataLoaded(false);
         
-        // Captura a altura atual do container antes de buscar os dados
-        if (pageContainerRef.current) {
-          setContainerHeight(
-            pageContainerRef.current.getBoundingClientRect().height,
-          )
-        }
-
-        // Store current scroll position before updating form
-        const currentScrollPosition = window.scrollY
-        setScrollPosition(currentScrollPosition)
+        // Capturar a posição atual de scroll para restaurar depois
+        setScrollPosition(window.scrollY)
         
         const config = await ConfigsService.getConfig();
         console.log("Job preferences fetch successful");
@@ -395,31 +363,28 @@ const JobPreferencesPage: React.FC = () => {
             keepSubmitCount: false,
           })
 
-          // Reset creating new flag if we successfully loaded config
-          if (isCreatingNew) {
-            setIsCreatingNew(false)
-          }
+          // Marcar que os dados foram carregados e não estamos criando novos
+          setIsCreatingNew(false)
+          setIsDataLoaded(true)
 
           // Usar múltiplos timeouts para garantir que o DOM seja atualizado completamente
           setTimeout(() => {
             window.scrollTo({
-              top: currentScrollPosition,
+              top: window.scrollY,
               behavior: "auto",
             })
           }, 100)
 
           setTimeout(() => {
             window.scrollTo({
-              top: currentScrollPosition,
+              top: window.scrollY,
               behavior: "auto",
             })
             setIsDataLoaded(true)
-            setContainerHeight(null) // Remover a altura fixa após o carregamento
           }, 300)
         } catch (error) {
           console.error("Error processing config data:", error)
           setIsDataLoaded(true)
-          setContainerHeight(null)
           showToast(
             "Error processing preferences",
             "There was an error processing your preference data.",
@@ -435,7 +400,6 @@ const JobPreferencesPage: React.FC = () => {
         // Em caso de 404, não é erro - apenas não existe config ainda
         if (apiError.status === 404) {
           setIsDataLoaded(true)
-          setContainerHeight(null)
           if (!isCreatingNew) {
             setIsCreatingNew(true)
             showToast(
@@ -449,7 +413,6 @@ const JobPreferencesPage: React.FC = () => {
           const detail = (apiError.body as any)?.detail || apiError.message
           showToast("Error fetching preferences", String(detail), "error")
           setIsDataLoaded(true)
-          setContainerHeight(null) // Remover a altura fixa em caso de erro
         }
         
         throw apiError;
@@ -493,8 +456,8 @@ const JobPreferencesPage: React.FC = () => {
         setIsCreatingNew(false)
       }
       
-      // Force a re-render of the form
-      setFormKey(prevKey => prevKey + 1)
+      // Force a re-render of the form with the current data
+      // setFormKey(prevKey => prevKey + 1)
     },
     onError: (err: ApiError) => {
       console.error("Mutation error:", err)

@@ -2,23 +2,13 @@ import {
   Alert,
   AlertIcon,
   AlertDescription,
-  Box,
   Button,
   ButtonGroup,
   Card,
-  CardBody,
-  CardHeader,
   Container,
-  Divider,
-  Flex,
-  FormControl,
-  FormErrorMessage,
-  FormLabel,
   Heading,
   Skeleton,
   Stack,
-  Text,
-  useColorModeValue,
 } from "@chakra-ui/react"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import type React from "react"
@@ -317,10 +307,7 @@ export const ResumePage: React.FC = () => {
   const showToast = useCustomToast()
   const [_scrollPosition, setScrollPosition] = useState<number>(0)
   const [isCreatingNew, setIsCreatingNew] = useState<boolean>(false)
-  const [formKey, setFormKey] = useState<number>(0) // Add a key to force re-render when needed
   const [hasShownNotFoundMessage, setHasShownNotFoundMessage] = useState<boolean>(false)
-  const cardBg = useColorModeValue("white", "gray.700")
-  const headerBg = useColorModeValue("gray.50", "gray.800")
 
   // Form setup
   const {
@@ -330,7 +317,7 @@ export const ResumePage: React.FC = () => {
     setValue,
     getValues,
     reset,
-    formState: { errors, isDirty, isSubmitting },
+    formState: { errors, isSubmitting },
     watch,
   } = useForm<ResumeForm>({
     defaultValues,
@@ -355,7 +342,7 @@ export const ResumePage: React.FC = () => {
   }, [subscriptions]);
 
   // Fetch resume data with better error handling
-  const { data: resumeData, isLoading: isLoadingResume, error: resumeError, refetch: refetchResume } = useQuery({
+  const { data: resumeData, isLoading: isLoadingResume, error: resumeError } = useQuery({
     queryKey: ["plainTextResume"],
     queryFn: async () => {
       console.log("Executing resume fetch...");
@@ -456,9 +443,6 @@ export const ResumePage: React.FC = () => {
           : "Your resume has been successfully updated.",
         "success",
       )
-      
-      // Force a re-render of the form with the current data
-      setFormKey(prevKey => prevKey + 1)
     },
     onError: (error: Error) => {
       console.error("Resume mutation error:", error)

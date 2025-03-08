@@ -4,7 +4,6 @@ import {
   Input,
   SimpleGrid,
   Text,
-  Flex,
 } from "@chakra-ui/react"
 import type { UseFormRegister } from "react-hook-form"
 import type { ResumeForm } from "../types"
