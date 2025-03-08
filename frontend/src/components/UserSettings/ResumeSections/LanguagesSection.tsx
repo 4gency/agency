@@ -88,6 +88,7 @@ const LanguagesSection: React.FC<LanguagesSectionProps> = ({
             right={2}
             colorScheme="red"
             onClick={() => remove(index)}
+            zIndex={10}
           >
             <DeleteIcon />
           </Button>

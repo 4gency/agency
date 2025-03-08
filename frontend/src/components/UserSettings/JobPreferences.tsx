@@ -249,7 +249,7 @@ const ArrayInput: React.FC<ArrayInputProps> = ({
         {items.map((item) => (
           <Tag key={item} m="2px" variant="subtle" colorScheme="teal">
             <TagLabel>{item}</TagLabel>
-            <TagCloseButton onClick={() => handleRemove(item)} />
+            <TagCloseButton onClick={() => handleRemove(item)} zIndex={10} />
           </Tag>
         ))}
       </Flex>
