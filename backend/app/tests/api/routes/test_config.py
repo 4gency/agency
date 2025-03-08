@@ -13,8 +13,6 @@ from app.models.core import (
     User,
 )
 from app.models.crud import subscription as subscription_crud
-from app.models.preference import ConfigPublic
-from app.models.resume import PlainTextResumePublic
 from app.tests.utils.user import (
     authentication_subscriber_token_from_email,
     create_random_user,
@@ -58,10 +56,7 @@ def test_get_job_preferences_not_found(
 ) -> None:
     url = f"{PREFERENCES_PREFIX}/job-preferences"
     response = client.get(url, headers=normal_subscriber_token_headers)
-    assert response.status_code == 200
-    data = response.json()
-    for field in ConfigPublic.model_fields:
-        assert field in data
+    assert response.status_code == 404
 
 
 def test_get_job_preferences_creates_default_if_missing(
@@ -77,10 +72,7 @@ def test_get_job_preferences_creates_default_if_missing(
     )
     url = f"{PREFERENCES_PREFIX}/job-preferences"
     response = client.get(url, headers=headers)
-    assert response.status_code == 200
-    data = response.json()
-    for field in ConfigPublic.model_fields:
-        assert field in data
+    assert response.status_code == 404
 
 
 def test_update_job_preferences_creates_default_if_missing(
@@ -152,10 +144,7 @@ def test_get_resume_not_found(
 ) -> None:
     url = f"{PREFERENCES_PREFIX}/resume"
     response = client.get(url, headers=normal_subscriber_token_headers)
-    assert response.status_code == 200
-    data = response.json()
-    for field in PlainTextResumePublic.model_fields:
-        assert field in data
+    assert response.status_code == 404
 
 
 def test_get_resume_creates_default_if_missing(
@@ -171,10 +160,7 @@ def test_get_resume_creates_default_if_missing(
     )
     url = f"{PREFERENCES_PREFIX}/resume"
     response = client.get(url, headers=headers)
-    assert response.status_code == 200
-    data = response.json()
-    for field in PlainTextResumePublic.model_fields:
-        assert field in data
+    assert response.status_code == 404
 
 
 def test_update_resume_creates_default_if_missing(

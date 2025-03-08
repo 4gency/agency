@@ -1,6 +1,6 @@
 from typing import Any
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, HTTPException, status
 
 from app.api.deps import CurrentUser, SessionDep
 from app.models.core import ErrorMessage
@@ -56,9 +56,8 @@ def get_config(
     )
 
     if not config:
-        config = config_crud.create_user_default_config(
-            user_id=user.id,
-            session=session,
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Config not found"
         )
 
     return ConfigPublic(**config.model_dump())
@@ -109,9 +108,8 @@ def get_plain_text_resume(
     )
 
     if not resume:
-        resume = config_crud.create_user_default_resume(
-            user_id=user.id,
-            session=session,
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Resume not found"
         )
 
     return PlainTextResumePublic(**resume.model_dump())
