@@ -1,4 +1,3 @@
-import json
 from typing import Any, ClassVar
 from uuid import UUID
 
@@ -16,9 +15,6 @@ class ExperienceLevel(BaseModel):
     director: bool = True
     executive: bool = True
 
-    def dict(self) -> dict[str, Any]:
-        return self.model_dump()
-
 
 class JobTypes(BaseModel):
     full_time: bool = True
@@ -28,9 +24,6 @@ class JobTypes(BaseModel):
     internship: bool = True
     other: bool = True
     volunteer: bool = True
-
-    def dict(self) -> dict[str, Any]:
-        return self.model_dump()
 
 
 class Date(BaseModel):
@@ -48,9 +41,6 @@ class Date(BaseModel):
             self.all_time = True
             self.month = self.week = self.hours = False
         return self
-
-    def dict(self) -> dict[str, Any]:
-        return self.model_dump()
 
 
 class ConfigPublic(BaseModel):
@@ -106,15 +96,15 @@ class Config(SQLModel, table=True):
     onsite: bool = True
 
     experience_level: dict[str, Any] = Field(
-        default_factory=lambda: json.loads(ExperienceLevel().model_dump_json()),
+        default_factory=lambda: ExperienceLevel().model_dump(),
         sa_column=Column(JSON),
     )
     job_types: dict[str, Any] = Field(
-        default_factory=lambda: json.loads(JobTypes().model_dump_json()),
+        default_factory=lambda: JobTypes().model_dump(),
         sa_column=Column(JSON),
     )
     date: dict[str, Any] = Field(
-        default_factory=lambda: json.loads(Date(all_time=True).model_dump_json()),
+        default_factory=lambda: Date(all_time=True).model_dump(),
         sa_column=Column(JSON),
     )
     positions: list[str] = Field(

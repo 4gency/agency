@@ -155,53 +155,53 @@ class PlainTextResume(SQLModel, table=True):
     )
 
     personal_information: dict[str, Any] = Field(
-        default_factory=lambda: json.loads(PersonalInformation().model_dump_json()),
+        default_factory=lambda: PersonalInformation().model_dump(),
         sa_column=Column(JSON),
     )
     education_details: list[dict[str, Any]] = Field(
-        default_factory=lambda: [json.loads(EducationDetails().model_dump_json())],
+        default_factory=lambda: [EducationDetails().model_dump(),],
         sa_column=Column(JSON),
     )
     experience_details: list[dict[str, Any]] = Field(
-        default_factory=lambda: [json.loads(ExperienceDetail().model_dump_json())],
+        default_factory=lambda: [ExperienceDetail().model_dump(),],
         sa_column=Column(JSON),
     )
     projects: list[dict[str, Any]] = Field(
-        default_factory=lambda: [json.loads(Project().model_dump_json())],
+        default_factory=lambda: [Project().model_dump(),],
         sa_column=Column(JSON),
     )
     achievements: list[dict[str, Any]] = Field(
-        default_factory=lambda: [json.loads(Achievement().model_dump_json())],
+        default_factory=lambda: [Achievement().model_dump(),],
         sa_column=Column(JSON),
     )
     certifications: list[dict[str, Any]] = Field(
-        default_factory=lambda: [json.loads(Certification().model_dump_json())],
+        default_factory=lambda: [Certification().model_dump(),],
         sa_column=Column(JSON),
     )
     languages: list[dict[str, Any]] = Field(
-        default_factory=lambda: [json.loads(Language().model_dump_json())],
+        default_factory=lambda: [Language().model_dump(),],
         sa_column=Column(JSON),
     )
     interests: list[str] = Field(
         default_factory=lambda: ["Reading", "Swimming"], sa_column=Column(JSON)
     )
     availability: dict[str, Any] = Field(
-        default_factory=lambda: json.loads(Availability().model_dump_json()),
+        default_factory=lambda: Availability().model_dump(),
         sa_column=Column(JSON),
     )
     salary_expectations: dict[str, Any] = Field(
-        default_factory=lambda: json.loads(SalaryExpectations().model_dump_json()),
+        default_factory=lambda: SalaryExpectations().model_dump(),
         sa_column=Column(JSON),
     )
     self_identification: dict[str, Any] = Field(
-        default_factory=lambda: json.loads(SelfIdentification().model_dump_json()),
+        default_factory=lambda: SelfIdentification().model_dump(),
         sa_column=Column(JSON),
     )
     legal_authorization: dict[str, Any] = Field(
-        default_factory=lambda: json.loads(LegalAuthorization().model_dump_json()),
+        default_factory=lambda: LegalAuthorization().model_dump(),
         sa_column=Column(JSON),
     )
     work_preferences: dict[str, Any] = Field(
-        default_factory=lambda: json.loads(WorkPreferences().model_dump_json()),
+        default_factory=lambda: WorkPreferences().model_dump(),
         sa_column=Column(JSON),
     )
