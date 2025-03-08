@@ -50,7 +50,6 @@ export interface Language {
 export interface SalaryExpectation {
   minimum?: number
   maximum?: number
-  currency?: string
 }
 
 export interface WorkPreference {

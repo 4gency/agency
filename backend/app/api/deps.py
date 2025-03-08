@@ -5,14 +5,12 @@ import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jwt.exceptions import InvalidTokenError
-from odmantic.session import SyncSession
 from pydantic import ValidationError
 from sqlmodel import Session
 
 from app.core import security
 from app.core.config import settings
 from app.core.db import engine
-from app.core.nosql_db import engine as nosql_engine
 from app.models.core import TokenPayload, User
 
 reusable_oauth2 = OAuth2PasswordBearer(
@@ -30,13 +28,7 @@ def get_db() -> Generator[Session, None, None]:
         yield session
 
 
-def get_nosql_db() -> Generator[SyncSession, None, None]:
-    with nosql_engine.session() as session:
-        yield session
-
-
 SessionDep = Annotated[Session, Depends(get_db)]
-NosqlSessionDep = Annotated[SyncSession, Depends(get_nosql_db)]
 TokenDep = Annotated[str, Depends(reusable_oauth2)]
 
 

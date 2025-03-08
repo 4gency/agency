@@ -4,6 +4,8 @@ from app.core.config import settings
 from app.models import crud
 from app.models.bot import *  # noqa
 from app.models.core import *  # noqa
+from app.models.preference import Config  # noqa
+from app.models.resume import PlainTextResume  # noqa
 
 engine = create_engine(str(settings.SQLALCHEMY_DATABASE_URI))
 

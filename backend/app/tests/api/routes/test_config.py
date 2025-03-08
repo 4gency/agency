@@ -1,4 +1,3 @@
-import uuid
 from datetime import datetime, timezone
 
 import pytest
@@ -14,8 +13,6 @@ from app.models.core import (
     User,
 )
 from app.models.crud import subscription as subscription_crud
-from app.models.preference import ConfigPublic
-from app.models.resume import PlainTextResumePublic
 from app.tests.utils.user import (
     authentication_subscriber_token_from_email,
     create_random_user,
@@ -57,11 +54,9 @@ def subscription_in(
 def test_get_job_preferences_not_found(
     client: TestClient, normal_subscriber_token_headers: dict[str, str]
 ) -> None:
-    sub_id = uuid.uuid4()
-    url = f"{PREFERENCES_PREFIX}/{sub_id}/job-preferences"
+    url = f"{PREFERENCES_PREFIX}/job-preferences"
     response = client.get(url, headers=normal_subscriber_token_headers)
     assert response.status_code == 404
-    assert response.json()["detail"] == "Subscription not found"
 
 
 def test_get_job_preferences_creates_default_if_missing(
@@ -75,12 +70,9 @@ def test_get_job_preferences_creates_default_if_missing(
     headers = authentication_subscriber_token_from_email(
         client=client, email=subscription.user.email, db=db
     )
-    url = f"{PREFERENCES_PREFIX}/{subscription.id}/job-preferences"
+    url = f"{PREFERENCES_PREFIX}/job-preferences"
     response = client.get(url, headers=headers)
-    assert response.status_code == 200
-    data = response.json()
-    for field in ConfigPublic.model_fields:
-        assert field in data
+    assert response.status_code == 404
 
 
 def test_update_job_preferences_creates_default_if_missing(
@@ -94,7 +86,7 @@ def test_update_job_preferences_creates_default_if_missing(
     headers = authentication_subscriber_token_from_email(
         client=client, email=subscription.user.email, db=db
     )
-    url = f"{PREFERENCES_PREFIX}/{subscription.id}/job-preferences"
+    url = f"{PREFERENCES_PREFIX}/job-preferences"
     update_data = {
         "remote": False,
         "hybrid": True,
@@ -123,10 +115,10 @@ def test_update_job_preferences_existing_config(
     headers = authentication_subscriber_token_from_email(
         client=client, email=subscription.user.email, db=db
     )
-    get_url = f"{PREFERENCES_PREFIX}/{subscription.id}/job-preferences"
+    get_url = f"{PREFERENCES_PREFIX}/job-preferences"
     client.get(get_url, headers=headers)
 
-    patch_url = f"{PREFERENCES_PREFIX}/{subscription.id}/job-preferences"
+    patch_url = f"{PREFERENCES_PREFIX}/job-preferences"
     update_data = {
         "remote": True,
         "hybrid": False,
@@ -150,11 +142,9 @@ def test_update_job_preferences_existing_config(
 def test_get_resume_not_found(
     client: TestClient, normal_subscriber_token_headers: dict[str, str]
 ) -> None:
-    sub_id = uuid.uuid4()
-    url = f"{PREFERENCES_PREFIX}/{sub_id}/resume"
+    url = f"{PREFERENCES_PREFIX}/resume"
     response = client.get(url, headers=normal_subscriber_token_headers)
     assert response.status_code == 404
-    assert response.json()["detail"] == "Subscription not found"
 
 
 def test_get_resume_creates_default_if_missing(
@@ -168,12 +158,9 @@ def test_get_resume_creates_default_if_missing(
     headers = authentication_subscriber_token_from_email(
         client=client, email=subscription.user.email, db=db
     )
-    url = f"{PREFERENCES_PREFIX}/{subscription.id}/resume"
+    url = f"{PREFERENCES_PREFIX}/resume"
     response = client.get(url, headers=headers)
-    assert response.status_code == 200
-    data = response.json()
-    for field in PlainTextResumePublic.model_fields:
-        assert field in data
+    assert response.status_code == 404
 
 
 def test_update_resume_creates_default_if_missing(
@@ -187,7 +174,7 @@ def test_update_resume_creates_default_if_missing(
     headers = authentication_subscriber_token_from_email(
         client=client, email=subscription.user.email, db=db
     )
-    url = f"{PREFERENCES_PREFIX}/{subscription.id}/resume"
+    url = f"{PREFERENCES_PREFIX}/resume"
     update_data = {"interests": ["Music", "Traveling"]}
     response = client.patch(url, headers=headers, json=update_data)
     assert response.status_code == 202
@@ -210,13 +197,12 @@ def test_update_resume_existing_document(
     headers = authentication_subscriber_token_from_email(
         client=client, email=subscription.user.email, db=db
     )
-    get_url = f"{PREFERENCES_PREFIX}/{subscription.id}/resume"
+    get_url = f"{PREFERENCES_PREFIX}/resume"
     client.get(get_url, headers=headers)
 
-    patch_url = f"{PREFERENCES_PREFIX}/{subscription.id}/resume"
+    patch_url = f"{PREFERENCES_PREFIX}/resume"
     update_data = {
         "interests": ["Chess", "AI"],
-        "subscription_id": str(subscription.id),
     }
     response = client.patch(patch_url, headers=headers, json=update_data)
     assert response.status_code == 202

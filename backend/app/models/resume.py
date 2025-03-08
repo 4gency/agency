@@ -1,10 +1,14 @@
 import datetime
+from typing import Any, ClassVar
+from uuid import UUID
 
-from odmantic import EmbeddedModel, Field, Model
 from pydantic import BaseModel, EmailStr
+from sqlalchemy import ForeignKey
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
+from sqlmodel import JSON, Column, Field, SQLModel
 
 
-class PersonalInformation(EmbeddedModel):
+class PersonalInformation(BaseModel):
     name: str = "John"
     surname: str = "Doe"
     date_of_birth: str = (
@@ -21,7 +25,7 @@ class PersonalInformation(EmbeddedModel):
     linkedin: str = "https://linkedin.com/in/john_doe"
 
 
-class EducationDetails(EmbeddedModel):
+class EducationDetails(BaseModel):
     education_level: str = "Bachelor's Degree"
     institution: str = "University of New York"
     field_of_study: str = "Computer Science"
@@ -31,7 +35,7 @@ class EducationDetails(EmbeddedModel):
     exam: list[str] = ["GRE", "TOEFL"]
 
 
-class ExperienceDetail(EmbeddedModel):
+class ExperienceDetail(BaseModel):
     position: str = "Software Engineer"
     company: str = "Google"
     employment_period: str = "2020 - 2022"
@@ -41,36 +45,36 @@ class ExperienceDetail(EmbeddedModel):
     skills_acquired: list[str] = ["Python", "Django", "React"]
 
 
-class Project(EmbeddedModel):
+class Project(BaseModel):
     name: str = "My awesome CRUD app"
     description: str = "A CRUD app that does CRUD operations"
     link: str = "www.myawesomecrud.com"
 
 
-class Achievement(EmbeddedModel):
+class Achievement(BaseModel):
     name: str = "Employee of the month"
     description: str = "Awarded for being the best employee"
 
 
-class Certification(EmbeddedModel):
+class Certification(BaseModel):
     name: str = "Python Certification"
     description: str = "Certified Python Developer"
 
 
-class Language(EmbeddedModel):
+class Language(BaseModel):
     language: str = "English"
     proficiency: str = "Native"
 
 
-class Availability(EmbeddedModel):
+class Availability(BaseModel):
     notice_period: str = "1 month"
 
 
-class SalaryExpectations(EmbeddedModel):
+class SalaryExpectations(BaseModel):
     salary_range_usd: str = "90000 - 110000"
 
 
-class SelfIdentification(EmbeddedModel):
+class SelfIdentification(BaseModel):
     gender: str = "Male"
     pronouns: str = "He/Him"
     veteran: bool = False
@@ -78,7 +82,7 @@ class SelfIdentification(EmbeddedModel):
     ethnicity: str = "Hispanic"
 
 
-class LegalAuthorization(EmbeddedModel):
+class LegalAuthorization(BaseModel):
     eu_work_authorization: bool = False
     us_work_authorization: bool = False
     requires_us_visa: bool = False
@@ -97,7 +101,7 @@ class LegalAuthorization(EmbeddedModel):
     requires_uk_sponsorship: bool = False
 
 
-class WorkPreferences(EmbeddedModel):
+class WorkPreferences(BaseModel):
     remote_work: bool = True
     in_person_work: bool = True
     open_to_relocation: bool = True
@@ -106,7 +110,7 @@ class WorkPreferences(EmbeddedModel):
     willing_to_undergo_background_checks: bool = True
 
 
-class PlainTextResumePublic(BaseModel, extra="ignore"):
+class PlainTextResumePublic(BaseModel):
     personal_information: PersonalInformation = PersonalInformation()
     education_details: list[EducationDetails] = [
         EducationDetails(),
@@ -133,37 +137,82 @@ class PlainTextResumePublic(BaseModel, extra="ignore"):
     legal_authorization: LegalAuthorization = LegalAuthorization()
     work_preferences: WorkPreferences = WorkPreferences()
 
+    class Config:
+        extra = "ignore"
 
-class PlainTextResume(Model):
-    subscription_id: str = Field(index=True, unique=True)
-    user_id: str
 
-    personal_information: PersonalInformation = PersonalInformation()
-    education_details: list[EducationDetails] = [
-        EducationDetails(),
-    ]
-    experience_details: list[ExperienceDetail] = [
-        ExperienceDetail(),
-    ]
-    projects: list[Project] = [
-        Project(),
-    ]
-    achievements: list[Achievement] = [
-        Achievement(),
-    ]
-    certifications: list[Certification] = [
-        Certification(),
-    ]
-    languages: list[Language] = [
-        Language(),
-    ]
-    interests: list[str] = ["Reading", "Swimming"]
-    availability: Availability = Availability()
-    salary_expectations: SalaryExpectations = SalaryExpectations()
-    self_identification: SelfIdentification = SelfIdentification()
-    legal_authorization: LegalAuthorization = LegalAuthorization()
-    work_preferences: WorkPreferences = WorkPreferences()
+class PlainTextResume(SQLModel, table=True):
+    __tablename__: ClassVar[str] = "plain_text_resumes"
 
-    model_config = {
-        "collection": "plain_text_resumes",  # type: ignore[typeddict-unknown-key]
-    }
+    id: int | None = Field(default=None, primary_key=True)
+    user_id: UUID = Field(
+        sa_column=Column(
+            PGUUID(as_uuid=True),
+            ForeignKey("user.id", ondelete="CASCADE"),
+            nullable=False,
+        )
+    )
+
+    personal_information: dict[str, Any] = Field(
+        default_factory=lambda: PersonalInformation().model_dump(),
+        sa_column=Column(JSON),
+    )
+    education_details: list[dict[str, Any]] = Field(
+        default_factory=lambda: [
+            EducationDetails().model_dump(),
+        ],
+        sa_column=Column(JSON),
+    )
+    experience_details: list[dict[str, Any]] = Field(
+        default_factory=lambda: [
+            ExperienceDetail().model_dump(),
+        ],
+        sa_column=Column(JSON),
+    )
+    projects: list[dict[str, Any]] = Field(
+        default_factory=lambda: [
+            Project().model_dump(),
+        ],
+        sa_column=Column(JSON),
+    )
+    achievements: list[dict[str, Any]] = Field(
+        default_factory=lambda: [
+            Achievement().model_dump(),
+        ],
+        sa_column=Column(JSON),
+    )
+    certifications: list[dict[str, Any]] = Field(
+        default_factory=lambda: [
+            Certification().model_dump(),
+        ],
+        sa_column=Column(JSON),
+    )
+    languages: list[dict[str, Any]] = Field(
+        default_factory=lambda: [
+            Language().model_dump(),
+        ],
+        sa_column=Column(JSON),
+    )
+    interests: list[str] = Field(
+        default_factory=lambda: ["Reading", "Swimming"], sa_column=Column(JSON)
+    )
+    availability: dict[str, Any] = Field(
+        default_factory=lambda: Availability().model_dump(),
+        sa_column=Column(JSON),
+    )
+    salary_expectations: dict[str, Any] = Field(
+        default_factory=lambda: SalaryExpectations().model_dump(),
+        sa_column=Column(JSON),
+    )
+    self_identification: dict[str, Any] = Field(
+        default_factory=lambda: SelfIdentification().model_dump(),
+        sa_column=Column(JSON),
+    )
+    legal_authorization: dict[str, Any] = Field(
+        default_factory=lambda: LegalAuthorization().model_dump(),
+        sa_column=Column(JSON),
+    )
+    work_preferences: dict[str, Any] = Field(
+        default_factory=lambda: WorkPreferences().model_dump(),
+        sa_column=Column(JSON),
+    )

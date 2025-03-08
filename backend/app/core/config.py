@@ -68,30 +68,10 @@ class Settings(BaseSettings):
             path=self.POSTGRES_DB,
         )
 
-    MONGODB_SERVER: str
-    MONGODB_PORT: int = 27017
-    MONGODB_DB: str
-    MONGODB_USER: str
-    MONGODB_PASSWORD: str
-
     S3_ENDPOINT_URL: str
     S3_ACCESS_KEY_ID: str
     S3_SECRET_ACCESS_KEY: str
     S3_CONFIGS_BUCKET: str = "configs"
-
-    @computed_field  # type: ignore[prop-decorator]
-    @property
-    def MONGODB_URI(self) -> MultiHostUrl:
-        scheme = "mongodb"
-        if "." in self.MONGODB_SERVER:
-            scheme = "mongodb+srv"  # DNS (supports SRV)
-        return MultiHostUrl.build(
-            scheme=scheme,
-            username=self.MONGODB_USER,
-            password=self.MONGODB_PASSWORD,
-            host=self.MONGODB_SERVER,
-            port=self.MONGODB_PORT,
-        )
 
     SMTP_TLS: bool = True
     SMTP_SSL: bool = False

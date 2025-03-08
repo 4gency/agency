@@ -1,18 +1,22 @@
 import {
+  Alert,
+  AlertIcon,
+  AlertDescription,
   Button,
+  ButtonGroup,
+  Card,
   Container,
-  Divider,
-  Flex,
   Heading,
   Skeleton,
   Stack,
 } from "@chakra-ui/react"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import type React from "react"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { ConfigsService, SubscriptionsService } from "../../client/sdk.gen"
 import type { GetPlainTextResumeResponse } from "../../client/types.gen"
+import { ApiError } from "../../client"
 import useCustomToast from "../../hooks/useCustomToast"
 import type { ResumeForm } from "./types"
 
@@ -20,7 +24,6 @@ import AvailabilitySection from "./ResumeSections/AvailabilitySection"
 import EducationSection from "./ResumeSections/EducationSection"
 import InterestsSection from "./ResumeSections/InterestsSection"
 import LanguagesSection from "./ResumeSections/LanguagesSection"
-// Import all section components
 import PersonalInformationSection from "./ResumeSections/PersonalInformationSection"
 import ProjectsSection from "./ResumeSections/ProjectsSection"
 import SalaryExpectationSection from "./ResumeSections/SalaryExpectationSection"
@@ -43,7 +46,6 @@ const defaultValues: ResumeForm = {
   salary_expectation: {
     minimum: undefined,
     maximum: undefined,
-    currency: "",
   },
   work_preference: {
     remote: false,
@@ -114,6 +116,18 @@ const transformApiResponseToFormData = (
         )
       }
 
+      // Parse salary range from string to min/max numbers
+      let minimum: number | undefined = undefined
+      let maximum: number | undefined = undefined
+      
+      if (apiData.salary_expectations?.salary_range_usd) {
+        const range = apiData.salary_expectations.salary_range_usd.split('-');
+        if (range.length === 2) {
+          minimum = parseInt(range[0].trim().replace(/\D/g, ''));
+          maximum = parseInt(range[1].trim().replace(/\D/g, ''));
+        }
+      }
+
       return {
         personal_information: {
           name: apiData.personal_information.name || "",
@@ -174,21 +188,8 @@ const transformApiResponseToFormData = (
           : [],
         availability: apiData.availability?.notice_period || "",
         salary_expectation: {
-          minimum: apiData.salary_expectations?.salary_range_usd
-            ? Number.parseInt(
-                apiData.salary_expectations.salary_range_usd
-                  .split("-")[0]
-                  ?.replace(/\D/g, ""),
-              ) || undefined
-            : undefined,
-          maximum: apiData.salary_expectations?.salary_range_usd
-            ? Number.parseInt(
-                apiData.salary_expectations.salary_range_usd
-                  .split("-")[1]
-                  ?.replace(/\D/g, ""),
-              ) || undefined
-            : undefined,
-          currency: "USD",
+          minimum: minimum,
+          maximum: maximum,
         },
         work_preference: {
           remote: apiData.work_preferences?.remote_work || false,
@@ -304,10 +305,9 @@ const LoadingSkeleton: React.FC = () => (
 // Main component
 export const ResumePage: React.FC = () => {
   const showToast = useCustomToast()
-  const [subscriptionId, setSubscriptionId] = useState<string>("")
-  const [isLoadingSubscription, setIsLoadingSubscription] =
-    useState<boolean>(true)
   const [_scrollPosition, setScrollPosition] = useState<number>(0)
+  const [isCreatingNew, setIsCreatingNew] = useState<boolean>(false)
+  const [hasShownNotFoundMessage, setHasShownNotFoundMessage] = useState<boolean>(false)
 
   // Form setup
   const {
@@ -317,7 +317,7 @@ export const ResumePage: React.FC = () => {
     setValue,
     getValues,
     reset,
-    formState: { errors, isDirty, isSubmitting },
+    formState: { errors, isSubmitting },
     watch,
   } = useForm<ResumeForm>({
     defaultValues,
@@ -327,68 +327,133 @@ export const ResumePage: React.FC = () => {
   const { data: subscriptions, isLoading: isLoadingSubscriptions } = useQuery({
     queryKey: ["subscriptions"],
     queryFn: async () => {
+      console.log("Fetching subscriptions...");
       return await SubscriptionsService.getUserSubscriptions({
         onlyActive: true,
       })
-    },
+    }
   })
 
-  // Set subscription ID when data is available
-  useEffect(() => {
-    if (subscriptions && subscriptions.length > 0) {
-      setSubscriptionId(subscriptions[0].id)
-      setIsLoadingSubscription(false)
-    }
-  }, [subscriptions])
+  // Check if user has an active subscription
+  const hasActiveSubscription = useMemo(() => {
+    const hasSubscription = subscriptions && subscriptions.length > 0;
+    console.log("Has active subscription:", hasSubscription);
+    return hasSubscription;
+  }, [subscriptions]);
 
-  // Fetch resume data
-  const { data: resumeData, isLoading: isLoadingResume } = useQuery({
-    queryKey: ["plainTextResume", subscriptionId],
+  // Fetch resume data with better error handling
+  const { data: resumeData, isLoading: isLoadingResume, error: resumeError } = useQuery({
+    queryKey: ["plainTextResume"],
     queryFn: async () => {
-      if (!subscriptionId) {
-        return null
+      console.log("Executing resume fetch...");
+      try {
+        const result = await ConfigsService.getPlainTextResume();
+        console.log("Resume fetch successful");
+        return result;
+      } catch (error) {
+        const apiError = error as ApiError;
+        console.log("Resume fetch error:", apiError.status, apiError.message);
+        if (apiError.status === 404) {
+          setIsCreatingNew(true);
+          // Não mostrar toast aqui, deixar para o useEffect
+        }
+        throw error;
       }
-      return await ConfigsService.getPlainTextResume({ subscriptionId })
     },
-    enabled: !!subscriptionId && !isLoadingSubscription,
-    retry: false,
-  })
+    // Don't condition the query on subscription status to avoid race conditions
+    enabled: true,
+    retry: false, // Não tentar novamente automaticamente
+    refetchOnWindowFocus: false,
+    staleTime: 60000, // 1 minuto
+  });
 
-  // Handle resume fetch error
+  // Reset form data when resume data is loaded or cleared
   useEffect(() => {
-    if (!isLoadingResume && !resumeData && subscriptionId) {
-      showToast(
-        "Error fetching resume",
-        "There was an error loading your resume data.",
-        "error",
-      )
+    if (resumeData) {
+      // If we successfully load data, we're editing an existing resume
+      setIsCreatingNew(false);
+      
+      // Transform API data to form format
+      const formData = transformApiResponseToFormData(resumeData);
+      reset(formData);
     }
-  }, [isLoadingResume, resumeData, subscriptionId, showToast])
+  }, [resumeData, reset]);
 
-  // Update resume mutation
+  // Handle resume fetch error - only show actual errors, not 404
+  useEffect(() => {
+    // If loading or data exists, do nothing
+    if (isLoadingResume || resumeData) return;
+    
+    // If we have an active subscription but no resume data
+    if (hasActiveSubscription && !resumeData) {
+      const apiError = resumeError as ApiError;
+      
+      // Show message for 404 only if we haven't shown it already
+      if (apiError && apiError.status === 404) {
+        if (!hasShownNotFoundMessage) {
+          setIsCreatingNew(true);
+          setHasShownNotFoundMessage(true);
+          showToast(
+            "Resume not found",
+            "Please fill out the form to create your resume.",
+            "success"
+          )
+        }
+      } else if (apiError) {
+        // Real errors
+        console.error("Resume fetch error:", apiError);
+        showToast(
+          "Error fetching resume",
+          apiError.message || "An error occurred while fetching your resume.",
+          "error"
+        )
+      }
+    }
+  }, [hasActiveSubscription, isLoadingResume, resumeData, resumeError, showToast, isCreatingNew, hasShownNotFoundMessage]);
+
+  // Update resume mutation with better error handling
   const updateResumeMutation = useMutation({
     mutationFn: async (data: ResumeForm) => {
-      if (!subscriptionId) {
-        throw new Error("No subscription ID available")
+      if (!hasActiveSubscription) {
+        throw new Error("No active subscription available")
       }
-      const apiData = transformFormToApiData(data)
-      return await ConfigsService.updatePlainTextResume({
-        subscriptionId,
-        requestBody: apiData,
-      })
+      
+      try {
+        const apiData = transformFormToApiData(data)
+        const result = await ConfigsService.updatePlainTextResume({
+          requestBody: apiData,
+        })
+        
+        // If we were creating a new resume, we're now editing
+        if (isCreatingNew) {
+          setIsCreatingNew(false)
+        }
+        
+        return result
+      } catch (error) {
+        console.error("Error saving resume:", error)
+        throw error
+      }
     },
     onSuccess: () => {
       showToast(
-        "Resume updated",
-        "Your resume has been successfully updated.",
+        isCreatingNew ? "Resume created" : "Resume updated",
+        isCreatingNew 
+          ? "Your resume has been successfully created." 
+          : "Your resume has been successfully updated.",
         "success",
       )
     },
     onError: (error: Error) => {
-      console.error("Error updating resume:", error)
+      console.error("Resume mutation error:", error)
+      const apiError = error as ApiError
+      const errorDetail = apiError.body ? 
+        (apiError.body as any).detail || apiError.message : 
+        "An unexpected error occurred."
+      
       showToast(
-        "Error updating resume",
-        "There was an error saving your resume data.",
+        "Error saving resume",
+        errorDetail,
         "error",
       )
     },
@@ -397,136 +462,165 @@ export const ResumePage: React.FC = () => {
   // Parse and set form data when API response is received
   useEffect(() => {
     if (resumeData) {
-      // Store current scroll position before form data is set
-      const currentScrollPosition = window.scrollY
-      setScrollPosition(currentScrollPosition)
+      try {
+        // Store current scroll position before form data is set
+        const currentScrollPosition = window.scrollY
+        setScrollPosition(currentScrollPosition)
 
-      const formData = transformApiResponseToFormData(resumeData)
+        const formData = transformApiResponseToFormData(resumeData)
 
-      // Use reset with callback para garantir conclusão da atualização
-      reset(formData, {
-        keepDirty: false,
-        keepErrors: false,
-        keepDefaultValues: false,
-        keepValues: false,
-        keepIsSubmitted: false,
-        keepTouched: false,
-        keepIsValid: false,
-        keepSubmitCount: false,
-      })
-
-      // Usar um timeout mais longo para garantir que o DOM tenha tempo de renderizar completamente
-      setTimeout(() => {
-        window.scrollTo({
-          top: currentScrollPosition,
-          behavior: "auto",
+        // Reset form with fetched data
+        reset(formData, {
+          keepDirty: false,
+          keepErrors: false,
+          keepDefaultValues: false,
+          keepValues: false,
+          keepIsSubmitted: false,
+          keepTouched: false,
+          keepIsValid: false,
+          keepSubmitCount: false,
         })
-      }, 100)
-    }
-  }, [resumeData, reset])
 
-  // Form submission handler
+        // Restore scroll position
+        setTimeout(() => {
+          window.scrollTo({
+            top: currentScrollPosition,
+            behavior: "auto",
+          })
+        }, 100)
+      } catch (error) {
+        console.error("Error processing resume data:", error)
+        showToast(
+          "Error processing data",
+          "There was an error processing your resume data.",
+          "error",
+        )
+      }
+    }
+  }, [resumeData, reset, showToast])
+
+  // Form submission handler with better error handling
   const onSubmit = (data: ResumeForm) => {
-    updateResumeMutation.mutate(data)
+    try {
+      updateResumeMutation.mutate(data)
+    } catch (error) {
+      console.error("Form submission error:", error)
+      showToast(
+        "Submission error",
+        "There was an error submitting the form.",
+        "error",
+      )
+    }
   }
 
-  const isLoading =
-    isLoadingSubscriptions || isLoadingSubscription || isLoadingResume
+  const isLoading = isLoadingSubscriptions || isLoadingResume
 
+  // Ensure all form fields correctly mark the form as dirty
+  const updateField = (field: any, value: any) => {
+    setValue(field, value, { 
+      shouldDirty: true,
+      shouldTouch: true,
+      shouldValidate: true 
+    });
+  }
+
+  // Return with the form key to force re-renders when needed
   return (
-    <Container
-      maxW={{ base: "full", md: "60%" }}
-      ml={{ base: 0, md: 0 }}
-      pb="100px"
-    >
+    <Container maxW="full">
       <Heading size="lg" textAlign={{ base: "center", md: "left" }} py={12}>
         Resume
       </Heading>
+      {!hasActiveSubscription ? (
+        <Alert status="warning" mb={4}>
+          <AlertIcon />
+          <AlertDescription>
+            You need an active subscription to create or edit your resume.
+          </AlertDescription>
+        </Alert>
+      ) : null}
 
       {isLoading ? (
         <LoadingSkeleton />
       ) : (
-        <form onSubmit={handleSubmit(onSubmit)}>
+        <form onSubmit={handleSubmit(onSubmit)} style={{ marginBottom: '3rem' }}>
           <Stack spacing={8}>
-            <PersonalInformationSection register={register} errors={errors} />
+            <Card variant="outline" p={4}>
+              <PersonalInformationSection register={register} errors={errors} />
+            </Card>
 
-            <Divider />
+            <Card variant="outline" p={4}>
+              <EducationSection
+                register={register}
+                errors={errors}
+                control={control}
+                watch={watch}
+              />
+            </Card>
 
-            <EducationSection
-              register={register}
-              errors={errors}
-              control={control}
-              watch={watch}
-            />
+            <Card variant="outline" p={4}>
+              <WorkExperienceSection
+                register={register}
+                errors={errors}
+                control={control}
+                watch={watch}
+              />
+            </Card>
 
-            <Divider />
+            <Card variant="outline" p={4}>
+              <ProjectsSection
+                register={register}
+                errors={errors}
+                control={control}
+                watch={watch}
+              />
+            </Card>
 
-            <WorkExperienceSection
-              register={register}
-              errors={errors}
-              control={control}
-              watch={watch}
-            />
+            <Card variant="outline" p={4}>
+              <SkillsSection
+                setValue={updateField}
+                getValues={getValues}
+                watch={watch}
+              />
+            </Card>
 
-            <Divider />
+            <Card variant="outline" p={4}>
+              <LanguagesSection
+                register={register}
+                errors={errors}
+                control={control}
+              />
+            </Card>
 
-            <ProjectsSection
-              register={register}
-              errors={errors}
-              control={control}
-              watch={watch}
-            />
+            <Card variant="outline" p={4}>
+              <AvailabilitySection register={register} />
+            </Card>
 
-            <Divider />
+            <Card variant="outline" p={4}>
+              <SalaryExpectationSection register={register} />
+            </Card>
 
-            <SkillsSection
-              setValue={(field, value) => {
-                setValue(field, value, { shouldDirty: true })
-              }}
-              getValues={getValues}
-              watch={watch}
-            />
+            <Card variant="outline" p={4}>
+              <WorkPreferenceSection register={register} />
+            </Card>
 
-            <Divider />
-
-            <LanguagesSection
-              register={register}
-              errors={errors}
-              control={control}
-            />
-
-            <Divider />
-
-            <AvailabilitySection register={register} />
-
-            <Divider />
-
-            <SalaryExpectationSection register={register} />
-
-            <Divider />
-
-            <WorkPreferenceSection register={register} />
-
-            <Divider />
-
-            <InterestsSection
-              setValue={(field, value) => {
-                setValue(field, value, { shouldDirty: true })
-              }}
-              getValues={getValues}
-              watch={watch}
-            />
-
-            <Flex justify="flex-end" mt={6}>
-              <Button
-                type="submit"
-                isLoading={isSubmitting || updateResumeMutation.isPending}
-                isDisabled={!isDirty || !subscriptionId}
-              >
-                Save Resume
-              </Button>
-            </Flex>
+            <Card variant="outline" p={4}>
+              <InterestsSection
+                setValue={updateField}
+                getValues={getValues}
+                watch={watch}
+              />
+            </Card>
           </Stack>
+          <ButtonGroup spacing={4} mt={4}>
+            <Button
+              type="submit"
+              variant="primary"
+              isLoading={isSubmitting || updateResumeMutation.isPending}
+              isDisabled={!hasActiveSubscription}
+            >
+              {isCreatingNew ? "Create Resume" : "Save Resume"}
+            </Button>
+          </ButtonGroup>
         </form>
       )}
     </Container>

@@ -1,11 +1,15 @@
 import {
+  Alert,
+  AlertIcon,
+  AlertDescription,
   Box,
   Button,
+  ButtonGroup,
+  Card,
   Container,
   Flex,
   FormControl,
   FormLabel,
-  HStack,
   Heading,
   IconButton,
   Input,
@@ -17,21 +21,20 @@ import {
   SliderFilledTrack,
   SliderThumb,
   SliderTrack,
+  Stack,
   Tag,
   TagCloseButton,
   TagLabel,
-  Text,
-  useColorModeValue, // <--- importamos esse hook
+  useColorModeValue,
 } from "@chakra-ui/react"
-import { useMutation } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import type React from "react"
-import { useEffect, useLayoutEffect, useRef, useState } from "react"
+import { useEffect, useLayoutEffect, useState, useMemo } from "react"
 import { useForm } from "react-hook-form"
-import { type ApiError, type ConfigPublic, ConfigsService } from "../../client"
+import { type ApiError, type ConfigPublic, ConfigsService, SubscriptionsService } from "../../client"
 
 import { AddIcon } from "@chakra-ui/icons"
 import useCustomToast from "../../hooks/useCustomToast"
-import useSubscriptions from "../../hooks/userSubscriptions"
 
 /* ----------------------------- TYPES & UTILS ----------------------------- */
 
@@ -164,13 +167,12 @@ const MultiSelectToggle: React.FC<MultiSelectToggleProps> = ({
   }
 
   return (
-    <Flex wrap="wrap" gap={2}>
+    <Flex wrap="wrap" gap={2} my={2}>
       {options.map((option) => {
         const isSelected = selected.includes(option.value)
         return (
           <Button
             key={option.value}
-            // MUDANÇA AQUI: Usamos a mesma lógica do "Remote" p/ cor
             bg={
               isSelected ? "#00766C" : useColorModeValue("white", "gray.800") // claro/escuro
             }
@@ -184,6 +186,7 @@ const MultiSelectToggle: React.FC<MultiSelectToggleProps> = ({
                 : useColorModeValue("gray.100", "gray.700"),
             }}
             onClick={() => handleToggle(option.value)}
+            size="sm"
           >
             {option.label}
           </Button>
@@ -242,51 +245,27 @@ const ArrayInput: React.FC<ArrayInputProps> = ({
           onClick={handleAdd}
         />
       </Flex>
-      <HStack wrap="wrap">
+      <Flex wrap="wrap" gap={1}>
         {items.map((item) => (
-          <Tag key={item} m="2px" variant="subtle">
+          <Tag key={item} m="2px" variant="subtle" colorScheme="teal">
             <TagLabel>{item}</TagLabel>
-            <TagCloseButton onClick={() => handleRemove(item)} />
+            <TagCloseButton onClick={() => handleRemove(item)} zIndex={10} />
           </Tag>
         ))}
-      </HStack>
+      </Flex>
     </FormControl>
   )
 }
 
-/* --------------------------- LOADING SKELETON --------------------------- */
-
+/* --------------------------- LOADING SKELETON COMPONENT --------------------------- */
 const LoadingSkeleton = () => {
   return (
-    <Box width="full">
-      <SkeletonText
-        mt="4"
-        noOfLines={1}
-        spacing="4"
-        skeletonHeight="10"
-        width="200px"
-      />
-
-      <Skeleton height="40px" mt="8" width="150px" />
-
-      <Flex wrap="wrap" gap={2} mt="6">
-        <Skeleton height="35px" width="100px" />
-        <Skeleton height="35px" width="90px" />
-        <Skeleton height="35px" width="120px" />
-      </Flex>
-
-      <Skeleton height="40px" mt="8" width="150px" />
-
-      <Flex wrap="wrap" gap={2} mt="6">
-        <Skeleton height="35px" width="100px" />
-        <Skeleton height="35px" width="110px" />
-        <Skeleton height="35px" width="90px" />
-      </Flex>
-
-      <Skeleton height="140px" mt="8" />
-      <Skeleton height="140px" mt="8" />
-
-      <Skeleton height="40px" mt="8" width="150px" />
+    <Box p={4}>
+      <Skeleton height="40px" width="150px" mb={6} />
+      <SkeletonText mt="4" noOfLines={4} spacing="4" />
+      <SkeletonText mt="6" noOfLines={3} spacing="4" />
+      <SkeletonText mt="6" noOfLines={5} spacing="4" />
+      <SkeletonText mt="6" noOfLines={2} spacing="4" />
     </Box>
   )
 }
@@ -294,12 +273,25 @@ const LoadingSkeleton = () => {
 /* --------------------------- MAIN COMPONENT --------------------------- */
 
 const JobPreferencesPage: React.FC = () => {
-  const { data: subscriptions, isLoading } = useSubscriptions()
-  const [selectedSubId, setSelectedSubId] = useState<string>("")
+  const { data: subscriptions, isLoading: isLoadingSubscriptions } = useQuery({
+    queryKey: ["subscriptions"],
+    queryFn: async () => {
+      console.log("Fetching subscriptions for preferences...");
+      return await SubscriptionsService.getUserSubscriptions({
+        onlyActive: true,
+      })
+    },
+  })
+
+  const hasActiveSubscription = useMemo(() => {
+    const hasSubscription = subscriptions && subscriptions.length > 0;
+    console.log("Has active subscription:", hasSubscription);
+    return hasSubscription;
+  }, [subscriptions]);
+
   const [scrollPosition, setScrollPosition] = useState<number>(0)
   const [isDataLoaded, setIsDataLoaded] = useState<boolean>(false)
-  const [containerHeight, setContainerHeight] = useState<number | null>(null)
-  const pageContainerRef = useRef<HTMLDivElement>(null)
+  const [isCreatingNew, setIsCreatingNew] = useState<boolean>(false)
   const showToast = useCustomToast()
 
   // Default form data for first render
@@ -319,8 +311,8 @@ const JobPreferencesPage: React.FC = () => {
     location_blacklist: [],
   }
 
+  // Form setup with React Hook Form
   const {
-    register,
     handleSubmit,
     reset,
     watch,
@@ -329,13 +321,6 @@ const JobPreferencesPage: React.FC = () => {
   } = useForm<JobPreferencesForm>({
     defaultValues: defaultFormValues,
   })
-
-  // Automatically select the first subscription when data is loaded
-  useEffect(() => {
-    if (subscriptions && subscriptions.length > 0 && !selectedSubId) {
-      setSelectedSubId(subscriptions[0].id)
-    }
-  }, [subscriptions, selectedSubId])
 
   // Adicionar um useLayoutEffect para garantir que a página não role após o carregamento dos dados
   useLayoutEffect(() => {
@@ -348,24 +333,21 @@ const JobPreferencesPage: React.FC = () => {
     }
   }, [isDataLoaded, scrollPosition])
 
-  /** When a subscription is selected, fetch the config and populate the form. */
-  useEffect(() => {
-    if (selectedSubId) {
-      setIsDataLoaded(false)
-
-      // Captura a altura atual do container antes de buscar os dados
-      if (pageContainerRef.current) {
-        setContainerHeight(
-          pageContainerRef.current.getBoundingClientRect().height,
-        )
-      }
-
-      // Store current scroll position before updating form
-      const currentScrollPosition = window.scrollY
-      setScrollPosition(currentScrollPosition)
-
-      ConfigsService.getConfig({ subscriptionId: selectedSubId })
-        .then((config) => {
+  // Fetch config using React Query directly for better consistency
+  const { refetch: refetchConfig } = useQuery({
+    queryKey: ["jobPreferences"],
+    queryFn: async () => {
+      console.log("Executing job preferences fetch...");
+      try {
+        setIsDataLoaded(false);
+        
+        // Capturar a posição atual de scroll para restaurar depois
+        setScrollPosition(window.scrollY)
+        
+        const config = await ConfigsService.getConfig();
+        console.log("Job preferences fetch successful");
+        
+        try {
           // Transform API config -> form shape
           const transformed = transformToForm(config)
 
@@ -381,57 +363,168 @@ const JobPreferencesPage: React.FC = () => {
             keepSubmitCount: false,
           })
 
+          // Marcar que os dados foram carregados e não estamos criando novos
+          setIsCreatingNew(false)
+          setIsDataLoaded(true)
+
           // Usar múltiplos timeouts para garantir que o DOM seja atualizado completamente
           setTimeout(() => {
             window.scrollTo({
-              top: currentScrollPosition,
+              top: window.scrollY,
               behavior: "auto",
             })
           }, 100)
 
           setTimeout(() => {
             window.scrollTo({
-              top: currentScrollPosition,
+              top: window.scrollY,
               behavior: "auto",
             })
             setIsDataLoaded(true)
-            setContainerHeight(null) // Remover a altura fixa após o carregamento
           }, 300)
-        })
-        .catch((err: ApiError) => {
-          const detail = (err.body as any)?.detail || err.message
+        } catch (error) {
+          console.error("Error processing config data:", error)
+          setIsDataLoaded(true)
+          showToast(
+            "Error processing preferences",
+            "There was an error processing your preference data.",
+            "error"
+          )
+        }
+        
+        return config;
+      } catch (err) {
+        const apiError = err as ApiError;
+        console.log("Job preferences fetch error:", apiError.status, apiError.message);
+        
+        // Em caso de 404, não é erro - apenas não existe config ainda
+        if (apiError.status === 404) {
+          setIsDataLoaded(true)
+          if (!isCreatingNew) {
+            setIsCreatingNew(true)
+            showToast(
+              "Job preferences not found",
+              "Please fill out the form to create your job preferences.",
+              "success"
+            )
+          }
+        } else {
+          console.error("Error fetching preferences:", apiError)
+          const detail = (apiError.body as any)?.detail || apiError.message
           showToast("Error fetching preferences", String(detail), "error")
           setIsDataLoaded(true)
-          setContainerHeight(null) // Remover a altura fixa em caso de erro
-        })
-    }
-  }, [selectedSubId, reset, showToast])
+        }
+        
+        throw apiError;
+      }
+    },
+    enabled: true,
+    retry: 1,
+    refetchOnWindowFocus: false,
+    staleTime: 30000, // 30 seconds
+  });
 
-  /** Save preferences (PUT) */
+  // Ensure we fetch data when component mounts
+  useEffect(() => {
+    // Force a refetch on component mount to ensure data is loaded
+    refetchConfig();
+  }, [refetchConfig]);
+
+  /** Save preferences with better error handling */
   const mutation = useMutation({
-    mutationFn: (data: ConfigPublic) =>
-      ConfigsService.updateConfig({
-        subscriptionId: selectedSubId,
-        requestBody: data,
-      }),
+    mutationFn: (data: ConfigPublic) => {
+      try {
+        return ConfigsService.updateConfig({
+          requestBody: data,
+        })
+      } catch (error) {
+        console.error("Error in mutation:", error)
+        throw error
+      }
+    },
     onSuccess: () => {
-      showToast("Success", "Preferences updated!", "success")
+      showToast(
+        isCreatingNew ? "Preferences created" : "Preferences updated", 
+        isCreatingNew 
+          ? "Your preferences have been successfully created." 
+          : "Your preferences have been successfully updated.", 
+        "success"
+      )
+      
+      // If we were creating, we're now editing
+      if (isCreatingNew) {
+        setIsCreatingNew(false)
+      }
+      
+      // Force a re-render of the form with the current data
+      // setFormKey(prevKey => prevKey + 1)
     },
     onError: (err: ApiError) => {
+      console.error("Mutation error:", err)
       const detail = (err.body as any)?.detail || err.message
-      showToast("Error updating preferences", String(detail), "error")
+      showToast("Error saving preferences", String(detail), "error")
     },
   })
 
-  /** Handle form submit */
+  /** Handle form submit with better error handling */
   const onSubmit = (data: JobPreferencesForm) => {
-    if (!selectedSubId) {
-      showToast("Attention", "No subscription available.", "error")
-      return
+    try {
+      if (!hasActiveSubscription) {
+        showToast("Attention", "No active subscription available.", "error")
+        return
+      }
+      
+      // Convert form data -> API shape
+      const payload = transformFromForm(data)
+      mutation.mutate(payload)
+    } catch (error) {
+      console.error("Form submission error:", error)
+      showToast(
+        "Submission error", 
+        "An error occurred while processing your form submission.", 
+        "error"
+      )
     }
-    // Convert form data -> API shape
-    const payload = transformFromForm(data)
-    mutation.mutate(payload)
+  }
+
+  // Ensure all form fields correctly mark the form as dirty
+  const updateField = (field: any, value: any) => {
+    setValue(field, value, { 
+      shouldDirty: true,
+      shouldTouch: true,
+      shouldValidate: true 
+    });
+  }
+
+  // Options for experience levels multi-select
+  const experienceOptions: Option[] = [
+    { value: "internship", label: "Internship" },
+    { value: "entry", label: "Entry Level" },
+    { value: "associate", label: "Associate" },
+    { value: "mid_senior_level", label: "Mid-Senior Level" },
+    { value: "director", label: "Director" },
+    { value: "executive", label: "Executive" },
+  ]
+
+  // Options for job types multi-select
+  const jobTypeOptions: Option[] = [
+    { value: "full_time", label: "Full-Time" },
+    { value: "contract", label: "Contract" },
+    { value: "part_time", label: "Part-Time" },
+    { value: "temporary", label: "Temporary" },
+    { value: "internship", label: "Internship" },
+    { value: "other", label: "Other" },
+    { value: "volunteer", label: "Volunteer" },
+  ]
+
+  if (isLoadingSubscriptions) {
+    return (
+      <Container maxW="full">
+        <Heading size="lg" textAlign={{ base: "center", md: "left" }} py={12}>
+          Job Preferences
+        </Heading>
+      </Container>
+    )
   }
 
   /** Watch local state for array-based fields to keep form in sync. */
@@ -443,268 +536,228 @@ const JobPreferencesPage: React.FC = () => {
   const experienceLevels = watch("experience_levels")
   const jobTypes = watch("job_types")
 
-  // Options for the MultiSelectToggle components
-  const experienceOptions: Option[] = [
-    { value: "internship", label: "Internship" },
-    { value: "entry", label: "Entry" },
-    { value: "associate", label: "Associate" },
-    { value: "mid_senior_level", label: "Mid-Senior Level" },
-    { value: "director", label: "Director" },
-    { value: "executive", label: "Executive" },
-  ]
-
-  const jobTypeOptions: Option[] = [
-    { value: "full_time", label: "Full-time" },
-    { value: "contract", label: "Contract" },
-    { value: "part_time", label: "Part-time" },
-    { value: "temporary", label: "Temporary" },
-    { value: "internship", label: "Internship" },
-    { value: "other", label: "Other" },
-    { value: "volunteer", label: "Volunteer" },
-  ]
-
-  if (isLoading) {
-    return (
-      <Container maxW={{ base: "full", md: "60%" }} ml={{ base: 0, md: 0 }}>
-        <Heading size="lg" textAlign={{ base: "center", md: "left" }} py={12}>
-          Job Preferences
-        </Heading>
-        <LoadingSkeleton />
-      </Container>
-    )
-  }
-
-  const hasSubscriptions = subscriptions && subscriptions.length > 0
-
   return (
-    <Container
-      maxW={{ base: "full", md: "60%" }}
-      ml={{ base: 0, md: 0 }}
-      pb="100px"
-      ref={pageContainerRef}
-      h={containerHeight ? `${containerHeight}px` : "auto"}
-      position="relative"
-    >
+    <Container maxW="full">
       <Heading size="lg" textAlign={{ base: "center", md: "left" }} py={12}>
         Job Preferences
       </Heading>
+      {!hasActiveSubscription && (
+        <Alert status="warning" mb={4}>
+          <AlertIcon />
+          <AlertDescription>
+            You need an active subscription to configure job preferences
+          </AlertDescription>
+        </Alert>
+      )}
 
-      {!hasSubscriptions ? (
-        <Text>No subscriptions available.</Text>
+      {!isDataLoaded ? (
+        <LoadingSkeleton />
       ) : (
-        <Box as="form" onSubmit={handleSubmit(onSubmit)}>
-          {/* Remote */}
-          <FormControl mb={4}>
-            <FormLabel>Remote</FormLabel>
-            <Input type="hidden" {...register("remote")} />
+        <form onSubmit={handleSubmit(onSubmit)} style={{ marginBottom: '3rem' }}>
+          <Stack spacing={6}>
+            <Card variant="outline" p={4}>
+              <FormControl mb={4}>
+                <FormLabel>Work Location Preferences</FormLabel>
+                <Flex gap={3} wrap="wrap">
+                  <Button
+                    bg={
+                      watch("remote") ? "#00766C" : useColorModeValue("white", "gray.800")
+                    }
+                    color={
+                      watch("remote") ? "white" : useColorModeValue("black", "white")
+                    }
+                    border="1px solid #00766C"
+                    _hover={{
+                      bg: watch("remote")
+                        ? "#00655D"
+                        : useColorModeValue("gray.100", "gray.700"),
+                    }}
+                    onClick={() => updateField("remote", !watch("remote"))}
+                  >
+                    {watch("remote") ? "Remote Allowed" : "Remote Not Allowed"}
+                  </Button>
+
+                  <Button
+                    bg={
+                      watch("hybrid") ? "#00766C" : useColorModeValue("white", "gray.800")
+                    }
+                    color={
+                      watch("hybrid") ? "white" : useColorModeValue("black", "white")
+                    }
+                    border="1px solid #00766C"
+                    _hover={{
+                      bg: watch("hybrid")
+                        ? "#00655D"
+                        : useColorModeValue("gray.100", "gray.700"),
+                    }}
+                    onClick={() => updateField("hybrid", !watch("hybrid"))}
+                  >
+                    {watch("hybrid") ? "Hybrid Allowed" : "Hybrid Not Allowed"}
+                  </Button>
+
+                  <Button
+                    bg={
+                      watch("onsite") ? "#00766C" : useColorModeValue("white", "gray.800")
+                    }
+                    color={
+                      watch("onsite") ? "white" : useColorModeValue("black", "white")
+                    }
+                    border="1px solid #00766C"
+                    _hover={{
+                      bg: watch("onsite")
+                        ? "#00655D"
+                        : useColorModeValue("gray.100", "gray.700"),
+                    }}
+                    onClick={() => updateField("onsite", !watch("onsite"))}
+                  >
+                    {watch("onsite") ? "Onsite Allowed" : "Onsite Not Allowed"}
+                  </Button>
+                </Flex>
+              </FormControl>
+            </Card>
+
+            <Card variant="outline" p={4}>
+              <FormControl mb={4}>
+                <FormLabel>Experience Levels</FormLabel>
+                <MultiSelectToggle
+                  options={experienceOptions}
+                  selected={experienceLevels}
+                  onChange={(values) => updateField("experience_levels", values)}
+                />
+              </FormControl>
+            </Card>
+
+            <Card variant="outline" p={4}>
+              <FormControl mb={4}>
+                <FormLabel>Job Types</FormLabel>
+                <MultiSelectToggle
+                  options={jobTypeOptions}
+                  selected={jobTypes}
+                  onChange={(values) => updateField("job_types", values)}
+                />
+              </FormControl>
+            </Card>
+
+            <Card variant="outline" p={4}>
+              <FormControl mb={4}>
+                <FormLabel>Posting Date</FormLabel>
+                <RadioGroup
+                  value={watch("posting_date")}
+                  onChange={(val) => updateField("posting_date", val)}
+                >
+                  <Flex direction="column" gap={2}>
+                    <Radio value="all_time">All Time</Radio>
+                    <Radio value="month">Past Month</Radio>
+                    <Radio value="week">Past Week</Radio>
+                    <Radio value="hours">Past 24 Hours</Radio>
+                  </Flex>
+                </RadioGroup>
+              </FormControl>
+            </Card>
+
+            <Card variant="outline" p={4}>
+              <FormControl mb={4}>
+                <FormLabel>Apply Once at Company</FormLabel>
+                <Button
+                  bg={
+                    watch("apply_once_at_company") ? "#00766C" : useColorModeValue("white", "gray.800")
+                  }
+                  color={
+                    watch("apply_once_at_company") ? "white" : useColorModeValue("black", "white")
+                  }
+                  border="1px solid #00766C"
+                  _hover={{
+                    bg: watch("apply_once_at_company")
+                      ? "#00655D"
+                      : useColorModeValue("gray.100", "gray.700"),
+                  }}
+                  onClick={() =>
+                    updateField(
+                      "apply_once_at_company",
+                      !watch("apply_once_at_company"),
+                    )
+                  }
+                >
+                  {watch("apply_once_at_company")
+                    ? "Apply Once at Company"
+                    : "Apply Multiple Times at Company"}
+                </Button>
+              </FormControl>
+            </Card>
+
+            <Card variant="outline" p={4}>
+              <FormControl mb={4}>
+                <FormLabel>Distance (miles): {watch("distance")}</FormLabel>
+                <Slider
+                  min={0}
+                  max={100}
+                  step={10}
+                  value={watch("distance")}
+                  onChange={(val) => updateField("distance", val)}
+                >
+                  <SliderTrack>
+                    <SliderFilledTrack bg="#00766C" />
+                  </SliderTrack>
+                  <SliderThumb />
+                </Slider>
+              </FormControl>
+            </Card>
+
+            <Card variant="outline" p={4}>
+              <ArrayInput
+                label="Positions"
+                items={positions}
+                onChange={(newItems) => updateField("positions", newItems)}
+                placeholder="e.g. Developer, Frontend"
+              />
+            </Card>
+
+            <Card variant="outline" p={4}>
+              <ArrayInput
+                label="Locations"
+                items={locations}
+                onChange={(newItems) => updateField("locations", newItems)}
+                placeholder="e.g. USA, Canada"
+              />
+            </Card>
+
+            <Card variant="outline" p={4}>
+              <Heading size="md" mb={4}>Blacklists</Heading>
+              <ArrayInput
+                label="Company Blacklist"
+                items={companyBlacklist}
+                onChange={(newItems) => updateField("company_blacklist", newItems)}
+                placeholder="e.g. Gupy, Lever"
+              />
+
+              <ArrayInput
+                label="Title Blacklist"
+                items={titleBlacklist}
+                onChange={(newItems) => updateField("title_blacklist", newItems)}
+                placeholder="e.g. Senior, Jr"
+              />
+
+              <ArrayInput
+                label="Location Blacklist"
+                items={locationBlacklist}
+                onChange={(newItems) => updateField("location_blacklist", newItems)}
+                placeholder="e.g. Brazil, Mexico"
+              />
+            </Card>
+          </Stack>
+          <ButtonGroup justifyContent="flex-end" mt={4}>
             <Button
-              bg={
-                watch("remote")
-                  ? "#00766C"
-                  : useColorModeValue("white", "gray.800")
-              }
-              color={
-                watch("remote") ? "white" : useColorModeValue("black", "white")
-              }
-              border="1px solid #00766C"
-              _hover={{
-                bg: watch("remote")
-                  ? "#00655D"
-                  : useColorModeValue("gray.100", "gray.700"),
-              }}
-              onClick={() => setValue("remote", !watch("remote"))}
+              type="submit"
+              variant="primary"
+              isLoading={isSubmitting}
+              isDisabled={!hasActiveSubscription}
+              mt={4}
+              width="200px"
             >
-              {watch("remote") ? "Remote Allowed" : "Remote Not Allowed"}
+              {isCreatingNew ? "Create Preferences" : "Save Preferences"}
             </Button>
-          </FormControl>
-
-          {/* Hybrid */}
-          <FormControl mb={4}>
-            <FormLabel>Hybrid</FormLabel>
-            <Input type="hidden" {...register("hybrid")} />
-            <Button
-              bg={
-                watch("hybrid")
-                  ? "#00766C"
-                  : useColorModeValue("white", "gray.800")
-              }
-              color={
-                watch("hybrid") ? "white" : useColorModeValue("black", "white")
-              }
-              border="1px solid #00766C"
-              _hover={{
-                bg: watch("hybrid")
-                  ? "#00655D"
-                  : useColorModeValue("gray.100", "gray.700"),
-              }}
-              onClick={() => setValue("hybrid", !watch("hybrid"))}
-            >
-              {watch("hybrid") ? "Hybrid Allowed" : "Hybrid Not Allowed"}
-            </Button>
-          </FormControl>
-
-          {/* Onsite */}
-          <FormControl mb={4}>
-            <FormLabel>Onsite</FormLabel>
-            <Input type="hidden" {...register("onsite")} />
-            <Button
-              bg={
-                watch("onsite")
-                  ? "#00766C"
-                  : useColorModeValue("white", "gray.800")
-              }
-              color={
-                watch("onsite") ? "white" : useColorModeValue("black", "white")
-              }
-              border="1px solid #00766C"
-              _hover={{
-                bg: watch("onsite")
-                  ? "#00655D"
-                  : useColorModeValue("gray.100", "gray.700"),
-              }}
-              onClick={() => setValue("onsite", !watch("onsite"))}
-            >
-              {watch("onsite") ? "Onsite Allowed" : "Onsite Not Allowed"}
-            </Button>
-          </FormControl>
-
-          {/* EXPERIENCE LEVELS (custom multi-select toggle) */}
-          <FormControl mb={4}>
-            <FormLabel>Experience Levels</FormLabel>
-            <MultiSelectToggle
-              options={experienceOptions}
-              selected={experienceLevels}
-              onChange={(values) => setValue("experience_levels", values)}
-            />
-          </FormControl>
-
-          {/* JOB TYPES (custom multi-select toggle) */}
-          <FormControl mb={4}>
-            <FormLabel>Job Types</FormLabel>
-            <MultiSelectToggle
-              options={jobTypeOptions}
-              selected={jobTypes}
-              onChange={(values) => setValue("job_types", values)}
-            />
-          </FormControl>
-
-          {/* POSTING DATE (single select) */}
-          <FormControl mb={4}>
-            <FormLabel>Posting Date</FormLabel>
-            <RadioGroup
-              value={watch("posting_date")}
-              onChange={(val) => setValue("posting_date", val)}
-            >
-              <Flex direction="column" gap={2}>
-                <Radio value="all_time">All time</Radio>
-                <Radio value="month">Last Month</Radio>
-                <Radio value="week">Last Week</Radio>
-                <Radio value="hours">Last 24 Hours</Radio>
-              </Flex>
-            </RadioGroup>
-          </FormControl>
-
-          {/* APPLY ONCE AT COMPANY */}
-          <FormControl mb={4}>
-            <FormLabel>Apply Once Per Company</FormLabel>
-            <Input type="hidden" {...register("apply_once_at_company")} />
-            <Button
-              bg={
-                watch("apply_once_at_company")
-                  ? "#00766C"
-                  : useColorModeValue("white", "gray.800")
-              }
-              color={
-                watch("apply_once_at_company")
-                  ? "white"
-                  : useColorModeValue("black", "white")
-              }
-              border="1px solid #00766C"
-              _hover={{
-                bg: watch("apply_once_at_company")
-                  ? "#00655D"
-                  : useColorModeValue("gray.100", "gray.700"),
-              }}
-              onClick={() =>
-                setValue(
-                  "apply_once_at_company",
-                  !watch("apply_once_at_company"),
-                )
-              }
-            >
-              {watch("apply_once_at_company")
-                ? "Apply Once Per Company"
-                : "Apply Multiple Times"}
-            </Button>
-          </FormControl>
-
-          {/* DISTANCE SLIDER */}
-          <FormControl mb={4}>
-            <FormLabel>Distance (miles)</FormLabel>
-            <Slider
-              min={0}
-              max={200}
-              step={10}
-              value={watch("distance")}
-              onChange={(val) => setValue("distance", val)}
-            >
-              <SliderTrack>
-                <SliderFilledTrack />
-              </SliderTrack>
-              <SliderThumb />
-            </Slider>
-            <Text mt={2}>Selected Distance: {watch("distance")}</Text>
-          </FormControl>
-
-          {/* POSITIONS */}
-          <ArrayInput
-            label="Positions"
-            items={positions}
-            onChange={(newItems) => setValue("positions", newItems)}
-            placeholder="e.g. Developer, Frontend"
-          />
-
-          {/* LOCATIONS */}
-          <ArrayInput
-            label="Locations"
-            items={locations}
-            onChange={(newItems) => setValue("locations", newItems)}
-            placeholder="e.g. USA, Canada"
-          />
-
-          {/* COMPANY BLACKLIST */}
-          <ArrayInput
-            label="Company Blacklist"
-            items={companyBlacklist}
-            onChange={(newItems) => setValue("company_blacklist", newItems)}
-            placeholder="e.g. Gupy, Lever"
-          />
-
-          {/* TITLE BLACKLIST */}
-          <ArrayInput
-            label="Title Blacklist"
-            items={titleBlacklist}
-            onChange={(newItems) => setValue("title_blacklist", newItems)}
-            placeholder="e.g. Senior, Jr"
-          />
-
-          {/* LOCATION BLACKLIST */}
-          <ArrayInput
-            label="Location Blacklist"
-            items={locationBlacklist}
-            onChange={(newItems) => setValue("location_blacklist", newItems)}
-            placeholder="e.g. Brazil, Mexico"
-          />
-
-          <Button
-            mt={6}
-            type="submit"
-            isDisabled={!hasSubscriptions}
-            isLoading={isSubmitting || mutation.status === "pending"}
-          >
-            Save Preferences
-          </Button>
-        </Box>
+          </ButtonGroup>
+        </form>
       )}
     </Container>
   )

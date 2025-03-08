@@ -133,8 +133,8 @@ const BotSessionManager = ({
 
   const {
     isOpen: isCreateOpen,
-    onOpen: onCreateOpen,
-    onClose: onCreateClose,
+    onOpen: onCreateOpenOriginal,
+    onClose: onCreateCloseOriginal,
   } = useDisclosure()
   const {
     isOpen: isDeleteOpen,
@@ -156,12 +156,19 @@ const BotSessionManager = ({
     // Não precisamos mais chamar nada aqui, os hooks já carregam automaticamente
   }, [])
 
-  // React to credentials updates
+  // React to credentials updates and set initial credential when available
   useEffect(() => {
+    if (credentials && credentials.length > 0 && !formData.credentials_id) {
+      setFormData(prev => ({
+        ...prev,
+        credentials_id: credentials[0].id
+      }));
+    }
+    
     if (onCredentialsUpdate) {
       refetchCredentials()
     }
-  }, [onCredentialsUpdate, refetchCredentials])
+  }, [onCredentialsUpdate, refetchCredentials, credentials, formData.credentials_id])
 
   // Handle select changes for create form
   const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -427,6 +434,21 @@ const BotSessionManager = ({
           </HStack>
         )
     }
+  }
+
+  // Custom open function to set initial credential
+  const onCreateOpen = () => {
+    // Reset form with first credential if available
+    setFormData({
+      credentials_id: credentials.length > 0 ? credentials[0].id : "",
+      applies_limit: 200,
+    });
+    onCreateOpenOriginal();
+  }
+
+  // Custom close function to reset form
+  const onCreateClose = () => {
+    onCreateCloseOriginal();
   }
 
   return (
