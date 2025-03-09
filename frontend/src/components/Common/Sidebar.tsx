@@ -41,9 +41,10 @@ const Sidebar = () => {
         onClick={onOpen}
         display={{ base: "flex", md: "none" }}
         aria-label="Open Menu"
-        position="absolute"
+        position="fixed"
+        top={4}
+        left={4}
         fontSize="20px"
-        m={4}
         icon={<FiMenu />}
         zIndex="200"
       />
@@ -57,6 +58,7 @@ const Sidebar = () => {
         />
         <DrawerContent
           maxW="250px"
+          zIndex={20}
           bg={useColorModeValue(
             "rgba(255, 255, 255, 0.8)",
             "rgba(26, 32, 44, 0.3)",
@@ -145,6 +147,7 @@ const Sidebar = () => {
         h="100vh"
         position="sticky"
         top="0"
+        zIndex={20}
         display={{ base: "none", md: "flex" }}
       >
         <Flex

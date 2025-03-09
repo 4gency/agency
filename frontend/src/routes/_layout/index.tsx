@@ -460,76 +460,87 @@ function Dashboard() {
           {showSubscriptionOverlay && (
             <Box
               position="fixed"
-              top="50%"
-              left="50%"
-              transform="translate(-50%, -50%)"
-              zIndex={2}
-              width={{ base: "90%", md: "550px" }}
-              maxWidth="90vw"
+              top="0"
+              left="0"
+              right="0"
+              bottom="0"
+              zIndex={5}
+              pointerEvents="none"
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+              overflow="auto"
             >
-              <Card
-                bg={useColorModeValue(
-                  "rgba(255, 255, 255, 0.01)",
-                  "rgba(26, 32, 44, 0.2)",
-                )}
-                backdropFilter="blur(25px)"
-                borderColor={useColorModeValue(
-                  "rgba(209, 213, 219, 0.15)",
-                  "rgba(255, 255, 255, 0.1)",
-                )}
-                borderWidth="1px"
-                borderRadius="xl"
-                boxShadow="xl"
-                overflow="hidden"
-                style={{ WebkitBackdropFilter: "blur(25px)" }}
+              <Box
+                width={["90%", "550px"]}
+                maxWidth="90vw"
+                margin="auto"
+                pointerEvents="auto"
               >
-                <Box bg="teal.500" h="8px" w="full" />
-                <CardBody
-                  p={8}
+                <Card
                   bg={useColorModeValue(
-                    "rgba(255, 255, 255, 0.05)",
-                    "rgba(26, 32, 44, 0.3)",
+                    "rgba(255, 255, 255, 0.01)",
+                    "rgba(26, 32, 44, 0.2)",
                   )}
+                  backdropFilter="blur(25px)"
+                  borderColor={useColorModeValue(
+                    "rgba(209, 213, 219, 0.15)",
+                    "rgba(255, 255, 255, 0.1)",
+                  )}
+                  borderWidth="1px"
+                  borderRadius="xl"
+                  boxShadow="xl"
+                  overflow="hidden"
+                  style={{ WebkitBackdropFilter: "blur(25px)" }}
                 >
-                  <VStack spacing={6} align="center">
-                    <Icon as={FiLock} boxSize={16} color={highlightColor} />
+                  <Box bg="teal.500" h="8px" w="full" />
+                  <CardBody
+                    p={8}
+                    bg={useColorModeValue(
+                      "rgba(255, 255, 255, 0.05)",
+                      "rgba(26, 32, 44, 0.3)",
+                    )}
+                  >
+                    <VStack spacing={6} align="center">
+                      <Icon as={FiLock} boxSize={16} color={highlightColor} />
 
-                    <VStack spacing={2}>
-                      <Heading
+                      <VStack spacing={2}>
+                        <Heading
+                          size="lg"
+                          textAlign="center"
+                          color={useColorModeValue("gray.800", "white")}
+                        >
+                          Unlock Bot Features
+                        </Heading>
+                        <Text
+                          textAlign="center"
+                          fontSize="md"
+                          fontWeight="medium"
+                          color={useColorModeValue("gray.800", "gray.100")}
+                        >
+                          To access the automated job application bot and all
+                          dashboard features, you need an active subscription
+                          plan.
+                        </Text>
+                      </VStack>
+
+                      <Box w="full" pt={4}>
+                        {renderPlans()}
+                      </Box>
+
+                      <Button
+                        variant="primary"
                         size="lg"
-                        textAlign="center"
-                        color={useColorModeValue("gray.800", "white")}
+                        width={{ base: "full", md: "auto" }}
+                        onClick={() => (window.location.href = "/pricing")}
+                        isLoading={loadingPlans}
                       >
-                        Unlock Bot Features
-                      </Heading>
-                      <Text
-                        textAlign="center"
-                        fontSize="md"
-                        fontWeight="medium"
-                        color={useColorModeValue("gray.800", "gray.100")}
-                      >
-                        To access the automated job application bot and all
-                        dashboard features, you need an active subscription
-                        plan.
-                      </Text>
+                        View All Plans
+                      </Button>
                     </VStack>
-
-                    <Box w="full" pt={4}>
-                      {renderPlans()}
-                    </Box>
-
-                    <Button
-                      variant="primary"
-                      size="lg"
-                      width={{ base: "full", md: "auto" }}
-                      onClick={() => (window.location.href = "/pricing")}
-                      isLoading={loadingPlans}
-                    >
-                      View All Plans
-                    </Button>
-                  </VStack>
-                </CardBody>
-              </Card>
+                  </CardBody>
+                </Card>
+              </Box>
             </Box>
           )}
         </Box>
