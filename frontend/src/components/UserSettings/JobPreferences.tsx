@@ -693,7 +693,7 @@ const JobPreferencesPage: React.FC = () => {
                   <SliderTrack>
                     <SliderFilledTrack bg="#00766C" />
                   </SliderTrack>
-                  <SliderThumb />
+                  <SliderThumb borderColor="#00766C" borderWidth="revert"  />
                 </Slider>
               </FormControl>
             </Card>
