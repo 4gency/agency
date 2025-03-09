@@ -90,6 +90,16 @@ body {
   max-width: 420px; /* Limitando a largura máxima do slide */
 }
 
+/* Alinhamento vertical para os elementos dentro dos slides */
+.slick-track {
+  display: flex !important;
+  align-items: flex-end !important; /* Alinha os slides pela parte inferior */
+}
+
+.slick-slide > div {
+  height: 100%;
+}
+
 .slick-list {
   overflow: visible !important;
   margin: 0 auto;
@@ -176,6 +186,7 @@ body {
 /* Ajuste da visibilidade do último item do carrossel */
 .pricing-carousel .slick-track {
   padding-right: 1px;
+  align-items: flex-end !important; /* Reforçando alinhamento pela parte inferior */
 }
 
 /* Estilos específicos para quando há poucos cards (slides centralizados) */
@@ -192,6 +203,7 @@ body {
   width: auto !important;
   min-width: 100% !important;
   transform: none !important;
+  align-items: flex-end !important; /* Garantindo alinhamento pela parte inferior */
 }
 
 .pricing-carousel.centered-slides .slick-slider {
@@ -210,6 +222,7 @@ body {
   justify-content: center !important;
   width: 100% !important;
   transform: translate3d(0, 0, 0) !important;
+  align-items: flex-end !important; /* Garantindo o alinhamento */
 }
 
 .pricing-carousel.centered-slides .slick-list {
@@ -220,4 +233,5 @@ body {
 /* Este seletor força o transform a ser centralizado */
 .pricing-carousel.centered-slides .slick-track {
   transform: translate3d(0, 0, 0) !important;
+  align-items: flex-end !important; /* Garantindo o alinhamento */
 } 

@@ -87,11 +87,10 @@ const BadgePricingCard: React.FC<BadgePricingCardProps> = ({
       borderColor={borderColor}
       boxShadow="md"
       width="100%"
-      minW={minWidth}
-      maxW={{ base: "100%", sm: "100%", md: "400px" }}
+      minW="320px"
       height="100%"
-      maxHeight={{ base: "430px", sm: "450px" }}
-      minHeight={{ base: "370px", sm: "390px" }}
+      maxHeight="450px"
+      minHeight="390px"
       p={{ base: horizontalPadding, md: 6 }}
       display="flex"
       flexDirection="column"
@@ -99,8 +98,9 @@ const BadgePricingCard: React.FC<BadgePricingCardProps> = ({
       position="relative"
       transition="all 0.3s"
       mx="auto"
-      my={2}
-      _hover={{ transform: "translateY(-5px)", boxShadow: "lg" }}
+      _hover={
+        { transform: "translateY(-5px)", boxShadow: "lg" }
+      }
     >
       {/* Badge */}
       <Badge
