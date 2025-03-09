@@ -327,7 +327,6 @@ export const ResumePage: React.FC = () => {
   const { data: subscriptions, isLoading: isLoadingSubscriptions } = useQuery({
     queryKey: ["subscriptions"],
     queryFn: async () => {
-      console.log("Fetching subscriptions...");
       return await SubscriptionsService.getUserSubscriptions({
         onlyActive: true,
       })
@@ -337,7 +336,6 @@ export const ResumePage: React.FC = () => {
   // Check if user has an active subscription
   const hasActiveSubscription = useMemo(() => {
     const hasSubscription = subscriptions && subscriptions.length > 0;
-    console.log("Has active subscription:", hasSubscription);
     return hasSubscription;
   }, [subscriptions]);
 
@@ -345,14 +343,11 @@ export const ResumePage: React.FC = () => {
   const { data: resumeData, isLoading: isLoadingResume, error: resumeError } = useQuery({
     queryKey: ["plainTextResume"],
     queryFn: async () => {
-      console.log("Executing resume fetch...");
       try {
         const result = await ConfigsService.getPlainTextResume();
-        console.log("Resume fetch successful");
         return result;
       } catch (error) {
         const apiError = error as ApiError;
-        console.log("Resume fetch error:", apiError.status, apiError.message);
         if (apiError.status === 404) {
           setIsCreatingNew(true);
           // Não mostrar toast aqui, deixar para o useEffect

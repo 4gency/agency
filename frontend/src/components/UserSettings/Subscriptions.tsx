@@ -29,7 +29,6 @@ const Subscriptions = () => {
 
   // Função para navegar para a página de detalhes da assinatura
   const handleGoToDetails = (subscriptionId: string) => {
-    console.log("Navegando para detalhes da assinatura:", subscriptionId)
 
     // Devido aos problemas de navegação, continuamos usando window.location.href
     // O TanStack Router requer parâmetros tipados específicos que podem causar problemas

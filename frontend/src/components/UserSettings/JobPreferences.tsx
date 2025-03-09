@@ -276,7 +276,6 @@ const JobPreferencesPage: React.FC = () => {
   const { data: subscriptions, isLoading: isLoadingSubscriptions } = useQuery({
     queryKey: ["subscriptions"],
     queryFn: async () => {
-      console.log("Fetching subscriptions for preferences...");
       return await SubscriptionsService.getUserSubscriptions({
         onlyActive: true,
       })
@@ -285,7 +284,6 @@ const JobPreferencesPage: React.FC = () => {
 
   const hasActiveSubscription = useMemo(() => {
     const hasSubscription = subscriptions && subscriptions.length > 0;
-    console.log("Has active subscription:", hasSubscription);
     return hasSubscription;
   }, [subscriptions]);
 
@@ -337,7 +335,6 @@ const JobPreferencesPage: React.FC = () => {
   const { refetch: refetchConfig } = useQuery({
     queryKey: ["jobPreferences"],
     queryFn: async () => {
-      console.log("Executing job preferences fetch...");
       try {
         setIsDataLoaded(false);
         
@@ -345,7 +342,6 @@ const JobPreferencesPage: React.FC = () => {
         setScrollPosition(window.scrollY)
         
         const config = await ConfigsService.getConfig();
-        console.log("Job preferences fetch successful");
         
         try {
           // Transform API config -> form shape
@@ -395,7 +391,6 @@ const JobPreferencesPage: React.FC = () => {
         return config;
       } catch (err) {
         const apiError = err as ApiError;
-        console.log("Job preferences fetch error:", apiError.status, apiError.message);
         
         // Em caso de 404, não é erro - apenas não existe config ainda
         if (apiError.status === 404) {

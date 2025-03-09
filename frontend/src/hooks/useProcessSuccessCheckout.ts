@@ -92,7 +92,6 @@ export function useProcessSuccessCheckout({
 
         // Use the utility function to check for 404 errors
         if (is404Error(error)) {
-          console.log("404 error detected, redirecting to dashboard")
           // If 404, redirect directly to dashboard without showing any modal
           navigate({ to: "/" })
         } else {

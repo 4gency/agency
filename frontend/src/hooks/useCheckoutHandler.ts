@@ -88,13 +88,11 @@ export const useCheckoutHandler = () => {
     // Check for debounce
     const now = Date.now()
     if (now - lastCheckoutAttempt.current < DEBOUNCE_TIME) {
-      console.log("Debouncing checkout attempt")
       return
     }
 
     // Check if this plan is already loading
     if (isPlanLoading(planId)) {
-      console.log(`Plan ${planId} checkout is already in progress`)
       return
     }
 
@@ -180,7 +178,6 @@ export const useCheckoutHandler = () => {
         await createAndRedirectToCheckout(planId)
       } catch (error) {
         // Error is already handled in createAndRedirectToCheckout
-        console.log("Checkout creation failed, user can try again")
       }
     }
   }

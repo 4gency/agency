@@ -54,7 +54,6 @@ export const Route = createFileRoute(
         to: "/login",
       })
     }
-    console.log("Carregando rota de detalhes da assinatura")
   },
 })
 
@@ -65,7 +64,6 @@ function SubscriptionDetailPage() {
 
   // Logging para debug
   useEffect(() => {
-    console.log("ID da assinatura da rota:", subscriptionId)
   }, [subscriptionId])
 
   // Resto do componente
@@ -252,7 +250,6 @@ function SubscriptionDetailPage() {
     )
   }
 
-  console.log("Dados da assinatura carregados:", subscription)
 
   return (
     <Container maxW="full">

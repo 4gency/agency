@@ -3,7 +3,7 @@ import PricingSection from "../../Pricing/PricingSection"
 
 export const Pricing = () => {
   return (
-    <Box width="100%" maxWidth="100%" overflow="hidden" position="relative">
+    <Box width="100%" maxWidth="100%" overflow="hidden" position="relative" px={4}>
       <Heading size="lg" textAlign={{ base: "center", md: "left" }} py={12}>
         Our Plans
       </Heading>

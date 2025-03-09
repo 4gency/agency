@@ -432,9 +432,25 @@ function Dashboard() {
     )
   }
 
+  // Efeito para impedir scroll do body quando o modal estiver aberto
+  useEffect(() => {
+    if (showSubscriptionOverlay) {
+      // Impedir scroll no body
+      document.body.style.overflow = 'hidden';
+    } else {
+      // Restaurar scroll
+      document.body.style.overflow = '';
+    }
+    
+    // Cleanup function
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [showSubscriptionOverlay]);
+
   return (
     <Container maxW="full">
-      <Box pt={12} px={4}>
+      <Box pt={12}>
         <Flex justify="space-between" align="center" mb={6}>
           <Box>
             <Heading fontSize="2xl">
@@ -452,6 +468,9 @@ function Dashboard() {
             pointerEvents={showSubscriptionOverlay ? "none" : "auto"}
             opacity={showSubscriptionOverlay ? 0.6 : 1}
             transition="all 0.3s ease"
+            overflow={showSubscriptionOverlay ? "hidden" : "auto"}
+            userSelect={showSubscriptionOverlay ? "none" : "auto"}
+            height={showSubscriptionOverlay ? "100vh" : "auto"}
           >
             <DashboardContent />
           </Box>
@@ -461,7 +480,7 @@ function Dashboard() {
             <Box
               position="fixed"
               top="0"
-              left={{ base: "0", md: "250px" }}
+              left="0"
               right="0"
               bottom="0"
               zIndex={5}
@@ -470,12 +489,30 @@ function Dashboard() {
               alignItems="center"
               justifyContent="center"
               overflow="auto"
+              sx={{
+                '&::-webkit-scrollbar': {
+                  display: 'none',
+                },
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none',
+              }}
             >
               <Box
                 width={["90%", "550px"]}
                 maxWidth="90vw"
                 margin="auto"
+                pt={{ base: "80px", md: 0 }}
+                pb={{ base: "50px", md: 0 }}
                 pointerEvents="auto"
+                overflowY="auto"
+                maxHeight="100%"
+                sx={{
+                  '&::-webkit-scrollbar': {
+                    display: 'none',
+                  },
+                  scrollbarWidth: 'none',
+                  msOverflowStyle: 'none',
+                }}
               >
                 <Card
                   bg={useColorModeValue(
