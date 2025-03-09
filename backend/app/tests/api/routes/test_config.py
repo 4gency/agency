@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
@@ -52,7 +53,7 @@ def subscription_in(
 
 
 @pytest.fixture
-def config_data() -> dict:
+def config_data() -> dict[str, Any]:
     """Fixture para dados de configuração completos para requisições PUT"""
     return {
         "remote": True,
@@ -85,7 +86,7 @@ def config_data() -> dict:
 
 
 @pytest.fixture
-def valid_resume_data() -> dict:
+def valid_resume_data() -> dict[str, Any]:
     """Fixture para dados de currículo válidos para requisições PUT"""
     return {
         "personal_information": {
@@ -202,7 +203,7 @@ def test_put_job_preferences_creates_if_missing(
     client: TestClient,
     db: Session,
     subscription_in: SubscriptionCreate,
-    config_data: dict,
+    config_data: dict[str, Any],
 ) -> None:
     # Cria um usuário com assinatura
     subscription = subscription_crud.create_subscription(
@@ -238,7 +239,7 @@ def test_put_job_preferences_updates_if_exists(
     client: TestClient,
     db: Session,
     subscription_in: SubscriptionCreate,
-    config_data: dict,
+    config_data: dict[str, Any],
 ) -> None:
     # Cria um usuário com assinatura
     subscription = subscription_crud.create_subscription(
@@ -286,7 +287,7 @@ def test_put_job_preferences_idempotent(
     client: TestClient,
     db: Session,
     subscription_in: SubscriptionCreate,
-    config_data: dict,
+    config_data: dict[str, Any],
 ) -> None:
     # Cria um usuário com assinatura
     subscription = subscription_crud.create_subscription(
@@ -330,7 +331,7 @@ def test_put_resume_creates_if_missing(
     client: TestClient,
     db: Session,
     subscription_in: SubscriptionCreate,
-    valid_resume_data: dict,
+    valid_resume_data: dict[str, Any],
 ) -> None:
     # Cria um usuário com assinatura
     subscription = subscription_crud.create_subscription(
@@ -364,7 +365,7 @@ def test_put_resume_updates_if_exists(
     client: TestClient,
     db: Session,
     subscription_in: SubscriptionCreate,
-    valid_resume_data: dict,
+    valid_resume_data: dict[str, Any],
 ) -> None:
     # Cria um usuário com assinatura
     subscription = subscription_crud.create_subscription(
@@ -408,7 +409,7 @@ def test_put_resume_idempotent(
     client: TestClient,
     db: Session,
     subscription_in: SubscriptionCreate,
-    valid_resume_data: dict,
+    valid_resume_data: dict[str, Any],
 ) -> None:
     # Cria um usuário com assinatura
     subscription = subscription_crud.create_subscription(
@@ -445,7 +446,7 @@ def test_put_job_preferences_partial_update(
     client: TestClient,
     db: Session,
     subscription_in: SubscriptionCreate,
-    config_data: dict,
+    config_data: dict[str, Any],
 ) -> None:
     """
     Teste para verificar que o PUT realmente sobrescreve completamente o objeto

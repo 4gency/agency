@@ -2,9 +2,9 @@ from typing import Any, ClassVar, Union
 from uuid import UUID
 
 from pydantic import BaseModel, model_validator
-from sqlalchemy import ForeignKey
+from sqlalchemy import JSON, Column, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
-from sqlmodel import JSON, Column, Field, SQLModel
+from sqlmodel import Field, SQLModel
 
 
 class ExperienceLevel(BaseModel):
@@ -35,11 +35,26 @@ class Date(BaseModel):
     @model_validator(mode="after")
     def validate_only_one_can_be_true(self) -> "Date":
         # Ensuring only one time period is selected
-        values = [self.all_time, self.month, self.week, self.hours]
-        if sum(values) != 1:
-            # If none or more than one is selected, set all_time to True and others to False
+        time_values = [self.all_time, self.month, self.week, self.hours]
+        # If none are selected, set all_time to True
+        if not any(time_values):
             self.all_time = True
-            self.month = self.week = self.hours = False
+        # If more than one is selected, prioritize all_time, then month, then week, then hours
+        elif sum(time_values) > 1:
+            # Reset all to False first
+            self.all_time = False
+            self.month = False
+            self.week = False
+            self.hours = False
+            # Then set the one with highest priority to True
+            if self.model_dump()["all_time"]:
+                self.all_time = True
+            elif self.model_dump()["month"]:
+                self.month = True
+            elif self.model_dump()["week"]:
+                self.week = True
+            elif self.model_dump()["hours"]:
+                self.hours = True
         return self
 
 
@@ -138,9 +153,20 @@ def generate_config_yaml(config: Union["Config", "ConfigPublic"]) -> str:
     # Check if we're dealing with ConfigPublic or Config
     is_config_public = not hasattr(config, "user_id")
 
-    # Helper function to get boolean values as strings
-    def get_bool(value: bool) -> str:
-        return str(value).lower()
+    # Helper function to safely access fields from either object type
+    def safe_get_dict_value(
+        obj: dict[str, Any] | Any, field: str, default: Any = None
+    ) -> Any:
+        if isinstance(obj, dict):
+            return obj.get(field, default)
+        return getattr(obj, field, default)
+
+    # Helper function to safely access boolean attributes
+    def safe_get_bool(
+        obj: dict[str, Any] | Any, field: str, default: bool = False
+    ) -> bool:
+        value = safe_get_dict_value(obj, field, default)
+        return bool(value)
 
     # Helper function to get experience level values
     def get_exp_level(field: str) -> bool:
@@ -149,40 +175,48 @@ def generate_config_yaml(config: Union["Config", "ConfigPublic"]) -> str:
             exp_level = config.experience_level
             # Handle the typo in the model (intership vs internship)
             if field == "internship":
-                return exp_level.intership  # type: ignore
-            return getattr(exp_level, field.replace("-", "_"))
+                return bool(getattr(exp_level, "intership", False))
+            return bool(getattr(exp_level, field.replace("-", "_"), False))
         else:
             # Config has a dict
             if field == "internship":
-                return config.experience_level.get("intership", False)  # type: ignore
-            return config.experience_level.get(field.replace("-", "_"), True)  # type: ignore
+                return bool(
+                    safe_get_dict_value(config.experience_level, "intership", False)
+                )
+            return bool(
+                safe_get_dict_value(
+                    config.experience_level, field.replace("-", "_"), False
+                )
+            )
 
     # Helper function to get job type values
     def get_job_type(field: str) -> bool:
         if is_config_public:
             job_types = config.job_types
-            return getattr(job_types, field.replace("-", "_"))
+            return bool(getattr(job_types, field.replace("-", "_"), False))
         else:
-            return config.job_types.get(field.replace("-", "_"), True)  # type: ignore
+            return bool(
+                safe_get_dict_value(config.job_types, field.replace("-", "_"), False)
+            )
 
     # Helper function to get date values
     def get_date(field: str) -> bool:
         if is_config_public:
             date = config.date
             if field == "all time":
-                return date.all_time  # type: ignore
+                return bool(getattr(date, "all_time", False))
             elif field == "24 hours":
-                return date.hours  # type: ignore
-            return getattr(date, field)
+                return bool(getattr(date, "hours", False))
+            return bool(getattr(date, field, False))
         else:
             if field == "all time":
-                return config.date.get("all_time", True)  # type: ignore
+                return bool(safe_get_dict_value(config.date, "all_time", False))
             elif field == "24 hours":
-                return config.date.get("hours", False)  # type: ignore
-            return config.date.get(field, False)  # type: ignore
+                return bool(safe_get_dict_value(config.date, "hours", False))
+            return bool(safe_get_dict_value(config.date, field, False))
 
     # Construct the YAML string manually to ensure exact format
-    yaml_str = f"remote: {get_bool(config.remote)}\n\n"
+    yaml_str = f"remote: {safe_get_bool(config, 'remote')}\n\n"
 
     # Experience Level
     yaml_str += "experienceLevel:\n"
@@ -194,7 +228,7 @@ def generate_config_yaml(config: Union["Config", "ConfigPublic"]) -> str:
         "director",
         "executive",
     ]:
-        yaml_str += f"  {field}: {get_bool(get_exp_level(field))}\n"
+        yaml_str += f"  {field}: {safe_get_bool(config, field)}\n"
     yaml_str += "\n"
 
     # Job Types
@@ -208,13 +242,13 @@ def generate_config_yaml(config: Union["Config", "ConfigPublic"]) -> str:
         "other",
         "volunteer",
     ]:
-        yaml_str += f"  {field}: {get_bool(get_job_type(field))}\n"
+        yaml_str += f"  {field}: {safe_get_bool(config, field)}\n"
     yaml_str += "\n"
 
     # Date
     yaml_str += "date:\n"
     for field in ["all time", "month", "week", "24 hours"]:
-        yaml_str += f"  {field}: {get_bool(get_date(field))}\n"
+        yaml_str += f"  {field}: {safe_get_bool(config, field)}\n"
     yaml_str += "\n"
 
     # Positions
@@ -230,29 +264,31 @@ def generate_config_yaml(config: Union["Config", "ConfigPublic"]) -> str:
     yaml_str += "\n"
 
     # Apply once at company
-    yaml_str += f"apply_once_at_company: {get_bool(config.apply_once_at_company)}\n\n"
+    yaml_str += (
+        f"apply_once_at_company: {safe_get_bool(config, 'apply_once_at_company')}\n\n"
+    )
 
     # Distance
-    yaml_str += f"distance: {config.distance}\n\n"
+    yaml_str += f"distance: {safe_get_dict_value(config, 'distance', 100)}\n\n"
 
     # Company blacklist
     yaml_str += "company_blacklist:\n"
-    if config.company_blacklist:
-        for company in config.company_blacklist:
+    if safe_get_dict_value(config, "company_blacklist", []):
+        for company in safe_get_dict_value(config, "company_blacklist", []):
             yaml_str += f"  - {company}\n"
     yaml_str += "\n"
 
     # Title blacklist
     yaml_str += "title_blacklist:\n"
-    if config.title_blacklist:
-        for title in config.title_blacklist:
+    if safe_get_dict_value(config, "title_blacklist", []):
+        for title in safe_get_dict_value(config, "title_blacklist", []):
             yaml_str += f"  - {title}\n"
     yaml_str += "\n"
 
     # Location blacklist
     yaml_str += "location_blacklist:\n"
-    if config.location_blacklist:
-        for loc in config.location_blacklist:
+    if safe_get_dict_value(config, "location_blacklist", []):
+        for loc in safe_get_dict_value(config, "location_blacklist", []):
             yaml_str += f"  - {loc}\n"
     yaml_str += "\n"
 
@@ -268,15 +304,12 @@ def generate_config_yaml(config: Union["Config", "ConfigPublic"]) -> str:
         yaml_str += f"  max_applicants: {threshold.get('max_applicants', 10000)}\n\n"
 
     # LLM model type and model
-    if hasattr(config, "llm_model_type") and hasattr(config, "llm_model"):
-        yaml_str += f"llm_model_type: {config.llm_model_type}\n"  # type: ignore
-        yaml_str += f"llm_model: '{config.llm_model}'\n"  # type: ignore
-    else:
-        yaml_str += "llm_model_type: openai\n"
-        yaml_str += "llm_model: 'gpt-4o-mini'\n"
+    yaml_str += f"llm_model_type: {getattr(config, 'llm_model_type', 'openai')}\n"
+    yaml_str += f"llm_model: '{getattr(config, 'llm_model', 'gpt-4o-mini')}'\n"
 
     # Add commented llm_api_url if it exists in the config
-    if hasattr(config, "llm_api_url") and getattr(config, "llm_api_url", None):
-        yaml_str += f"# llm_api_url: '{config.llm_api_url}'\n"  # type: ignore
+    llm_api_url = getattr(config, "llm_api_url", None)
+    if hasattr(config, "llm_api_url") and llm_api_url:
+        yaml_str += f"# llm_api_url: '{llm_api_url}'\n"
 
     return yaml_str

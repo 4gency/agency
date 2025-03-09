@@ -269,12 +269,21 @@ def generate_plain_text_resume_yaml(
         return "Yes" if value else "No"
 
     # Helper function to get a field from the object based on the type
-    def get_field(obj, field_name) -> Any:
+    def get_field(obj: Any, field_name: str) -> Any:
         if is_public:
             return getattr(obj, field_name)
         else:
-            # If it's a dict in PlainTextResume
+            # If it's a dict in PlainTextResume, we know it's a dict type
+            if isinstance(obj, dict):
+                return obj.get(field_name)
+            # Fallback for any other case
+            return None
+
+    # Helper function for the else branches to safely access dictionary data
+    def safe_get(obj: Any, field_name: str) -> Any:
+        if isinstance(obj, dict):
             return obj.get(field_name)
+        return None
 
     # Start building the YAML string
     yaml_str = "personal_information:\n"
@@ -294,7 +303,9 @@ def generate_plain_text_resume_yaml(
         "linkedin",
     ]:
         value = (
-            get_field(personal_info, field) if is_public else personal_info.get(field)  # type: ignore
+            get_field(personal_info, field)
+            if is_public
+            else safe_get(personal_info, field)
         )
         yaml_str += f'  {field}: "{value}"\n'
 
@@ -303,93 +314,98 @@ def generate_plain_text_resume_yaml(
     education_list = resume.education_details
     for edu in education_list:
         yaml_str += (
-            '  - education_level: "' + get_field(edu, "education_level") + '"\n'  # type: ignore
+            '  - education_level: "' + get_field(edu, "education_level") + '"\n'
             if is_public
-            else '  - education_level: "' + edu.get("education_level") + '"\n'  # type: ignore
+            else '  - education_level: "'
+            + str(safe_get(edu, "education_level"))
+            + '"\n'
         )
         yaml_str += (
-            '    institution: "' + get_field(edu, "institution") + '"\n'  # type: ignore
+            '    institution: "' + get_field(edu, "institution") + '"\n'
             if is_public
-            else '    institution: "' + edu.get("institution") + '"\n'  # type: ignore
+            else '    institution: "' + str(safe_get(edu, "institution")) + '"\n'
         )
         yaml_str += (
-            '    field_of_study: "' + get_field(edu, "field_of_study") + '"\n'  # type: ignore
+            '    field_of_study: "' + get_field(edu, "field_of_study") + '"\n'
             if is_public
-            else '    field_of_study: "' + edu.get("field_of_study") + '"\n'  # type: ignore
+            else '    field_of_study: "' + str(safe_get(edu, "field_of_study")) + '"\n'
         )
         yaml_str += (
             '    final_evaluation_grade: "'
-            + get_field(edu, "final_evaluation_grade")  # type: ignore
+            + get_field(edu, "final_evaluation_grade")
             + '"\n'
             if is_public
             else '    final_evaluation_grade: "'
-            + edu.get("final_evaluation_grade")  # type: ignore
+            + str(safe_get(edu, "final_evaluation_grade"))
             + '"\n'
         )
         yaml_str += (
-            '    start_date: "' + get_field(edu, "start_date") + '"\n'  # type: ignore
+            '    start_date: "' + get_field(edu, "start_date") + '"\n'
             if is_public
-            else '    start_date: "' + edu.get("start_date") + '"\n'  # type: ignore
+            else '    start_date: "' + str(safe_get(edu, "start_date")) + '"\n'
         )
         yaml_str += (
-            '    year_of_completion: "' + get_field(edu, "year_of_completion") + '"\n'  # type: ignore
+            '    year_of_completion: "' + get_field(edu, "year_of_completion") + '"\n'
             if is_public
-            else '    year_of_completion: "' + edu.get("year_of_completion") + '"\n'  # type: ignore
+            else '    year_of_completion: "'
+            + str(safe_get(edu, "year_of_completion"))
+            + '"\n'
         )
 
         # Handle exams differently based on the structure
         yaml_str += "    exam:\n"
         if is_public:
-            # Handle if it's a list in PlainTextResumePublic
             if isinstance(get_field(edu, "exam"), list):
                 exams = get_field(edu, "exam")
-                for i, exam in enumerate(exams):  # type: ignore
+                for i, exam in enumerate(exams):
                     yaml_str += f'      exam_name_{i+1}: "{exam}"\n'
             else:
-                # If it's not a list, we assume it's a nested object
-                exam_obj = get_field(edu, "exam")
-                for key, value in exam_obj.items():  # type: ignore
-                    yaml_str += f'      {key}: "{value}"\n'
+                yaml_str += '      exam_name_1: ""\n'
         else:
             # Handle if it's in PlainTextResume
-            if isinstance(edu.get("exam"), list):  # type: ignore
-                exams = edu.get("exam")  # type: ignore
-                for i, exam in enumerate(exams):  # type: ignore
+            exam_value = safe_get(edu, "exam")
+            if isinstance(exam_value, list) and exam_value is not None:
+                for i, exam in enumerate(exam_value):
                     yaml_str += f'      exam_name_{i+1}: "{exam}"\n'
             else:
                 # If it's not a list, we assume it's a nested dictionary
-                exam_obj = edu.get("exam", {})  # type: ignore
-                for key, value in exam_obj.items():
-                    yaml_str += f'      {key}: "{value}"\n'
+                exam_obj = safe_get(edu, "exam") or {}
+                if isinstance(exam_obj, dict):
+                    for key, value in exam_obj.items():
+                        yaml_str += f'      {key}: "{value}"\n'
+                else:
+                    yaml_str += '      exam_name_1: ""\n'
 
     # Experience details
     yaml_str += "\nexperience_details:\n"
     exp_list = resume.experience_details
     for exp in exp_list:
         yaml_str += (
-            '  - position: "' + get_field(exp, "position") + '"\n'  # type: ignore
+            '  - position: "' + get_field(exp, "position") + '"\n'
             if is_public
-            else '  - position: "' + exp.get("position") + '"\n'  # type: ignore
+            else '  - position: "' + str(safe_get(exp, "position")) + '"\n'
         )
         yaml_str += (
-            '    company: "' + get_field(exp, "company") + '"\n'  # type: ignore
+            '    company: "' + get_field(exp, "company") + '"\n'
             if is_public
-            else '    company: "' + exp.get("company") + '"\n'  # type: ignore
+            else '    company: "' + str(safe_get(exp, "company")) + '"\n'
         )
         yaml_str += (
-            '    employment_period: "' + get_field(exp, "employment_period") + '"\n'  # type: ignore
+            '    employment_period: "' + get_field(exp, "employment_period") + '"\n'
             if is_public
-            else '    employment_period: "' + exp.get("employment_period") + '"\n'  # type: ignore
+            else '    employment_period: "'
+            + str(safe_get(exp, "employment_period"))
+            + '"\n'
         )
         yaml_str += (
-            '    location: "' + get_field(exp, "location") + '"\n'  # type: ignore
+            '    location: "' + get_field(exp, "location") + '"\n'
             if is_public
-            else '    location: "' + exp.get("location") + '"\n'  # type: ignore
+            else '    location: "' + str(safe_get(exp, "location")) + '"\n'
         )
         yaml_str += (
-            '    industry: "' + get_field(exp, "industry") + '"\n'  # type: ignore
+            '    industry: "' + get_field(exp, "industry") + '"\n'
             if is_public
-            else '    industry: "' + exp.get("industry") + '"\n'  # type: ignore
+            else '    industry: "' + str(safe_get(exp, "industry")) + '"\n'
         )
 
         # Key responsibilities
@@ -397,9 +413,9 @@ def generate_plain_text_resume_yaml(
         responsibilities = (
             get_field(exp, "key_responsibilities")
             if is_public
-            else exp.get("key_responsibilities")  # type: ignore
+            else safe_get(exp, "key_responsibilities") or []
         )
-        for i, resp in enumerate(responsibilities):  # type: ignore
+        for i, resp in enumerate(responsibilities):
             yaml_str += f'      - responsibility_{i+1}: "{resp}"\n'
 
         # Skills acquired
@@ -407,9 +423,9 @@ def generate_plain_text_resume_yaml(
         skills = (
             get_field(exp, "skills_acquired")
             if is_public
-            else exp.get("skills_acquired")  # type: ignore
+            else safe_get(exp, "skills_acquired") or []
         )
-        for skill in skills:  # type: ignore
+        for skill in skills:
             yaml_str += f'      - "{skill}"\n'
 
     # Projects
@@ -417,19 +433,19 @@ def generate_plain_text_resume_yaml(
     projects = resume.projects
     for project in projects:
         yaml_str += (
-            '  - name: "' + get_field(project, "name") + '"\n'  # type: ignore
+            '  - name: "' + get_field(project, "name") + '"\n'
             if is_public
-            else '  - name: "' + project.get("name") + '"\n'  # type: ignore
+            else '  - name: "' + str(safe_get(project, "name")) + '"\n'
         )
         yaml_str += (
-            '    description: "' + get_field(project, "description") + '"\n'  # type: ignore
+            '    description: "' + get_field(project, "description") + '"\n'
             if is_public
-            else '    description: "' + project.get("description") + '"\n'  # type: ignore
+            else '    description: "' + str(safe_get(project, "description")) + '"\n'
         )
         yaml_str += (
-            '    link: "' + get_field(project, "link") + '"\n'  # type: ignore
+            '    link: "' + get_field(project, "link") + '"\n'
             if is_public
-            else '    link: "' + project.get("link") + '"\n'  # type: ignore
+            else '    link: "' + str(safe_get(project, "link")) + '"\n'
         )
 
     # Achievements
@@ -437,14 +453,16 @@ def generate_plain_text_resume_yaml(
     achievements = resume.achievements
     for achievement in achievements:
         yaml_str += (
-            '  - name: "' + get_field(achievement, "name") + '"\n'  # type: ignore
+            '  - name: "' + get_field(achievement, "name") + '"\n'
             if is_public
-            else '  - name: "' + achievement.get("name") + '"\n'  # type: ignore
+            else '  - name: "' + str(safe_get(achievement, "name")) + '"\n'
         )
         yaml_str += (
-            '    description: "' + get_field(achievement, "description") + '"\n'  # type: ignore
+            '    description: "' + get_field(achievement, "description") + '"\n'
             if is_public
-            else '    description: "' + achievement.get("description") + '"\n'  # type: ignore
+            else '    description: "'
+            + str(safe_get(achievement, "description"))
+            + '"\n'
         )
 
     # Certifications
@@ -452,14 +470,14 @@ def generate_plain_text_resume_yaml(
     certifications = resume.certifications
     for cert in certifications:
         yaml_str += (
-            '  - name: "' + get_field(cert, "name") + '"\n'  # type: ignore
+            '  - name: "' + get_field(cert, "name") + '"\n'
             if is_public
-            else '  - name: "' + cert.get("name") + '"\n'  # type: ignore
+            else '  - name: "' + str(safe_get(cert, "name")) + '"\n'
         )
         yaml_str += (
-            '    description: "' + get_field(cert, "description") + '"\n'  # type: ignore
+            '    description: "' + get_field(cert, "description") + '"\n'
             if is_public
-            else '    description: "' + cert.get("description") + '"\n'  # type: ignore
+            else '    description: "' + str(safe_get(cert, "description")) + '"\n'
         )
 
     # Languages
@@ -467,14 +485,14 @@ def generate_plain_text_resume_yaml(
     languages = resume.languages
     for lang in languages:
         yaml_str += (
-            '  - language: "' + get_field(lang, "language") + '"\n'  # type: ignore
+            '  - language: "' + get_field(lang, "language") + '"\n'
             if is_public
-            else '  - language: "' + lang.get("language") + '"\n'  # type: ignore
+            else '  - language: "' + str(safe_get(lang, "language")) + '"\n'
         )
         yaml_str += (
-            '    proficiency: "' + get_field(lang, "proficiency") + '"\n'  # type: ignore
+            '    proficiency: "' + get_field(lang, "proficiency") + '"\n'
             if is_public
-            else '    proficiency: "' + lang.get("proficiency") + '"\n'  # type: ignore
+            else '    proficiency: "' + str(safe_get(lang, "proficiency")) + '"\n'
         )
 
     # Interests
@@ -487,47 +505,51 @@ def generate_plain_text_resume_yaml(
     yaml_str += "\navailability:\n"
     availability = resume.availability
     yaml_str += (
-        '  notice_period: "' + get_field(availability, "notice_period") + '"\n'  # type: ignore
+        '  notice_period: "' + get_field(availability, "notice_period") + '"\n'
         if is_public
-        else '  notice_period: "' + availability.get("notice_period") + '"\n'  # type: ignore
+        else '  notice_period: "' + str(safe_get(availability, "notice_period")) + '"\n'
     )
 
     # Salary expectations
     yaml_str += "\nsalary_expectations:\n"
     salary = resume.salary_expectations
     yaml_str += (
-        '  salary_range_usd: "' + get_field(salary, "salary_range_usd") + '"\n'  # type: ignore
+        '  salary_range_usd: "' + get_field(salary, "salary_range_usd") + '"\n'
         if is_public
-        else '  salary_range_usd: "' + salary.get("salary_range_usd") + '"\n'  # type: ignore
+        else '  salary_range_usd: "' + str(safe_get(salary, "salary_range_usd")) + '"\n'
     )
 
     # Self identification
     yaml_str += "\nself_identification:\n"
     self_id = resume.self_identification
     yaml_str += (
-        '  gender: "' + get_field(self_id, "gender") + '"\n'  # type: ignore
+        '  gender: "' + get_field(self_id, "gender") + '"\n'
         if is_public
-        else '  gender: "' + self_id.get("gender") + '"\n'  # type: ignore
+        else '  gender: "' + str(safe_get(self_id, "gender")) + '"\n'
     )
     yaml_str += (
-        '  pronouns: "' + get_field(self_id, "pronouns") + '"\n'  # type: ignore
+        '  pronouns: "' + get_field(self_id, "pronouns") + '"\n'
         if is_public
-        else '  pronouns: "' + self_id.get("pronouns") + '"\n'  # type: ignore
+        else '  pronouns: "' + str(safe_get(self_id, "pronouns")) + '"\n'
     )
     yaml_str += (
-        '  veteran: "' + bool_to_yes_no(get_field(self_id, "veteran")) + '"\n'  # type: ignore
+        '  veteran: "' + bool_to_yes_no(get_field(self_id, "veteran")) + '"\n'
         if is_public
-        else '  veteran: "' + bool_to_yes_no(self_id.get("veteran")) + '"\n'  # type: ignore
+        else '  veteran: "'
+        + bool_to_yes_no(safe_get(self_id, "veteran") or False)
+        + '"\n'
     )
     yaml_str += (
-        '  disability: "' + bool_to_yes_no(get_field(self_id, "disability")) + '"\n'  # type: ignore
+        '  disability: "' + bool_to_yes_no(get_field(self_id, "disability")) + '"\n'
         if is_public
-        else '  disability: "' + bool_to_yes_no(self_id.get("disability")) + '"\n'  # type: ignore
+        else '  disability: "'
+        + bool_to_yes_no(safe_get(self_id, "disability") or False)
+        + '"\n'
     )
     yaml_str += (
-        '  ethnicity: "' + get_field(self_id, "ethnicity") + '"\n'  # type: ignore
+        '  ethnicity: "' + get_field(self_id, "ethnicity") + '"\n'
         if is_public
-        else '  ethnicity: "' + self_id.get("ethnicity") + '"\n'  # type: ignore
+        else '  ethnicity: "' + str(safe_get(self_id, "ethnicity")) + '"\n'
     )
 
     # Legal authorization
@@ -553,8 +575,8 @@ def generate_plain_text_resume_yaml(
     ]
 
     for field in legal_fields:
-        value = get_field(legal, field) if is_public else legal.get(field)  # type: ignore
-        yaml_str += f'  {field}: "{bool_to_yes_no(value)}"\n'  # type: ignore
+        value = get_field(legal, field) if is_public else safe_get(legal, field)
+        yaml_str += f'  {field}: "{bool_to_yes_no(value or False)}"\n'
 
     # Work preferences
     yaml_str += "\nwork_preferences:\n"
@@ -569,7 +591,7 @@ def generate_plain_text_resume_yaml(
     ]
 
     for field in pref_fields:
-        value = get_field(prefs, field) if is_public else prefs.get(field)  # type: ignore
-        yaml_str += f'  {field}: "{bool_to_yes_no(value)}"\n'  # type: ignore
+        value = get_field(prefs, field) if is_public else safe_get(prefs, field)
+        yaml_str += f'  {field}: "{bool_to_yes_no(value or False)}"\n'
 
     return yaml_str
