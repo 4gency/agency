@@ -461,7 +461,7 @@ function Dashboard() {
             <Box
               position="fixed"
               top="0"
-              left="0"
+              left={{ base: "0", md: "250px" }}
               right="0"
               bottom="0"
               zIndex={5}
