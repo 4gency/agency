@@ -115,7 +115,7 @@ def get_plain_text_resume(
     return PlainTextResumePublic(**resume.model_dump())
 
 
-@router.patch(
+@router.put(
     "/job-preferences",
     status_code=status.HTTP_202_ACCEPTED,
     responses={
@@ -165,10 +165,12 @@ def update_config(
     )
 
     if not config:
-        config = config_crud.create_user_default_config(
-            user_id=user.id,
+        config = config_crud.create_config(
             session=session,
+            config_in=config_in,
+            user=user,
         )
+        return {"status": "Config created"}
 
     config_crud.update_config(
         session=session,
@@ -179,7 +181,7 @@ def update_config(
     return {"status": "Config updated"}
 
 
-@router.patch(
+@router.put(
     "/resume",
     status_code=status.HTTP_202_ACCEPTED,
     responses={
@@ -229,10 +231,10 @@ def update_plain_text_resume(
     )
 
     if not resume:
-        resume = config_crud.create_user_default_resume(
-            user_id=user.id,
-            session=session,
+        resume = config_crud.create_resume(
+            user=user, session=session, resume_in=resume_in
         )
+        return {"status": "Resume created"}
 
     config_crud.update_resume(
         session=session,
