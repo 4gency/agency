@@ -36,7 +36,10 @@ const InterestsSection: React.FC<InterestsSectionProps> = ({
   const displayInterests = Array.isArray(interests) ? interests : []
 
   return (
-    <SectionContainer title="Interests">
+    <SectionContainer 
+      title="Interests" 
+      infoTooltip="Share relevant hobbies and interests that reveal your personality and complement your professional profile."
+    >
       <FormControl>
         <ArrayInputField
           label="Add interest"

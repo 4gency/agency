@@ -1,7 +1,7 @@
 import { Box, Flex, Icon, Text, useColorModeValue } from "@chakra-ui/react"
 import { useQueryClient } from "@tanstack/react-query"
 import { Link, useMatchRoute, useNavigate } from "@tanstack/react-router"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { FiBriefcase, FiHome, FiSettings, FiUsers } from "react-icons/fi"
 import { HiOutlineDocumentText } from "react-icons/hi"
 import { SlCalender } from "react-icons/sl"
@@ -138,6 +138,9 @@ const SidebarItems = ({ onClose }: SidebarItemsProps) => {
   const navigate = useNavigate()
   const matchRoute = useMatchRoute()
   
+  // Referência para controlar se já verificamos a rota anterior
+  const hasCheckedPrevRoute = useRef(false)
+
   // Estado para armazenar os itens do menu
   const [menuItems, setMenuItems] = useState<MenuItem[]>(() => {
     // Tentar carregar do cache inicialmente
@@ -154,6 +157,35 @@ const SidebarItems = ({ onClose }: SidebarItemsProps) => {
       to: "/settings/",
       fuzzy: false,
     })
+
+  // Efeito para verificar se o usuário veio de uma página de checkout
+  useEffect(() => {
+    // Verificamos apenas uma vez ao montar o componente
+    if (hasCheckedPrevRoute.current) return
+    
+    // Obter o histórico de navegação do browser
+    const currentPath = window.location.pathname
+    const fromCheckout = 
+      sessionStorage.getItem('came_from_checkout') === 'true' || 
+      document.referrer.includes('checkout-success') || 
+      document.referrer.includes('checkout-failed')
+    
+    // Se o usuário veio de uma página de checkout e está na dashboard
+    if (fromCheckout && (currentPath === '/' || currentPath === '/dashboard')) {
+      
+      // Limpar os caches de itens do menu e status de assinante
+      sessionStorage.removeItem(MENU_ITEMS_CACHE_KEY)
+      sessionStorage.removeItem(USER_SUBSCRIBER_STATUS_KEY)
+      
+      // Invalidar a consulta de assinaturas para forçar uma nova consulta
+      queryClient.invalidateQueries({ queryKey: ['subscriptions'] })
+      
+      // Limpar o flag de checkout
+      sessionStorage.removeItem('came_from_checkout')
+    }
+    
+    hasCheckedPrevRoute.current = true
+  }, [queryClient])
 
   // Atualizar os itens do menu quando os dados de assinatura mudam
   useEffect(() => {

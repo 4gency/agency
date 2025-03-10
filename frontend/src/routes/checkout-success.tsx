@@ -8,7 +8,7 @@ import {
   VStack,
   useColorModeValue,
 } from "@chakra-ui/react"
-import { createFileRoute, useNavigate } from "@tanstack/react-router"
+import { createFileRoute } from "@tanstack/react-router"
 import { AnimatedCard } from "../components/Common/AnimatedCard"
 import { CircleIcon } from "../components/Common/CircleIcon"
 import useAuth from "../hooks/useAuth"
@@ -33,7 +33,6 @@ export const Route = createFileRoute("/checkout-success")({
 function CheckoutSuccess() {
   const { sessionId } = Route.useSearch()
   const { user: authUser, isLoading } = useAuth()
-  const navigate = useNavigate()
 
   // Use our custom hook for checkout processing
   const { shouldShowCard, successMessage } = useProcessSuccessCheckout({
@@ -104,7 +103,10 @@ function CheckoutSuccess() {
               _hover={{
                 opacity: 0.9,
               }}
-              onClick={() => navigate({ to: "/" })}
+              onClick={() => {
+                // Use window.location para forçar um recarregamento completo
+                window.location.href = "/";
+              }}
             >
               Your dashboard
             </Button>

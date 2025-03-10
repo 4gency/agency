@@ -54,6 +54,7 @@ const LanguagesSection: React.FC<LanguagesSectionProps> = ({
   return (
     <SectionContainer
       title="Languages"
+      infoTooltip="Specify your language proficiency levels accurately. Even basic knowledge can be valuable to employers."
       actionButton={
         <Button
           leftIcon={<AddIcon />}

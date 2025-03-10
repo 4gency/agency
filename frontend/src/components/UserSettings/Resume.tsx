@@ -30,6 +30,10 @@ import SalaryExpectationSection from "./ResumeSections/SalaryExpectationSection"
 import SkillsSection from "./ResumeSections/SkillsSection"
 import WorkExperienceSection from "./ResumeSections/WorkExperienceSection"
 import WorkPreferenceSection from "./ResumeSections/WorkPreferenceSection"
+import AchievementsSection from "./ResumeSections/AchievementsSection"
+import CertificationsSection from "./ResumeSections/CertificationsSection"
+import SelfIdentificationSection from "./ResumeSections/SelfIdentificationSection"
+import LegalAuthorizationSection from "./ResumeSections/LegalAuthorizationSection"
 
 // Default empty form values
 const defaultValues: ResumeForm = {
@@ -37,6 +41,15 @@ const defaultValues: ResumeForm = {
     name: "",
     surname: "",
     email: "",
+    date_of_birth: "",
+    country: "",
+    city: "",
+    address: "",
+    zip_code: "",
+    phone_prefix: "",
+    phone: "",
+    linkedin: "",
+    github: "",
   },
   education: [],
   work_experience: [],
@@ -52,9 +65,121 @@ const defaultValues: ResumeForm = {
     hybrid: false,
     on_site: false,
     relocation: false,
+    willing_to_complete_assessments: false,
+    willing_to_undergo_drug_tests: false,
+    willing_to_undergo_background_checks: false,
   },
   interests: [],
+  achievements: [],
+  certifications: [],
+  availability: "",
+  self_identification: {
+    gender: "",
+    pronouns: "",
+    veteran: false,
+    disability: false,
+    ethnicity: "",
+  },
+  legal_authorization: {
+    eu_work_authorization: false,
+    us_work_authorization: false,
+    requires_us_visa: false,
+    requires_us_sponsorship: false,
+    requires_eu_visa: false,
+    legally_allowed_to_work_in_eu: false,
+    legally_allowed_to_work_in_us: false,
+    requires_eu_sponsorship: false,
+    canada_work_authorization: false,
+    requires_canada_visa: false,
+    legally_allowed_to_work_in_canada: false,
+    requires_canada_sponsorship: false,
+    uk_work_authorization: false,
+    requires_uk_visa: false,
+    legally_allowed_to_work_in_uk: false,
+    requires_uk_sponsorship: false,
+  },
 }
+
+// Função auxiliar para normalizar datas
+const parseEmploymentPeriod = (period: string): { startDate: string; endDate: string; isCurrent: boolean } => {
+  let startDate = "";
+  let endDate = "";
+  let isCurrent = false;
+  
+  // Log original
+  
+  if (!period) {
+    return { startDate, endDate, isCurrent };
+  }
+  
+  // Remover espaços extras e normalizar
+  const normalizedPeriod = period.trim().replace(/\s+/g, ' ');
+  
+  // Verificar se contém a palavra "Present" em qualquer parte
+  if (normalizedPeriod.toLowerCase().includes("present")) {
+    isCurrent = true;
+    
+    // Procurar por um padrão comum: início "-" presente
+    const presentPattern = /(.+?)\s*-\s*(?:present|atual|current)/i;
+    const match = normalizedPeriod.match(presentPattern);
+    
+    if (match && match[1]) {
+      startDate = match[1].trim();
+    } else {
+      // Último recurso se não conseguir extrair a data de início
+      startDate = normalizedPeriod.replace(/\s*-\s*(?:present|atual|current)/i, "").trim();
+    }
+  } 
+  // Verificar padrão de data específico: YYYY-MM-DD - YYYY-MM-DD
+  else {
+    const datePattern = /(\d{4}-\d{1,2}-\d{1,2})\s*-\s*(\d{4}-\d{1,2}-\d{1,2})/;
+    const match = normalizedPeriod.match(datePattern);
+    
+    if (match) {
+      startDate = match[1];
+      endDate = match[2];
+    } 
+    // Tentar dividir por hífen com espaços
+    else if (normalizedPeriod.includes(" - ")) {
+      const parts = normalizedPeriod.split(" - ");
+      if (parts.length === 2) {
+        startDate = parts[0].trim();
+        endDate = parts[1].trim();
+      }
+    } 
+    // Tentar dividir apenas por hífen
+    else if (normalizedPeriod.includes("-")) {
+      // Se contém hífen nas datas (como 2020-01-01), precisamos ter cuidado
+      // Use regex para encontrar os padrões de data
+      const datesPattern = /(\d{4}-\d{1,2}-\d{1,2}).*?(\d{4}-\d{1,2}-\d{1,2})/;
+      const datesMatch = normalizedPeriod.match(datesPattern);
+      
+      if (datesMatch) {
+        startDate = datesMatch[1];
+        endDate = datesMatch[2];
+      } else {
+        // Último recurso: dividir pelo primeiro hífen e tentar interpretar
+        const parts = normalizedPeriod.split("-");
+        startDate = parts[0].trim();
+        
+        // Se tiver mais de 2 partes, juntar o resto
+        if (parts.length > 1) {
+          endDate = parts.slice(1).join("-").trim();
+        }
+      }
+    } 
+    // Se não tiver hífen ou outros separadores, considerar como data única
+    else {
+      startDate = normalizedPeriod;
+      isCurrent = true; // Assumir que é atual se só tem uma data
+    }
+  }
+  
+  // Verificar se temos uma data de fim
+  isCurrent = isCurrent || !endDate || endDate.trim() === "";
+  
+  return { startDate, endDate, isCurrent };
+};
 
 // Function to transform API response to our form model
 const transformApiResponseToFormData = (
@@ -128,55 +253,83 @@ const transformApiResponseToFormData = (
         }
       }
 
+      // Map achievements
+      const achievements = Array.isArray(apiData.achievements)
+        ? apiData.achievements.map((ach) => ({
+            name: ach.name || "",
+            description: ach.description || "",
+          }))
+        : [];
+
+      // Map certifications
+      const certifications = Array.isArray(apiData.certifications)
+        ? apiData.certifications.map((cert) => ({
+            name: cert.name || "",
+            description: cert.description || "",
+          }))
+        : [];
+
+      // Extract self identification
+      const selfId = apiData.self_identification || {};
+
+      // Extract legal authorization
+      const legalAuth = apiData.legal_authorization || {};
+
       return {
         personal_information: {
           name: apiData.personal_information.name || "",
           surname: apiData.personal_information.surname || "",
           email: apiData.personal_information.email || "",
-          date_of_birth: apiData.personal_information.date_of_birth,
-          country: apiData.personal_information.country,
-          city: apiData.personal_information.city,
-          address: apiData.personal_information.address,
-          zip_code: apiData.personal_information.zip_code,
-          phone_prefix: apiData.personal_information.phone_prefix,
-          phone: apiData.personal_information.phone,
-          linkedin: apiData.personal_information.linkedin,
-          github: apiData.personal_information.github,
+          date_of_birth: apiData.personal_information.date_of_birth || "",
+          country: apiData.personal_information.country || "",
+          city: apiData.personal_information.city || "",
+          address: apiData.personal_information.address || "",
+          zip_code: apiData.personal_information.zip_code || "",
+          phone_prefix: apiData.personal_information.phone_prefix || "",
+          phone: apiData.personal_information.phone || "",
+          linkedin: apiData.personal_information.linkedin || "",
+          github: apiData.personal_information.github || "",
         },
         education: Array.isArray(apiData.education_details)
-          ? apiData.education_details.map((edu) => ({
-              institution: edu.institution || "",
-              degree: edu.education_level || "",
-              field_of_study: edu.field_of_study || "",
-              start_date: edu.start_date || "",
-              end_date: edu.year_of_completion || "",
-              current: false,
-              description: "",
-            }))
+          ? apiData.education_details.map((edu) => {
+              // Verificando se o campo year_of_completion está vazio para marcar como current
+              const isCurrent = !edu.year_of_completion || edu.year_of_completion.trim() === "";
+              
+              return {
+                institution: edu.institution || "",
+                degree: edu.education_level || "",
+                field_of_study: edu.field_of_study || "",
+                start_date: edu.start_date || "",
+                end_date: edu.year_of_completion || "",
+                current: isCurrent,
+                final_evaluation_grade: edu.final_evaluation_grade || "",
+                exam: edu.exam || [],
+              };
+            })
           : [],
         work_experience: Array.isArray(apiData.experience_details)
-          ? apiData.experience_details.map((exp) => ({
-              company: exp.company || "",
-              position: exp.position || "",
-              start_date: exp.employment_period
-                ? exp.employment_period.split("-")[0]?.trim() || ""
-                : "",
-              end_date: exp.employment_period
-                ? exp.employment_period.split("-")[1]?.trim() || ""
-                : "",
-              current: false,
-              description: (exp.key_responsibilities || []).join("\n"),
-              location: exp.location || "",
-            }))
+          ? apiData.experience_details.map((exp) => {
+              // Usar a função de parsing robusta
+              const { startDate, endDate, isCurrent } = parseEmploymentPeriod(exp.employment_period);
+              
+              return {
+                company: exp.company || "",
+                position: exp.position || "",
+                start_date: startDate,
+                end_date: endDate,
+                current: isCurrent,
+                description: (exp.key_responsibilities || []).join("\n") || "",
+                location: exp.location || "",
+                industry: exp.industry || "",
+                skills_acquired: exp.skills_acquired || [],
+              };
+            })
           : [],
         projects: Array.isArray(apiData.projects)
           ? apiData.projects.map((proj) => ({
               name: proj.name || "",
               description: proj.description || "",
               url: proj.link || "",
-              start_date: "",
-              end_date: "",
-              current: false,
             }))
           : [],
         skills: skills,
@@ -196,15 +349,44 @@ const transformApiResponseToFormData = (
           hybrid: false, // API doesn't have hybrid option
           on_site: apiData.work_preferences?.in_person_work || false,
           relocation: apiData.work_preferences?.open_to_relocation || false,
+          willing_to_complete_assessments: apiData.work_preferences?.willing_to_complete_assessments || false,
+          willing_to_undergo_drug_tests: apiData.work_preferences?.willing_to_undergo_drug_tests || false,
+          willing_to_undergo_background_checks: apiData.work_preferences?.willing_to_undergo_background_checks || false,
         },
         interests: interests,
+        achievements: achievements,
+        certifications: certifications,
+        self_identification: {
+          gender: selfId.gender || "",
+          pronouns: selfId.pronouns || "",
+          veteran: selfId.veteran || false,
+          disability: selfId.disability || false,
+          ethnicity: selfId.ethnicity || "",
+        },
+        legal_authorization: {
+          eu_work_authorization: legalAuth.eu_work_authorization || false,
+          us_work_authorization: legalAuth.us_work_authorization || false,
+          requires_us_visa: legalAuth.requires_us_visa || false,
+          requires_us_sponsorship: legalAuth.requires_us_sponsorship || false,
+          requires_eu_visa: legalAuth.requires_eu_visa || false,
+          legally_allowed_to_work_in_eu: legalAuth.legally_allowed_to_work_in_eu || false,
+          legally_allowed_to_work_in_us: legalAuth.legally_allowed_to_work_in_us || false,
+          requires_eu_sponsorship: legalAuth.requires_eu_sponsorship || false,
+          canada_work_authorization: legalAuth.canada_work_authorization || false,
+          requires_canada_visa: legalAuth.requires_canada_visa || false,
+          legally_allowed_to_work_in_canada: legalAuth.legally_allowed_to_work_in_canada || false,
+          requires_canada_sponsorship: legalAuth.requires_canada_sponsorship || false,
+          uk_work_authorization: legalAuth.uk_work_authorization || false,
+          requires_uk_visa: legalAuth.requires_uk_visa || false,
+          legally_allowed_to_work_in_uk: legalAuth.legally_allowed_to_work_in_uk || false,
+          requires_uk_sponsorship: legalAuth.requires_uk_sponsorship || false,
+        },
       }
     }
 
     return defaultValues
   } catch (error) {
     console.error("Error transforming API response:", error)
-    // Log the structure of apiData to help with debugging
     if (apiData) {
       console.error(
         "Failed to transform API data structure:",
@@ -213,8 +395,6 @@ const transformApiResponseToFormData = (
           : typeof apiData,
       )
     }
-
-    // Always return defaultValues as fallback to prevent application crashes
     return defaultValues
   }
 }
@@ -229,38 +409,66 @@ const transformFormToApiData = (
         name: data.personal_information.name,
         surname: data.personal_information.surname,
         email: data.personal_information.email,
-        date_of_birth: data.personal_information.date_of_birth,
-        country: data.personal_information.country,
-        city: data.personal_information.city,
-        address: data.personal_information.address,
-        zip_code: data.personal_information.zip_code,
-        phone_prefix: data.personal_information.phone_prefix,
-        phone: data.personal_information.phone,
-        linkedin: data.personal_information.linkedin,
-        github: data.personal_information.github,
+        date_of_birth: data.personal_information.date_of_birth || "",
+        country: data.personal_information.country || "",
+        city: data.personal_information.city || "",
+        address: data.personal_information.address || "",
+        zip_code: data.personal_information.zip_code || "",
+        phone_prefix: data.personal_information.phone_prefix || "",
+        phone: data.personal_information.phone || "",
+        linkedin: data.personal_information.linkedin || "",
+        github: data.personal_information.github || "",
       },
-      education_details: data.education.map((edu) => ({
-        institution: edu.institution,
-        education_level: edu.degree,
-        field_of_study: edu.field_of_study,
-        start_date: edu.start_date,
-        year_of_completion: edu.end_date,
-      })),
-      experience_details: data.work_experience.map((exp) => ({
-        company: exp.company,
-        position: exp.position,
-        employment_period:
-          exp.start_date && exp.end_date
-            ? `${exp.start_date} - ${exp.end_date}`
-            : exp.start_date || "",
-        location: exp.location,
-        key_responsibilities: exp.description ? [exp.description] : [],
-        skills_acquired: [],
-      })),
+      education_details: data.education.map((edu) => {        
+        // Se for current, garantir que não enviamos year_of_completion
+        const yearOfCompletion = edu.current ? "" : edu.end_date || "";
+        
+        return {
+          institution: edu.institution,
+          education_level: edu.degree,
+          field_of_study: edu.field_of_study || "",
+          start_date: edu.start_date,
+          year_of_completion: yearOfCompletion,
+          final_evaluation_grade: edu.final_evaluation_grade || "",
+          exam: edu.exam || [],
+        };
+      }),
+      experience_details: data.work_experience.map((exp) => {
+        // Formatar employment_period de forma robusta
+        let employmentPeriod = "";
+        
+        if (exp.start_date) {
+          // Inicia com a data de início
+          employmentPeriod = exp.start_date.trim();
+          
+          // Adiciona data de término apenas se não for um trabalho atual
+          if (!exp.current) {
+            // Verifica se existe uma data de término válida
+            if (exp.end_date && exp.end_date.trim() !== "") {
+              employmentPeriod += ` - ${exp.end_date.trim()}`;
+            } else {
+              console.warn("Work experience has current=false but no end_date:", exp);
+            }
+          } else {
+            // Se for current, adicione explicitamente " - Present"
+            employmentPeriod += " - Present";
+          }
+        }
+        
+        return {
+          company: exp.company,
+          position: exp.position,
+          employment_period: employmentPeriod,
+          location: exp.location || "",
+          key_responsibilities: exp.description ? [exp.description] : [],
+          skills_acquired: exp.skills_acquired || [],
+          industry: exp.industry || "",
+        };
+      }),
       projects: data.projects.map((proj) => ({
         name: proj.name,
-        description: proj.description,
-        link: proj.url,
+        description: proj.description || "",
+        link: proj.url || "",
       })),
       languages: data.languages.map((lang) => ({
         language: lang.name,
@@ -268,26 +476,59 @@ const transformFormToApiData = (
       })),
       interests: data.interests,
       availability: {
-        notice_period: data.availability,
+        notice_period: data.availability || "",
       },
       salary_expectations: {
         salary_range_usd:
           data.salary_expectation.minimum && data.salary_expectation.maximum
             ? `${data.salary_expectation.minimum} - ${data.salary_expectation.maximum}`
-            : undefined,
+            : "",
       },
       work_preferences: {
-        remote_work: data.work_preference.remote,
-        in_person_work: data.work_preference.on_site,
-        open_to_relocation: data.work_preference.relocation,
-        willing_to_complete_assessments: false,
-        willing_to_undergo_drug_tests: false,
-        willing_to_undergo_background_checks: false,
+        remote_work: data.work_preference.remote || false,
+        in_person_work: data.work_preference.on_site || false,
+        open_to_relocation: data.work_preference.relocation || false,
+        willing_to_complete_assessments: data.work_preference.willing_to_complete_assessments || false,
+        willing_to_undergo_drug_tests: data.work_preference.willing_to_undergo_drug_tests || false,
+        willing_to_undergo_background_checks: data.work_preference.willing_to_undergo_background_checks || false,
+      },
+      achievements: data.achievements.map(ach => ({
+        name: ach.name,
+        description: ach.description,
+      })),
+      certifications: data.certifications.map(cert => ({
+        name: cert.name,
+        description: cert.description,
+      })),
+      self_identification: {
+        gender: data.self_identification.gender || "",
+        pronouns: data.self_identification.pronouns || "",
+        veteran: data.self_identification.veteran || false,
+        disability: data.self_identification.disability || false,
+        ethnicity: data.self_identification.ethnicity || "",
+      },
+      legal_authorization: {
+        eu_work_authorization: data.legal_authorization.eu_work_authorization || false,
+        us_work_authorization: data.legal_authorization.us_work_authorization || false,
+        requires_us_visa: data.legal_authorization.requires_us_visa || false,
+        requires_us_sponsorship: data.legal_authorization.requires_us_sponsorship || false,
+        requires_eu_visa: data.legal_authorization.requires_eu_visa || false,
+        legally_allowed_to_work_in_eu: data.legal_authorization.legally_allowed_to_work_in_eu || false,
+        legally_allowed_to_work_in_us: data.legal_authorization.legally_allowed_to_work_in_us || false,
+        requires_eu_sponsorship: data.legal_authorization.requires_eu_sponsorship || false,
+        canada_work_authorization: data.legal_authorization.canada_work_authorization || false,
+        requires_canada_visa: data.legal_authorization.requires_canada_visa || false,
+        legally_allowed_to_work_in_canada: data.legal_authorization.legally_allowed_to_work_in_canada || false,
+        requires_canada_sponsorship: data.legal_authorization.requires_canada_sponsorship || false,
+        uk_work_authorization: data.legal_authorization.uk_work_authorization || false,
+        requires_uk_visa: data.legal_authorization.requires_uk_visa || false,
+        legally_allowed_to_work_in_uk: data.legal_authorization.legally_allowed_to_work_in_uk || false,
+        requires_uk_sponsorship: data.legal_authorization.requires_uk_sponsorship || false,
       },
     }
   } catch (error) {
     console.error("Error transforming form data to API model:", error)
-    return {}
+    throw error
   }
 }
 
@@ -476,6 +717,15 @@ export const ResumePage: React.FC = () => {
           keepSubmitCount: false,
         })
 
+        // Forçar a atualização de cada campo current para garantir que a UI reflita os valores
+        formData.education.forEach((edu, index) => {
+          setValue(`education.${index}.current`, edu.current, { shouldDirty: false });
+        });
+        
+        formData.work_experience.forEach((exp, index) => {
+          setValue(`work_experience.${index}.current`, exp.current, { shouldDirty: false });
+        });
+
         // Restore scroll position
         setTimeout(() => {
           window.scrollTo({
@@ -492,21 +742,58 @@ export const ResumePage: React.FC = () => {
         )
       }
     }
-  }, [resumeData, reset, showToast])
+  }, [resumeData, reset, showToast, setValue])
 
   // Form submission handler with better error handling
   const onSubmit = (data: ResumeForm) => {
     try {
-      updateResumeMutation.mutate(data)
+      // Validação adicional para garantir que não há inconsistências
+      let isValid = true;
+      
+      // Verificar se há experiências de trabalho com current false mas sem end_date
+      data.work_experience.forEach((exp, index) => {
+        if (exp.current === false && (!exp.end_date || exp.end_date.trim() === "")) {
+          setValue(`work_experience.${index}.end_date`, "", { 
+            shouldValidate: true,
+            shouldDirty: true,
+            shouldTouch: true
+          });
+          isValid = false;
+        }
+      });
+      
+      // Verificar se há educações com current false mas sem end_date
+      data.education.forEach((edu, index) => {
+        if (edu.current === false && (!edu.end_date || edu.end_date.trim() === "")) {
+          setValue(`education.${index}.end_date`, "", { 
+            shouldValidate: true,
+            shouldDirty: true,
+            shouldTouch: true
+          });
+          isValid = false;
+        }
+      });
+      
+      if (!isValid) {
+        showToast(
+          "Validation Error",
+          "Please fill all required fields. End dates are required for non-current items.",
+          "error"
+        );
+        return;
+      }
+      
+      // Agora temos certeza que os dados estão válidos
+      updateResumeMutation.mutate(data);
     } catch (error) {
-      console.error("Form submission error:", error)
+      console.error("Form submission error:", error);
       showToast(
         "Submission error",
         "There was an error submitting the form.",
         "error",
-      )
+      );
     }
-  }
+  };
 
   const isLoading = isLoadingSubscriptions || isLoadingResume
 
@@ -544,11 +831,18 @@ export const ResumePage: React.FC = () => {
             </Card>
 
             <Card variant="outline" p={4}>
+              <SelfIdentificationSection
+                register={register}
+              />
+            </Card>
+
+            <Card variant="outline" p={4}>
               <EducationSection
                 register={register}
                 errors={errors}
                 control={control}
                 watch={watch}
+                setValue={setValue}
               />
             </Card>
 
@@ -558,6 +852,7 @@ export const ResumePage: React.FC = () => {
                 errors={errors}
                 control={control}
                 watch={watch}
+                setValue={setValue}
               />
             </Card>
 
@@ -566,7 +861,6 @@ export const ResumePage: React.FC = () => {
                 register={register}
                 errors={errors}
                 control={control}
-                watch={watch}
               />
             </Card>
 
@@ -603,6 +897,28 @@ export const ResumePage: React.FC = () => {
                 setValue={updateField}
                 getValues={getValues}
                 watch={watch}
+              />
+            </Card>
+
+            <Card variant="outline" p={4}>
+              <AchievementsSection
+                register={register}
+                errors={errors}
+                control={control}
+              />
+            </Card>
+
+            <Card variant="outline" p={4}>
+              <CertificationsSection
+                register={register}
+                errors={errors}
+                control={control}
+              />
+            </Card>
+
+            <Card variant="outline" p={4}>
+              <LegalAuthorizationSection
+                register={register}
               />
             </Card>
           </Stack>

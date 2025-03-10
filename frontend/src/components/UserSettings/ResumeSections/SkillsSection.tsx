@@ -1,4 +1,4 @@
-import { FormControl } from "@chakra-ui/react"
+import { Box, FormControl } from "@chakra-ui/react"
 import { useEffect } from "react"
 import type { UseFormGetValues, UseFormWatch } from "react-hook-form"
 import type { ResumeForm } from "../types"
@@ -36,7 +36,15 @@ const SkillsSection: React.FC<SkillsSectionProps> = ({
   const displaySkills = Array.isArray(skills) ? skills : []
 
   return (
-    <SectionContainer title="Skills">
+    <SectionContainer 
+      title="Skills" 
+      infoTooltip="Add as many skills as possible - technical and soft skills. This helps our AI provide more accurate answers about your expertise."
+    >
+      <Box mb={4}>
+        <Box fontSize="sm" color="gray.600">
+          Add as many skills as possible - technical and soft skills. This helps our AI provide more accurate answers about your expertise.
+        </Box>
+      </Box>
       <FormControl>
         <ArrayInputField
           label="Add skill"

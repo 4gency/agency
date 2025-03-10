@@ -2,7 +2,7 @@
 import uuid
 from datetime import datetime, timedelta, timezone
 from enum import Enum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from dateutil.relativedelta import relativedelta
 from pydantic import EmailStr, field_validator
@@ -15,6 +15,8 @@ if TYPE_CHECKING:
         BotSession,
         Credentials,
     )
+    from app.models.preference import Config
+    from app.models.resume import PlainTextResume
 
 
 class SubscriptionMetric(Enum):
@@ -114,6 +116,8 @@ class User(UserBase, table=True):
     bot_sessions: list["BotSession"] = Relationship(
         back_populates="user", cascade_delete=True
     )
+    plain_text_resume: Optional["PlainTextResume"] = Relationship(back_populates="user")
+    config: Optional["Config"] = Relationship(back_populates="user")
 
     def get_active_subscriptions(self) -> list["Subscription"]:
         """Retorna as assinaturas ativas do usuário."""

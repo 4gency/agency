@@ -20,7 +20,10 @@ const PersonalInformationSection: React.FC<PersonalInformationSectionProps> = ({
   errors,
 }) => {
   return (
-    <SectionContainer title="Personal Information">
+    <SectionContainer 
+      title="Personal Information" 
+      infoTooltip="Basic contact details are essential. Ensure your email and phone are current for employer communications."
+    >
       <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={6}>
         <GridItem>
           <FormControl isInvalid={!!errors.personal_information?.name}>

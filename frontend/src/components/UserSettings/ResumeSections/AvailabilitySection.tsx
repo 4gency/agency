@@ -11,7 +11,10 @@ const AvailabilitySection: React.FC<AvailabilitySectionProps> = ({
   register,
 }) => {
   return (
-    <SectionContainer title="Availability">
+    <SectionContainer 
+      title="Availability" 
+      infoTooltip="Specify when you can start working and your notice period. This helps match you with time-sensitive opportunities."
+    >
       <FormControl>
         <FormLabel>Notice Period</FormLabel>
         <Input

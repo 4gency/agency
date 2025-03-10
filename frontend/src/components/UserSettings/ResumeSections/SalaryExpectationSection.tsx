@@ -17,7 +17,10 @@ const SalaryExpectationSection: React.FC<SalaryExpectationSectionProps> = ({
   register,
 }) => {
   return (
-    <SectionContainer title="Salary Expectation">
+    <SectionContainer 
+      title="Salary Expectation" 
+      infoTooltip="Provide a realistic range based on your research. It helps match you with opportunities aligned with your expectations."
+    >
       <Text fontSize="sm" color="gray.500" mb={3}>
         Please provide your expected annual salary range in USD.
       </Text>

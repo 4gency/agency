@@ -1,7 +1,7 @@
 import { InfoIcon } from "@chakra-ui/icons"
 import { 
   Box, 
-  Divider, 
+  Card, 
   Flex, 
   HStack, 
   Heading, 
@@ -17,22 +17,20 @@ import {
 import type React from "react"
 import { useState } from "react"
 
-interface SectionContainerProps {
+interface JobSectionContainerProps {
   title: string
   children: React.ReactNode
   actionButton?: React.ReactNode
-  showInfoIcon?: boolean
   infoTooltip?: string
 }
 
 /**
- * Componente reutilizável para padronizar o layout de cada seção do formulário de Resume
+ * Componente reutilizável para padronizar o layout de cada seção do formulário de preferências de trabalho
  */
-const SectionContainer: React.FC<SectionContainerProps> = ({
+const JobSectionContainer: React.FC<JobSectionContainerProps> = ({
   title,
   children,
   actionButton,
-  showInfoIcon = true, // Por padrão, mostrar o ícone para manter compatibilidade
   infoTooltip = "", // Texto do tooltip para o ícone de informação
 }) => {
   // Detecta se é um dispositivo móvel (tela pequena)
@@ -48,13 +46,13 @@ const SectionContainer: React.FC<SectionContainerProps> = ({
   }
 
   return (
-    <Box mb={8}>
+    <Card variant="outline" p={4} mb={4}>
       <Flex justify="space-between" align="center" mb={4}>
         <HStack spacing={2}>
           <Heading size="md" color="#00766C">
             {title}
           </Heading>
-          {showInfoIcon && infoTooltip && (
+          {infoTooltip && (
             isMobile ? (
               // Em dispositivos móveis, usar Popover que responde ao toque
               <Popover
@@ -97,10 +95,11 @@ const SectionContainer: React.FC<SectionContainerProps> = ({
         </HStack>
         {actionButton}
       </Flex>
-      <Divider borderColor="gray.300" mb={4} />
-      {children}
-    </Box>
+      <Box>
+        {children}
+      </Box>
+    </Card>
   )
 }
 
-export default SectionContainer
+export default JobSectionContainer 
