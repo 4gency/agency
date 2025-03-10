@@ -5,26 +5,11 @@ import {
   Box,
   Button,
   ButtonGroup,
-  Card,
   Container,
-  Flex,
-  FormControl,
-  FormLabel,
   Heading,
-  IconButton,
-  Input,
-  Radio,
-  RadioGroup,
   Skeleton,
   SkeletonText,
-  Slider,
-  SliderFilledTrack,
-  SliderThumb,
-  SliderTrack,
   Stack,
-  Tag,
-  TagCloseButton,
-  TagLabel,
   useColorModeValue,
 } from "@chakra-ui/react"
 import { useMutation, useQuery } from "@tanstack/react-query"
@@ -33,16 +18,36 @@ import { useEffect, useLayoutEffect, useState, useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { type ApiError, type ConfigPublic, ConfigsService, SubscriptionsService } from "../../client"
 
-import { AddIcon } from "@chakra-ui/icons"
 import useCustomToast from "../../hooks/useCustomToast"
+
+// Definindo um tipo estendido para incluir as propriedades específicas
+type ExtendedConfigPublic = ConfigPublic;
+
+// Função para converter ConfigPublic para ExtendedConfigPublic
+function toExtendedConfig(config: ConfigPublic): ExtendedConfigPublic {
+  return config;
+}
+
+// Função para converter ExtendedConfigPublic para ConfigPublic
+function toApiConfig(extConfig: ExtendedConfigPublic): ConfigPublic {
+  return extConfig;
+}
+
+// Importando os componentes de seção
+import WorkLocationSection from "./JobPreferenceSections/WorkLocationSection"
+import ExperienceLevelSection from "./JobPreferenceSections/ExperienceLevelSection"
+import JobTypeSection from "./JobPreferenceSections/JobTypeSection"
+import PostingDateSection from "./JobPreferenceSections/PostingDateSection"
+import ApplyOnceSection from "./JobPreferenceSections/ApplyOnceSection"
+import DistanceSection from "./JobPreferenceSections/DistanceSection"
+import FilterListSection from "./JobPreferenceSections/FilterListSection"
+import BlacklistsSection from "./JobPreferenceSections/BlacklistsSection"
 
 /* ----------------------------- TYPES & UTILS ----------------------------- */
 
 /** The shape we'll use internally for form data (more user-friendly). */
 type JobPreferencesForm = {
   remote: boolean
-  hybrid: boolean
-  onsite: boolean
   experience_levels: string[]
   job_types: string[]
   posting_date: string
@@ -58,7 +63,7 @@ type JobPreferencesForm = {
 /**
  * Transform API data (ConfigPublic) --> Form data (JobPreferencesForm)
  */
-function transformToForm(config: ConfigPublic): JobPreferencesForm {
+function transformToForm(config: ExtendedConfigPublic): JobPreferencesForm {
   const experience_levels: string[] = []
   if (config.experience_level?.intership) experience_levels.push("internship")
   if (config.experience_level?.entry) experience_levels.push("entry")
@@ -84,13 +89,11 @@ function transformToForm(config: ConfigPublic): JobPreferencesForm {
 
   return {
     remote: config.remote ?? false,
-    hybrid: config.hybrid ?? false,
-    onsite: config.onsite ?? false,
     experience_levels,
     job_types,
     posting_date,
     apply_once_at_company: config.apply_once_at_company ?? false,
-    distance: config.distance ?? 0,
+    distance: config.distance ?? DEFAULT_DISTANCE,
     positions: config.positions || [],
     locations: config.locations || [],
     company_blacklist: config.company_blacklist || [],
@@ -102,11 +105,9 @@ function transformToForm(config: ConfigPublic): JobPreferencesForm {
 /**
  * Transform Form data (JobPreferencesForm) --> API data (ConfigPublic)
  */
-function transformFromForm(formData: JobPreferencesForm): ConfigPublic {
+function transformFromForm(formData: JobPreferencesForm): ExtendedConfigPublic {
   return {
     remote: formData.remote,
-    hybrid: formData.hybrid,
-    onsite: formData.onsite,
     experience_level: {
       intership: formData.experience_levels.includes("internship"),
       entry: formData.experience_levels.includes("entry"),
@@ -140,122 +141,8 @@ function transformFromForm(formData: JobPreferencesForm): ConfigPublic {
   }
 }
 
-/* ----------------------- MULTI-SELECT TOGGLE COMPONENT ---------------------- */
-
-type Option = {
-  label: string
-  value: string
-}
-
-type MultiSelectToggleProps = {
-  options: Option[]
-  selected: string[]
-  onChange: (selected: string[]) => void
-}
-
-const MultiSelectToggle: React.FC<MultiSelectToggleProps> = ({
-  options,
-  selected,
-  onChange,
-}) => {
-  const handleToggle = (value: string) => {
-    if (selected.includes(value)) {
-      onChange(selected.filter((v) => v !== value))
-    } else {
-      onChange([...selected, value])
-    }
-  }
-
-  return (
-    <Flex wrap="wrap" gap={2} my={2}>
-      {options.map((option) => {
-        const isSelected = selected.includes(option.value)
-        return (
-          <Button
-            key={option.value}
-            bg={
-              isSelected ? "#00766C" : useColorModeValue("white", "gray.800") // claro/escuro
-            }
-            color={
-              isSelected ? "white" : useColorModeValue("black", "white") // claro/escuro
-            }
-            border="1px solid #00766C"
-            _hover={{
-              bg: isSelected
-                ? "#00655D"
-                : useColorModeValue("gray.100", "gray.700"),
-            }}
-            onClick={() => handleToggle(option.value)}
-            size="sm"
-          >
-            {option.label}
-          </Button>
-        )
-      })}
-    </Flex>
-  )
-}
-
-/* --------------------------- ARRAY INPUT COMPONENT --------------------------- */
-/**
- * A small reusable component to manage an array of strings
- * with an input field and an "Add" button.
- */
-type ArrayInputProps = {
-  label: string
-  items: string[]
-  onChange: (newItems: string[]) => void
-  placeholder?: string
-}
-
-const ArrayInput: React.FC<ArrayInputProps> = ({
-  label,
-  items,
-  onChange,
-  placeholder,
-}) => {
-  const [inputValue, setInputValue] = useState("")
-
-  const handleAdd = () => {
-    const trimmed = inputValue.trim()
-    if (!trimmed) return
-    if (!items.includes(trimmed)) {
-      onChange([...items, trimmed])
-    }
-    setInputValue("")
-  }
-
-  const handleRemove = (item: string) => {
-    const filtered = items.filter((i) => i !== item)
-    onChange(filtered)
-  }
-
-  return (
-    <FormControl mb={4}>
-      <FormLabel>{label}</FormLabel>
-      <Flex gap={2} mb={2}>
-        <Input
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          placeholder={placeholder}
-        />
-        <IconButton
-          aria-label="Add item"
-          icon={<AddIcon />}
-          onClick={handleAdd}
-        />
-      </Flex>
-      <Flex wrap="wrap" gap={1}>
-        {items.map((item) => (
-          <Tag key={item} m="2px" variant="subtle" colorScheme="teal">
-            <TagLabel>{item}</TagLabel>
-            <TagCloseButton onClick={() => handleRemove(item)} zIndex={10} />
-          </Tag>
-        ))}
-      </Flex>
-    </FormControl>
-  )
-}
+// Definir o valor padrão para distance
+const DEFAULT_DISTANCE = 25;
 
 /* --------------------------- LOADING SKELETON COMPONENT --------------------------- */
 const LoadingSkeleton = () => {
@@ -295,13 +182,11 @@ const JobPreferencesPage: React.FC = () => {
   // Default form data for first render
   const defaultFormValues: JobPreferencesForm = {
     remote: true,
-    hybrid: true,
-    onsite: true,
     experience_levels: [],
     job_types: [],
     posting_date: "all_time",
     apply_once_at_company: true,
-    distance: 0,
+    distance: DEFAULT_DISTANCE,
     positions: ["Developer"],
     locations: ["USA"],
     company_blacklist: [],
@@ -345,7 +230,9 @@ const JobPreferencesPage: React.FC = () => {
         
         try {
           // Transform API config -> form shape
-          const transformed = transformToForm(config)
+          // Converter para o formato estendido primeiro
+          const extendedConfig = toExtendedConfig(config);
+          const transformed = transformToForm(extendedConfig);
 
           // Use reset with callback para garantir conclusão da atualização
           reset(transformed, {
@@ -427,10 +314,12 @@ const JobPreferencesPage: React.FC = () => {
 
   /** Save preferences with better error handling */
   const mutation = useMutation({
-    mutationFn: (data: ConfigPublic) => {
+    mutationFn: (data: ExtendedConfigPublic) => {
       try {
+        // Converter de volta para o formato da API
+        const apiConfig = toApiConfig(data);
         return ConfigsService.updateConfig({
-          requestBody: data,
+          requestBody: apiConfig,
         })
       } catch (error) {
         console.error("Error in mutation:", error)
@@ -450,9 +339,6 @@ const JobPreferencesPage: React.FC = () => {
       if (isCreatingNew) {
         setIsCreatingNew(false)
       }
-      
-      // Force a re-render of the form with the current data
-      // setFormKey(prevKey => prevKey + 1)
     },
     onError: (err: ApiError) => {
       console.error("Mutation error:", err)
@@ -470,8 +356,8 @@ const JobPreferencesPage: React.FC = () => {
       }
       
       // Convert form data -> API shape
-      const payload = transformFromForm(data)
-      mutation.mutate(payload)
+      const extendedConfig = transformFromForm(data)
+      mutation.mutate(extendedConfig)
     } catch (error) {
       console.error("Form submission error:", error)
       showToast(
@@ -491,27 +377,6 @@ const JobPreferencesPage: React.FC = () => {
     });
   }
 
-  // Options for experience levels multi-select
-  const experienceOptions: Option[] = [
-    { value: "internship", label: "Internship" },
-    { value: "entry", label: "Entry Level" },
-    { value: "associate", label: "Associate" },
-    { value: "mid_senior_level", label: "Mid-Senior Level" },
-    { value: "director", label: "Director" },
-    { value: "executive", label: "Executive" },
-  ]
-
-  // Options for job types multi-select
-  const jobTypeOptions: Option[] = [
-    { value: "full_time", label: "Full-Time" },
-    { value: "contract", label: "Contract" },
-    { value: "part_time", label: "Part-Time" },
-    { value: "temporary", label: "Temporary" },
-    { value: "internship", label: "Internship" },
-    { value: "other", label: "Other" },
-    { value: "volunteer", label: "Volunteer" },
-  ]
-
   if (isLoadingSubscriptions) {
     return (
       <Container maxW="full">
@@ -523,6 +388,7 @@ const JobPreferencesPage: React.FC = () => {
   }
 
   /** Watch local state for array-based fields to keep form in sync. */
+  const remote = watch("remote")
   const positions = watch("positions")
   const locations = watch("locations")
   const companyBlacklist = watch("company_blacklist")
@@ -530,6 +396,9 @@ const JobPreferencesPage: React.FC = () => {
   const locationBlacklist = watch("location_blacklist")
   const experienceLevels = watch("experience_levels")
   const jobTypes = watch("job_types")
+  const postingDate = watch("posting_date")
+  const applyOnce = watch("apply_once_at_company")
+  const distance = watch("distance")
 
   return (
     <Container maxW="full">
@@ -550,195 +419,71 @@ const JobPreferencesPage: React.FC = () => {
       ) : (
         <form onSubmit={handleSubmit(onSubmit)} style={{ marginBottom: '3rem' }}>
           <Stack spacing={6}>
-            <Card variant="outline" p={4}>
-              <FormControl mb={4}>
-                <FormLabel>Work Location Preferences</FormLabel>
-                <Flex gap={3} wrap="wrap">
-                  <Button
-                    bg={
-                      watch("remote") ? "#00766C" : useColorModeValue("white", "gray.800")
-                    }
-                    color={
-                      watch("remote") ? "white" : useColorModeValue("black", "white")
-                    }
-                    border="1px solid #00766C"
-                    _hover={{
-                      bg: watch("remote")
-                        ? "#00655D"
-                        : useColorModeValue("gray.100", "gray.700"),
-                    }}
-                    onClick={() => updateField("remote", !watch("remote"))}
-                  >
-                    {watch("remote") ? "Remote Allowed" : "Remote Not Allowed"}
-                  </Button>
+            {/* Work Location Section */}
+            <WorkLocationSection 
+              remote={remote}
+              onUpdate={(field, value) => updateField(field, value)}
+            />
 
-                  <Button
-                    bg={
-                      watch("hybrid") ? "#00766C" : useColorModeValue("white", "gray.800")
-                    }
-                    color={
-                      watch("hybrid") ? "white" : useColorModeValue("black", "white")
-                    }
-                    border="1px solid #00766C"
-                    _hover={{
-                      bg: watch("hybrid")
-                        ? "#00655D"
-                        : useColorModeValue("gray.100", "gray.700"),
-                    }}
-                    onClick={() => updateField("hybrid", !watch("hybrid"))}
-                  >
-                    {watch("hybrid") ? "Hybrid Allowed" : "Hybrid Not Allowed"}
-                  </Button>
+            {/* Experience Levels Section */}
+            <ExperienceLevelSection 
+              selected={experienceLevels}
+              onChange={(values) => updateField("experience_levels", values)}
+            />
 
-                  <Button
-                    bg={
-                      watch("onsite") ? "#00766C" : useColorModeValue("white", "gray.800")
-                    }
-                    color={
-                      watch("onsite") ? "white" : useColorModeValue("black", "white")
-                    }
-                    border="1px solid #00766C"
-                    _hover={{
-                      bg: watch("onsite")
-                        ? "#00655D"
-                        : useColorModeValue("gray.100", "gray.700"),
-                    }}
-                    onClick={() => updateField("onsite", !watch("onsite"))}
-                  >
-                    {watch("onsite") ? "Onsite Allowed" : "Onsite Not Allowed"}
-                  </Button>
-                </Flex>
-              </FormControl>
-            </Card>
+            {/* Job Types Section */}
+            <JobTypeSection 
+              selected={jobTypes}
+              onChange={(values) => updateField("job_types", values)}
+            />
 
-            <Card variant="outline" p={4}>
-              <FormControl mb={4}>
-                <FormLabel>Experience Levels</FormLabel>
-                <MultiSelectToggle
-                  options={experienceOptions}
-                  selected={experienceLevels}
-                  onChange={(values) => updateField("experience_levels", values)}
-                />
-              </FormControl>
-            </Card>
+            {/* Posting Date Section */}
+            <PostingDateSection 
+              value={postingDate}
+              onChange={(val) => updateField("posting_date", val)}
+            />
 
-            <Card variant="outline" p={4}>
-              <FormControl mb={4}>
-                <FormLabel>Job Types</FormLabel>
-                <MultiSelectToggle
-                  options={jobTypeOptions}
-                  selected={jobTypes}
-                  onChange={(values) => updateField("job_types", values)}
-                />
-              </FormControl>
-            </Card>
+            {/* Apply Once Section */}
+            <ApplyOnceSection 
+              value={applyOnce}
+              onChange={(val) => updateField("apply_once_at_company", val)}
+            />
 
-            <Card variant="outline" p={4}>
-              <FormControl mb={4}>
-                <FormLabel>Posting Date</FormLabel>
-                <RadioGroup
-                  value={watch("posting_date")}
-                  onChange={(val) => updateField("posting_date", val)}
-                >
-                  <Flex direction="column" gap={2}>
-                    <Radio value="all_time">All Time</Radio>
-                    <Radio value="month">Past Month</Radio>
-                    <Radio value="week">Past Week</Radio>
-                    <Radio value="hours">Past 24 Hours</Radio>
-                  </Flex>
-                </RadioGroup>
-              </FormControl>
-            </Card>
+            {/* Distance Section */}
+            <DistanceSection 
+              value={distance}
+              onChange={(val) => updateField("distance", val)}
+            />
 
-            <Card variant="outline" p={4}>
-              <FormControl mb={4}>
-                <FormLabel>Apply Once at Company</FormLabel>
-                <Button
-                  bg={
-                    watch("apply_once_at_company") ? "#00766C" : useColorModeValue("white", "gray.800")
-                  }
-                  color={
-                    watch("apply_once_at_company") ? "white" : useColorModeValue("black", "white")
-                  }
-                  border="1px solid #00766C"
-                  _hover={{
-                    bg: watch("apply_once_at_company")
-                      ? "#00655D"
-                      : useColorModeValue("gray.100", "gray.700"),
-                  }}
-                  onClick={() =>
-                    updateField(
-                      "apply_once_at_company",
-                      !watch("apply_once_at_company"),
-                    )
-                  }
-                >
-                  {watch("apply_once_at_company")
-                    ? "Apply Once at Company"
-                    : "Apply Multiple Times at Company"}
-                </Button>
-              </FormControl>
-            </Card>
+            {/* Positions Section */}
+            <FilterListSection
+              title="Positions"
+              infoTooltip="List job titles you're interested in, such as 'Developer' or 'Frontend Engineer'. Enter specific keywords."
+              label="Positions"
+              items={positions}
+              onChange={(newItems) => updateField("positions", newItems)}
+              placeholder="e.g. Developer, Frontend"
+            />
 
-            <Card variant="outline" p={4}>
-              <FormControl mb={4}>
-                <FormLabel>Distance (miles): {watch("distance")}</FormLabel>
-                <Slider
-                  min={0}
-                  max={100}
-                  step={10}
-                  value={watch("distance")}
-                  onChange={(val) => updateField("distance", val)}
-                >
-                  <SliderTrack>
-                    <SliderFilledTrack bg="#00766C" />
-                  </SliderTrack>
-                  <SliderThumb borderColor="#00766C" borderWidth="revert"  />
-                </Slider>
-              </FormControl>
-            </Card>
+            {/* Locations Section */}
+            <FilterListSection
+              title="Locations"
+              infoTooltip="Specify locations where you're looking for jobs. Can be countries, states, or cities."
+              label="Locations"
+              items={locations}
+              onChange={(newItems) => updateField("locations", newItems)}
+              placeholder="e.g. USA, Canada"
+            />
 
-            <Card variant="outline" p={4}>
-              <ArrayInput
-                label="Positions"
-                items={positions}
-                onChange={(newItems) => updateField("positions", newItems)}
-                placeholder="e.g. Developer, Frontend"
-              />
-            </Card>
-
-            <Card variant="outline" p={4}>
-              <ArrayInput
-                label="Locations"
-                items={locations}
-                onChange={(newItems) => updateField("locations", newItems)}
-                placeholder="e.g. USA, Canada"
-              />
-            </Card>
-
-            <Card variant="outline" p={4}>
-              <Heading size="md" mb={4}>Blacklists</Heading>
-              <ArrayInput
-                label="Company Blacklist"
-                items={companyBlacklist}
-                onChange={(newItems) => updateField("company_blacklist", newItems)}
-                placeholder="e.g. Gupy, Lever"
-              />
-
-              <ArrayInput
-                label="Title Blacklist"
-                items={titleBlacklist}
-                onChange={(newItems) => updateField("title_blacklist", newItems)}
-                placeholder="e.g. Senior, Jr"
-              />
-
-              <ArrayInput
-                label="Location Blacklist"
-                items={locationBlacklist}
-                onChange={(newItems) => updateField("location_blacklist", newItems)}
-                placeholder="e.g. Brazil, Mexico"
-              />
-            </Card>
+            {/* Blacklists Section */}
+            <BlacklistsSection 
+              companyBlacklist={companyBlacklist}
+              titleBlacklist={titleBlacklist}
+              locationBlacklist={locationBlacklist}
+              onCompanyChange={(newItems) => updateField("company_blacklist", newItems)}
+              onTitleChange={(newItems) => updateField("title_blacklist", newItems)}
+              onLocationChange={(newItems) => updateField("location_blacklist", newItems)}
+            />
           </Stack>
           <ButtonGroup justifyContent="flex-end" mt={4}>
             <Button
@@ -746,8 +491,6 @@ const JobPreferencesPage: React.FC = () => {
               variant="primary"
               isLoading={isSubmitting}
               isDisabled={!hasActiveSubscription}
-              mt={4}
-              width="200px"
             >
               {isCreatingNew ? "Create Preferences" : "Save Preferences"}
             </Button>

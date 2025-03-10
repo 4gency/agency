@@ -9,6 +9,7 @@ import {
   FormLabel,
   Grid,
   GridItem,
+  IconButton,
   Input,
   Textarea,
   useColorModeValue,
@@ -229,7 +230,13 @@ const WorkExperienceSection: React.FC<WorkExperienceSectionProps> = ({
           }
           bg={buttonBg}
           color={buttonColor}
-          _hover={{ bg: buttonHoverBg }}
+          _hover={{ 
+            bg: buttonHoverBg,
+            transform: "translateY(-2px)",
+            shadow: "md" 
+          }}
+          shadow="sm"
+          transition="all 0.2s"
         >
           Add Experience
         </Button>
@@ -387,9 +394,18 @@ const WorkExperienceSection: React.FC<WorkExperienceSectionProps> = ({
                     onKeyDown={(e) => handleSkillKeyDown(e, index)}
                     onPaste={(e) => handleSkillPaste(e, index)}
                   />
-                  <Button onClick={() => addSkill(index)} colorScheme="teal">
-                    Add
-                  </Button>
+                  <IconButton
+                    aria-label="Add skill"
+                    icon={<AddIcon />}
+                    onClick={() => addSkill(index)}
+                    colorScheme="gray"
+                    shadow="sm"
+                    _hover={{ 
+                      transform: "translateY(-2px)",
+                      shadow: "md" 
+                    }}
+                    transition="all 0.2s"
+                  />
                 </HStack>
                 
                 <Wrap spacing={2} mt={2}>
@@ -431,7 +447,13 @@ const WorkExperienceSection: React.FC<WorkExperienceSectionProps> = ({
             }
             bg={buttonBg}
             color={buttonColor}
-            _hover={{ bg: buttonHoverBg }}
+            _hover={{ 
+              bg: buttonHoverBg,
+              transform: "translateY(-2px)",
+              shadow: "md" 
+            }}
+            shadow="sm"
+            transition="all 0.2s"
           >
             Add Experience
           </Button>

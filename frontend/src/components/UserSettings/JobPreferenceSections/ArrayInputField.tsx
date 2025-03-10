@@ -3,13 +3,11 @@ import {
   Flex,
   FormControl,
   FormLabel,
-  HStack,
   IconButton,
   Input,
   Tag,
   TagCloseButton,
   TagLabel,
-  useColorModeValue,
 } from "@chakra-ui/react"
 import type React from "react"
 import { useState } from "react"
@@ -19,25 +17,19 @@ interface ArrayInputFieldProps {
   items: string[]
   onChange: (items: string[]) => void
   placeholder?: string
-  onBlur?: () => void
 }
 
 /**
  * Componente reutilizável para campos que permitem adicionar múltiplos valores
+ * Versão melhorada do ArrayInput com suporte a colagem múltipla e teclas Enter/vírgula
  */
 const ArrayInputField: React.FC<ArrayInputFieldProps> = ({
   label,
   items,
   onChange,
   placeholder = "Add new item",
-  onBlur,
 }) => {
   const [inputValue, setInputValue] = useState("")
-
-  // Cores para o botão
-  const buttonBg = useColorModeValue("#00766C", "#00766C")
-  const buttonHoverBg = useColorModeValue("#005f57", "#005f57")
-  const buttonColor = useColorModeValue("white", "white")
 
   const handleAdd = () => {
     const trimmed = inputValue.trim()
@@ -89,31 +81,23 @@ const ArrayInputField: React.FC<ArrayInputFieldProps> = ({
           onKeyPress={handleKeyPress}
           onPaste={handlePaste}
           placeholder={placeholder}
-          onBlur={onBlur}
         />
         <IconButton
           aria-label="Add item"
           icon={<AddIcon />}
           onClick={handleAdd}
-          colorScheme="gray"
-          shadow="sm"
-          _hover={{ 
-            transform: "translateY(-2px)",
-            shadow: "md" 
-          }}
-          transition="all 0.2s"
         />
       </Flex>
-      <HStack wrap="wrap">
+      <Flex wrap="wrap" gap={1}>
         {items.map((item) => (
-          <Tag key={item} m="2px" variant="subtle">
+          <Tag key={item} m="2px" variant="subtle" colorScheme="teal">
             <TagLabel>{item}</TagLabel>
-            <TagCloseButton onClick={() => handleRemove(item)} />
+            <TagCloseButton onClick={() => handleRemove(item)} zIndex={10} />
           </Tag>
         ))}
-      </HStack>
+      </Flex>
     </FormControl>
   )
 }
 
-export default ArrayInputField
+export default ArrayInputField 

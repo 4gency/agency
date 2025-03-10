@@ -9,6 +9,7 @@ import {
   FormLabel,
   Grid,
   GridItem,
+  IconButton,
   Input,
   Textarea,
   useColorModeValue,
@@ -215,7 +216,13 @@ const EducationSection: React.FC<EducationSectionProps> = ({
           }
           bg={buttonBg}
           color={buttonColor}
-          _hover={{ bg: buttonHoverBg }}
+          _hover={{ 
+            bg: buttonHoverBg,
+            transform: "translateY(-2px)",
+            shadow: "md" 
+          }}
+          shadow="sm"
+          transition="all 0.2s"
         >
           Add Education
         </Button>
@@ -362,9 +369,18 @@ const EducationSection: React.FC<EducationSectionProps> = ({
                     onKeyDown={(e) => handleExamKeyDown(e, index)}
                     onPaste={(e) => handleExamPaste(e, index)}
                   />
-                  <Button onClick={() => addExam(index)} colorScheme="teal">
-                    Add
-                  </Button>
+                  <IconButton
+                    aria-label="Add test"
+                    icon={<AddIcon />}
+                    onClick={() => addExam(index)}
+                    colorScheme="gray"
+                    shadow="sm"
+                    _hover={{ 
+                      transform: "translateY(-2px)",
+                      shadow: "md" 
+                    }}
+                    transition="all 0.2s"
+                  />
                 </HStack>
                 
                 <Wrap spacing={2} mt={2}>
@@ -405,7 +421,13 @@ const EducationSection: React.FC<EducationSectionProps> = ({
             }
             bg={buttonBg}
             color={buttonColor}
-            _hover={{ bg: buttonHoverBg }}
+            _hover={{ 
+              bg: buttonHoverBg,
+              transform: "translateY(-2px)",
+              shadow: "md" 
+            }}
+            shadow="sm"
+            transition="all 0.2s"
           >
             Add Education
           </Button>
