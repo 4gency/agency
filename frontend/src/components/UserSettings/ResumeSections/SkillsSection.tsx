@@ -40,6 +40,11 @@ const SkillsSection: React.FC<SkillsSectionProps> = ({
       title="Skills" 
       infoTooltip="Add as many skills as possible - technical and soft skills. This helps our AI provide more accurate answers about your expertise."
     >
+      <Box mb={4}>
+        <Box fontSize="sm" color="gray.600">
+          Add as many skills as possible - technical and soft skills. This helps our AI provide more accurate answers about your expertise.
+        </Box>
+      </Box>
       <FormControl>
         <ArrayInputField
           label="Add skill"
