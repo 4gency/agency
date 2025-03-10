@@ -47,6 +47,7 @@ const ProjectsSection: React.FC<ProjectsSectionProps> = ({
   return (
     <SectionContainer
       title="Projects"
+      infoTooltip="Showcase projects that demonstrate your skills. Include links, technologies used, and your specific role."
       actionButton={
         <Button
           leftIcon={<AddIcon />}

@@ -44,6 +44,7 @@ const AchievementsSection: React.FC<AchievementsSectionProps> = ({
   return (
     <SectionContainer
       title="Achievements"
+      infoTooltip="Highlight notable accomplishments that set you apart. Include awards, recognition, and measurable successes."
       actionButton={
         <Button
           leftIcon={<AddIcon />}

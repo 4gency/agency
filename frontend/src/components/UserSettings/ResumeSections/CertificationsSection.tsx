@@ -44,6 +44,7 @@ const CertificationsSection: React.FC<CertificationsSectionProps> = ({
   return (
     <SectionContainer
       title="Certifications"
+      infoTooltip="List relevant certifications with issuing organizations and dates. Include both technical and professional credentials."
       actionButton={
         <Button
           leftIcon={<AddIcon />}

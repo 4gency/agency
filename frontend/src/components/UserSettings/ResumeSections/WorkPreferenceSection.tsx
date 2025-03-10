@@ -11,7 +11,10 @@ const WorkPreferenceSection: React.FC<WorkPreferenceSectionProps> = ({
   register,
 }) => {
   return (
-    <SectionContainer title="Work Preferences">
+    <SectionContainer 
+      title="Work Preference" 
+      infoTooltip="Be clear about your availability, preferred work modes, and relocation options to match with suitable opportunities."
+    >
       <Box p={4}>
         <Text mb={4} fontSize="sm" color="gray.600">
           Please indicate your work preferences. This information helps employers find opportunities that match your preferences.

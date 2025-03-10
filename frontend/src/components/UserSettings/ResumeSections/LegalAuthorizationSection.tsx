@@ -111,7 +111,10 @@ const LegalAuthorizationSection: React.FC<LegalAuthorizationSectionProps> = ({
   ]
 
   return (
-    <SectionContainer title="Work Authorization">
+    <SectionContainer 
+      title="Legal Authorization" 
+      infoTooltip="Provide accurate information about your work authorization status. This is essential for employers to determine eligibility."
+    >
       <Box p={4}>
         <Text mb={4} fontSize="sm" color="gray.600">
           Please indicate your work authorization status for different regions. This information helps employers understand your eligibility to work in various locations.

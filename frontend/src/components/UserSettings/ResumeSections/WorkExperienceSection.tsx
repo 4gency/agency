@@ -207,8 +207,9 @@ const WorkExperienceSection: React.FC<WorkExperienceSectionProps> = ({
   const buttonColor = useColorModeValue("white", "white")
 
   return (
-    <SectionContainer
-      title="Work Experience"
+    <SectionContainer 
+      title="Work Experience" 
+      infoTooltip="Detail your job history, focusing on achievements and responsibilities. Quantify results where possible."
       actionButton={
         <Button
           leftIcon={<AddIcon />}

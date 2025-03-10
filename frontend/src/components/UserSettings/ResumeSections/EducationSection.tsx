@@ -196,6 +196,7 @@ const EducationSection: React.FC<EducationSectionProps> = ({
   return (
     <SectionContainer
       title="Education"
+      infoTooltip="Include all relevant degrees, certifications, and coursework. Mark ongoing education as current."
       actionButton={
         <Button
           leftIcon={<AddIcon />}

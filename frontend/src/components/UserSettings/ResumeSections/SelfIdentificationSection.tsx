@@ -45,7 +45,10 @@ const SelfIdentificationSection: React.FC<SelfIdentificationSectionProps> = ({
   ]
 
   return (
-    <SectionContainer title="Self Identification">
+    <SectionContainer 
+      title="Self Identification" 
+      infoTooltip="Optional information used for diversity tracking. All responses are confidential and won't affect your application."
+    >
       <Box p={4}>
         <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={4}>
           <GridItem>
