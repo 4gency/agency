@@ -455,13 +455,8 @@ const BotSessionManager = ({
     <Box>
       <Flex justify="space-between" mb={4}>
         <Heading size="md">Bot Sessions</Heading>
-        <Button
-          leftIcon={<FiPlus />}
-          colorScheme="teal"
-          size="sm"
-          onClick={onCreateOpen}
-        >
-          New Session
+        <Button leftIcon={<FiPlus />} variant="primary" onClick={onCreateOpen}>
+        New Session
         </Button>
       </Flex>
 
@@ -631,7 +626,7 @@ const BotSessionManager = ({
               </FormControl>
 
               <FormControl mt={4}>
-                <FormLabel>Application Style</FormLabel>
+                <FormLabel>Resumes Style</FormLabel>
                 <RadioGroup
                   value={formData.style}
                   onChange={handleRadioChange}
@@ -645,7 +640,7 @@ const BotSessionManager = ({
                   </Stack>
                 </RadioGroup>
                 <Text fontSize="sm" color="gray.500" mt={1}>
-                  Visual style of the bot interface
+                  Visual style of the resumes generated
                 </Text>
               </FormControl>
             </Stack>
