@@ -1,18 +1,31 @@
 import datetime
+from typing import Any
 from uuid import uuid4
 
 import pytest
 
 from app.models.resume import (
+    Achievement,
+    Availability,
+    Certification,
+    EducationDetails,
+    ExperienceDetail,
+    Language,
+    LegalAuthorization,
+    PersonalInformation,
     PlainTextResume,
     PlainTextResumePublic,
+    Project,
+    SalaryExpectations,
+    SelfIdentification,
+    WorkPreferences,
     generate_plain_text_resume_yaml,
 )
 
 
 class TestGeneratePlainTextResumeYaml:
     @pytest.fixture
-    def sample_personal_info(self):
+    def sample_personal_info(self) -> dict[str, Any]:
         return {
             "name": "John",
             "surname": "Doe",
@@ -31,7 +44,7 @@ class TestGeneratePlainTextResumeYaml:
         }
 
     @pytest.fixture
-    def sample_education(self):
+    def sample_education(self) -> dict[str, Any]:
         return {
             "education_level": "Bachelor's Degree",
             "institution": "University of New York",
@@ -43,7 +56,7 @@ class TestGeneratePlainTextResumeYaml:
         }
 
     @pytest.fixture
-    def sample_experience(self):
+    def sample_experience(self) -> dict[str, Any]:
         return {
             "position": "Software Engineer",
             "company": "Google",
@@ -55,7 +68,7 @@ class TestGeneratePlainTextResumeYaml:
         }
 
     @pytest.fixture
-    def sample_project(self):
+    def sample_project(self) -> dict[str, str]:
         return {
             "name": "My awesome CRUD app",
             "description": "A CRUD app that does CRUD operations",
@@ -63,33 +76,33 @@ class TestGeneratePlainTextResumeYaml:
         }
 
     @pytest.fixture
-    def sample_achievement(self):
+    def sample_achievement(self) -> dict[str, str]:
         return {
             "name": "Employee of the month",
             "description": "Awarded for being the best employee",
         }
 
     @pytest.fixture
-    def sample_certification(self):
+    def sample_certification(self) -> dict[str, str]:
         return {
             "name": "Python Certification",
             "description": "Certified Python Developer",
         }
 
     @pytest.fixture
-    def sample_language(self):
+    def sample_language(self) -> dict[str, str]:
         return {"language": "English", "proficiency": "Native"}
 
     @pytest.fixture
-    def sample_availability(self):
+    def sample_availability(self) -> dict[str, str]:
         return {"notice_period": "1 month"}
 
     @pytest.fixture
-    def sample_salary_expectations(self):
+    def sample_salary_expectations(self) -> dict[str, str]:
         return {"salary_range_usd": "90000 - 110000"}
 
     @pytest.fixture
-    def sample_self_identification(self):
+    def sample_self_identification(self) -> dict[str, Any]:
         return {
             "gender": "Male",
             "pronouns": "He/Him",
@@ -99,7 +112,7 @@ class TestGeneratePlainTextResumeYaml:
         }
 
     @pytest.fixture
-    def sample_legal_authorization(self):
+    def sample_legal_authorization(self) -> dict[str, bool]:
         return {
             "eu_work_authorization": False,
             "us_work_authorization": False,
@@ -120,7 +133,7 @@ class TestGeneratePlainTextResumeYaml:
         }
 
     @pytest.fixture
-    def sample_work_preferences(self):
+    def sample_work_preferences(self) -> dict[str, bool]:
         return {
             "remote_work": True,
             "in_person_work": True,
@@ -133,52 +146,52 @@ class TestGeneratePlainTextResumeYaml:
     @pytest.fixture
     def public_resume(
         self,
-        sample_personal_info,
-        sample_education,
-        sample_experience,
-        sample_project,
-        sample_achievement,
-        sample_certification,
-        sample_language,
-        sample_availability,
-        sample_salary_expectations,
-        sample_self_identification,
-        sample_legal_authorization,
-        sample_work_preferences,
-    ):
+        sample_personal_info: dict[str, Any],
+        sample_education: dict[str, Any],
+        sample_experience: dict[str, Any],
+        sample_project: dict[str, str],
+        sample_achievement: dict[str, str],
+        sample_certification: dict[str, str],
+        sample_language: dict[str, str],
+        sample_availability: dict[str, str],
+        sample_salary_expectations: dict[str, str],
+        sample_self_identification: dict[str, Any],
+        sample_legal_authorization: dict[str, bool],
+        sample_work_preferences: dict[str, bool],
+    ) -> PlainTextResumePublic:
         """Fixture for a PlainTextResumePublic object."""
         return PlainTextResumePublic(
-            personal_information=sample_personal_info,
-            education_details=[sample_education],
-            experience_details=[sample_experience],
-            projects=[sample_project],
-            achievements=[sample_achievement],
-            certifications=[sample_certification],
-            languages=[sample_language],
+            personal_information=PersonalInformation(**sample_personal_info),
+            education_details=[EducationDetails(**sample_education)],
+            experience_details=[ExperienceDetail(**sample_experience)],
+            projects=[Project(**sample_project)],
+            achievements=[Achievement(**sample_achievement)],
+            certifications=[Certification(**sample_certification)],
+            languages=[Language(**sample_language)],
             interests=["Reading", "Swimming"],
-            availability=sample_availability,
-            salary_expectations=sample_salary_expectations,
-            self_identification=sample_self_identification,
-            legal_authorization=sample_legal_authorization,
-            work_preferences=sample_work_preferences,
+            availability=Availability(**sample_availability),
+            salary_expectations=SalaryExpectations(**sample_salary_expectations),
+            self_identification=SelfIdentification(**sample_self_identification),
+            legal_authorization=LegalAuthorization(**sample_legal_authorization),
+            work_preferences=WorkPreferences(**sample_work_preferences),
         )
 
     @pytest.fixture
     def private_resume(
         self,
-        sample_personal_info,
-        sample_education,
-        sample_experience,
-        sample_project,
-        sample_achievement,
-        sample_certification,
-        sample_language,
-        sample_availability,
-        sample_salary_expectations,
-        sample_self_identification,
-        sample_legal_authorization,
-        sample_work_preferences,
-    ):
+        sample_personal_info: dict[str, Any],
+        sample_education: dict[str, Any],
+        sample_experience: dict[str, Any],
+        sample_project: dict[str, str],
+        sample_achievement: dict[str, str],
+        sample_certification: dict[str, str],
+        sample_language: dict[str, str],
+        sample_availability: dict[str, str],
+        sample_salary_expectations: dict[str, str],
+        sample_self_identification: dict[str, Any],
+        sample_legal_authorization: dict[str, bool],
+        sample_work_preferences: dict[str, bool],
+    ) -> PlainTextResume:
         """Fixture for a PlainTextResume object."""
         resume = PlainTextResume()
         resume.id = 1
@@ -198,7 +211,9 @@ class TestGeneratePlainTextResumeYaml:
         resume.work_preferences = sample_work_preferences
         return resume
 
-    def test_basic_generation_public(self, public_resume):
+    def test_basic_generation_public(
+        self, public_resume: PlainTextResumePublic
+    ) -> None:
         """Test basic YAML generation with a public resume."""
         yaml_str = generate_plain_text_resume_yaml(public_resume)
 
@@ -217,7 +232,7 @@ class TestGeneratePlainTextResumeYaml:
         assert "legal_authorization:" in yaml_str
         assert "work_preferences:" in yaml_str
 
-    def test_basic_generation_private(self, private_resume):
+    def test_basic_generation_private(self, private_resume: PlainTextResume) -> None:
         """Test basic YAML generation with a private resume."""
         yaml_str = generate_plain_text_resume_yaml(private_resume)
 
@@ -236,7 +251,7 @@ class TestGeneratePlainTextResumeYaml:
         assert "legal_authorization:" in yaml_str
         assert "work_preferences:" in yaml_str
 
-    def test_personal_info_public(self, public_resume):
+    def test_personal_info_public(self, public_resume: PlainTextResumePublic) -> None:
         """Test personal information in YAML for public resume."""
         yaml_str = generate_plain_text_resume_yaml(public_resume)
 
@@ -245,7 +260,7 @@ class TestGeneratePlainTextResumeYaml:
         assert '  surname: "Doe"' in yaml_str
         assert '  email: "john.doe@email.com"' in yaml_str
 
-    def test_personal_info_private(self, private_resume):
+    def test_personal_info_private(self, private_resume: PlainTextResume) -> None:
         """Test personal information in YAML for private resume."""
         yaml_str = generate_plain_text_resume_yaml(private_resume)
 
@@ -254,7 +269,9 @@ class TestGeneratePlainTextResumeYaml:
         assert '  surname: "Doe"' in yaml_str
         assert '  email: "john.doe@email.com"' in yaml_str
 
-    def test_education_details_public(self, public_resume):
+    def test_education_details_public(
+        self, public_resume: PlainTextResumePublic
+    ) -> None:
         """Test education details in YAML for public resume."""
         yaml_str = generate_plain_text_resume_yaml(public_resume)
 
@@ -263,7 +280,7 @@ class TestGeneratePlainTextResumeYaml:
         assert '    institution: "University of New York"' in yaml_str
         assert '    field_of_study: "Computer Science"' in yaml_str
 
-    def test_education_details_private(self, private_resume):
+    def test_education_details_private(self, private_resume: PlainTextResume) -> None:
         """Test education details in YAML for private resume."""
         yaml_str = generate_plain_text_resume_yaml(private_resume)
 
@@ -272,7 +289,9 @@ class TestGeneratePlainTextResumeYaml:
         assert '    institution: "University of New York"' in yaml_str
         assert '    field_of_study: "Computer Science"' in yaml_str
 
-    def test_experience_details_public(self, public_resume):
+    def test_experience_details_public(
+        self, public_resume: PlainTextResumePublic
+    ) -> None:
         """Test experience details in YAML for public resume."""
         yaml_str = generate_plain_text_resume_yaml(public_resume)
 
@@ -281,7 +300,7 @@ class TestGeneratePlainTextResumeYaml:
         assert '    company: "Google"' in yaml_str
         assert '    employment_period: "2020 - 2022"' in yaml_str
 
-    def test_experience_details_private(self, private_resume):
+    def test_experience_details_private(self, private_resume: PlainTextResume) -> None:
         """Test experience details in YAML for private resume."""
         yaml_str = generate_plain_text_resume_yaml(private_resume)
 
@@ -290,7 +309,7 @@ class TestGeneratePlainTextResumeYaml:
         assert '    company: "Google"' in yaml_str
         assert '    employment_period: "2020 - 2022"' in yaml_str
 
-    def test_exams_as_list_public(self, public_resume):
+    def test_exams_as_list_public(self, public_resume: PlainTextResumePublic) -> None:
         """Test exams as list in public resume."""
         yaml_str = generate_plain_text_resume_yaml(public_resume)
 
@@ -298,7 +317,7 @@ class TestGeneratePlainTextResumeYaml:
         assert '      exam_name_1: "GRE"' in yaml_str
         assert '      exam_name_2: "TOEFL"' in yaml_str
 
-    def test_exams_as_list_private(self, private_resume):
+    def test_exams_as_list_private(self, private_resume: PlainTextResume) -> None:
         """Test exams as list in private resume."""
         yaml_str = generate_plain_text_resume_yaml(private_resume)
 
@@ -306,7 +325,7 @@ class TestGeneratePlainTextResumeYaml:
         assert '      exam_name_1: "GRE"' in yaml_str
         assert '      exam_name_2: "TOEFL"' in yaml_str
 
-    def test_exams_as_dict_public(self, public_resume):
+    def test_exams_as_dict_public(self, public_resume: PlainTextResumePublic) -> None:
         """Test exams as dictionary in public resume."""
         # Vamos modificar o teste para realmente testar a funcionalidade de "keys" do objeto exam
         # Já que o exam, na verdade, não é um dicionário no modelo Pydantic, e sim uma lista
@@ -333,7 +352,7 @@ class TestGeneratePlainTextResumeYaml:
         assert '      exam_name_1: "Advanced Mathematics"' in yaml_str
         assert '      exam_name_2: "Quantum Physics"' in yaml_str
 
-    def test_exams_as_dict_private(self, private_resume):
+    def test_exams_as_dict_private(self, private_resume: PlainTextResume) -> None:
         """Test exams as dictionary in private resume."""
         # Modify the resume to have exams as a dict
         private_resume.education_details[0]["exam"] = {"Math": "A+", "Physics": "B"}
@@ -344,7 +363,7 @@ class TestGeneratePlainTextResumeYaml:
         assert '      Math: "A+"' in yaml_str
         assert '      Physics: "B"' in yaml_str
 
-    def test_boolean_fields_public(self, public_resume):
+    def test_boolean_fields_public(self, public_resume: PlainTextResumePublic) -> None:
         """Test boolean fields conversion to Yes/No in public resume."""
         # For Pydantic objects, we need to create new instances with modified values
         from app.models.resume import LegalAuthorization, SelfIdentification
@@ -388,7 +407,7 @@ class TestGeneratePlainTextResumeYaml:
         assert '  us_work_authorization: "Yes"' in yaml_str
         assert '  disability: "No"' in yaml_str
 
-    def test_boolean_fields_private(self, private_resume):
+    def test_boolean_fields_private(self, private_resume: PlainTextResume) -> None:
         """Test boolean fields conversion to Yes/No in private resume."""
         # Set some booleans
         private_resume.self_identification["veteran"] = True
@@ -401,7 +420,7 @@ class TestGeneratePlainTextResumeYaml:
         assert '  us_work_authorization: "Yes"' in yaml_str
         assert '  disability: "No"' in yaml_str
 
-    def test_interests_public(self, public_resume):
+    def test_interests_public(self, public_resume: PlainTextResumePublic) -> None:
         """Test interests formatting in public resume."""
         yaml_str = generate_plain_text_resume_yaml(public_resume)
 
@@ -409,7 +428,7 @@ class TestGeneratePlainTextResumeYaml:
         assert '  - "Reading"' in yaml_str
         assert '  - "Swimming"' in yaml_str
 
-    def test_interests_private(self, private_resume):
+    def test_interests_private(self, private_resume: PlainTextResume) -> None:
         """Test interests formatting in private resume."""
         yaml_str = generate_plain_text_resume_yaml(private_resume)
 
@@ -417,7 +436,7 @@ class TestGeneratePlainTextResumeYaml:
         assert '  - "Reading"' in yaml_str
         assert '  - "Swimming"' in yaml_str
 
-    def test_empty_fields_public(self, public_resume):
+    def test_empty_fields_public(self, public_resume: PlainTextResumePublic) -> None:
         """Test handling of empty fields in public resume."""
         # Create empty fields
         public_resume.projects = []
@@ -429,7 +448,7 @@ class TestGeneratePlainTextResumeYaml:
         assert "projects:" in yaml_str
         assert "achievements:" in yaml_str
 
-    def test_empty_fields_private(self, private_resume):
+    def test_empty_fields_private(self, private_resume: PlainTextResume) -> None:
         """Test handling of empty fields in private resume."""
         # Create empty fields
         private_resume.projects = []
@@ -441,7 +460,7 @@ class TestGeneratePlainTextResumeYaml:
         assert "projects:" in yaml_str
         assert "achievements:" in yaml_str
 
-    def test_null_values_public(self, public_resume):
+    def test_null_values_public(self, public_resume: PlainTextResumePublic) -> None:
         """Test handling of null values in public resume."""
         # Para Pydantic, não podemos usar None diretamente em campos de string
         # Vamos usar string vazia em vez disso para simular um valor nulo
@@ -471,7 +490,7 @@ class TestGeneratePlainTextResumeYaml:
         # Verifique se o campo github está vazio
         assert '  github: ""' in yaml_str
 
-    def test_null_values_private(self, private_resume):
+    def test_null_values_private(self, private_resume: PlainTextResume) -> None:
         """Test handling of null values in private resume."""
         # Set some null values
         private_resume.personal_information["github"] = None
@@ -481,7 +500,9 @@ class TestGeneratePlainTextResumeYaml:
         # Check null value handling
         assert '  github: "None"' in yaml_str
 
-    def test_responsibilities_and_skills_public(self, public_resume):
+    def test_responsibilities_and_skills_public(
+        self, public_resume: PlainTextResumePublic
+    ) -> None:
         """Test responsibilities and skills formatting in public resume."""
         yaml_str = generate_plain_text_resume_yaml(public_resume)
 
@@ -492,7 +513,9 @@ class TestGeneratePlainTextResumeYaml:
         assert '      - "Django"' in yaml_str
         assert '      - "React"' in yaml_str
 
-    def test_responsibilities_and_skills_private(self, private_resume):
+    def test_responsibilities_and_skills_private(
+        self, private_resume: PlainTextResume
+    ) -> None:
         """Test responsibilities and skills formatting in private resume."""
         yaml_str = generate_plain_text_resume_yaml(private_resume)
 
@@ -503,7 +526,7 @@ class TestGeneratePlainTextResumeYaml:
         assert '      - "Django"' in yaml_str
         assert '      - "React"' in yaml_str
 
-    def test_missing_fields_public(self, public_resume):
+    def test_missing_fields_public(self, public_resume: PlainTextResumePublic) -> None:
         """Test handling of missing fields in public resume."""
         # For Pydantic models, we can't delete fields but we can set them to empty strings
         # or default values to simulate missing fields
@@ -535,7 +558,7 @@ class TestGeneratePlainTextResumeYaml:
         assert '  surname: "Doe"' in yaml_str
         assert '  github: ""' in yaml_str
 
-    def test_missing_fields_private(self, private_resume):
+    def test_missing_fields_private(self, private_resume: PlainTextResume) -> None:
         """Test handling of missing fields in private resume."""
         # Remove some fields
         del private_resume.personal_information["github"]
@@ -546,7 +569,9 @@ class TestGeneratePlainTextResumeYaml:
         assert '  name: "John"' in yaml_str
         assert '  surname: "Doe"' in yaml_str
 
-    def test_edge_case_empty_responsibilities(self, private_resume):
+    def test_edge_case_empty_responsibilities(
+        self, private_resume: PlainTextResume
+    ) -> None:
         """Test handling of empty responsibilities list."""
         private_resume.experience_details[0]["key_responsibilities"] = []
 
@@ -555,7 +580,7 @@ class TestGeneratePlainTextResumeYaml:
         # Should still have the section but no entries
         assert "    key_responsibilities:" in yaml_str
 
-    def test_edge_case_empty_skills(self, private_resume):
+    def test_edge_case_empty_skills(self, private_resume: PlainTextResume) -> None:
         """Test handling of empty skills list."""
         private_resume.experience_details[0]["skills_acquired"] = []
 
@@ -564,7 +589,7 @@ class TestGeneratePlainTextResumeYaml:
         # Should still have the section but no entries
         assert "    skills_acquired:" in yaml_str
 
-    def test_special_characters_handling(self, private_resume):
+    def test_special_characters_handling(self, private_resume: PlainTextResume) -> None:
         """Test handling of special characters in fields."""
         private_resume.personal_information["name"] = 'John "Quotation" O\'Connor'
 
@@ -573,7 +598,7 @@ class TestGeneratePlainTextResumeYaml:
         # Special characters should be preserved
         assert '  name: "John "Quotation" O\'Connor"' in yaml_str
 
-    def test_end_to_end_private(self, private_resume):
+    def test_end_to_end_private(self, private_resume: PlainTextResume) -> None:
         """End-to-end test for a private resume."""
         yaml_str = generate_plain_text_resume_yaml(private_resume)
 
@@ -593,7 +618,7 @@ class TestGeneratePlainTextResumeYaml:
         assert "\nlegal_authorization:\n" in yaml_str
         assert "\nwork_preferences:\n" in yaml_str
 
-    def test_end_to_end_public(self, public_resume):
+    def test_end_to_end_public(self, public_resume: PlainTextResumePublic) -> None:
         """End-to-end test for a public resume."""
         yaml_str = generate_plain_text_resume_yaml(public_resume)
 

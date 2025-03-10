@@ -14,7 +14,7 @@ from app.models.preference import (
 
 class TestGenerateConfigYaml:
     @pytest.fixture
-    def sample_experience_level(self):
+    def sample_experience_level(self) -> ExperienceLevel:
         return ExperienceLevel(
             intership=True,
             entry=True,
@@ -25,7 +25,7 @@ class TestGenerateConfigYaml:
         )
 
     @pytest.fixture
-    def sample_job_types(self):
+    def sample_job_types(self) -> JobTypes:
         return JobTypes(
             full_time=True,
             contract=True,
@@ -37,11 +37,16 @@ class TestGenerateConfigYaml:
         )
 
     @pytest.fixture
-    def sample_date(self):
+    def sample_date(self) -> Date:
         return Date(all_time=True, month=False, week=False, hours=False)
 
     @pytest.fixture
-    def public_config(self, sample_experience_level, sample_job_types, sample_date):
+    def public_config(
+        self,
+        sample_experience_level: ExperienceLevel,
+        sample_job_types: JobTypes,
+        sample_date: Date,
+    ) -> ConfigPublic:
         """Fixture para um objeto ConfigPublic"""
         return ConfigPublic(
             remote=True,
@@ -58,7 +63,12 @@ class TestGenerateConfigYaml:
         )
 
     @pytest.fixture
-    def private_config(self, sample_experience_level, sample_job_types, sample_date):
+    def private_config(
+        self,
+        sample_experience_level: ExperienceLevel,
+        sample_job_types: JobTypes,
+        sample_date: Date,
+    ) -> Config:
         """Fixture para um objeto Config"""
         config = Config()
         config.id = 1
@@ -78,7 +88,7 @@ class TestGenerateConfigYaml:
         config.llm_model = "gpt-4o-mini"
         return config
 
-    def test_basic_generation_public(self, public_config):
+    def test_basic_generation_public(self, public_config: ConfigPublic) -> None:
         """Teste básico de geração de YAML com configuração pública."""
         yaml_str = generate_config_yaml(public_config)
 
@@ -97,7 +107,7 @@ class TestGenerateConfigYaml:
         assert "llm_model_type: openai" in yaml_str
         assert "llm_model: 'gpt-4o-mini'" in yaml_str
 
-    def test_basic_generation_private(self, private_config):
+    def test_basic_generation_private(self, private_config: Config) -> None:
         """Teste básico de geração de YAML com configuração privada."""
         yaml_str = generate_config_yaml(private_config)
 
@@ -116,7 +126,7 @@ class TestGenerateConfigYaml:
         assert "llm_model_type: openai" in yaml_str
         assert "llm_model: 'gpt-4o-mini'" in yaml_str
 
-    def test_experience_level_public(self, public_config):
+    def test_experience_level_public(self, public_config: ConfigPublic) -> None:
         """Teste de níveis de experiência em YAML para configuração pública."""
         # Gerar o YAML sem modificar os valores (usar os padrões)
         yaml_str = generate_config_yaml(public_config)
@@ -130,7 +140,7 @@ class TestGenerateConfigYaml:
         assert "director:" in yaml_str
         assert "executive:" in yaml_str
 
-    def test_experience_level_private(self, private_config):
+    def test_experience_level_private(self, private_config: Config) -> None:
         """Teste de níveis de experiência em YAML para configuração privada."""
         # Gerar o YAML sem modificar os valores (usar os padrões)
         yaml_str = generate_config_yaml(private_config)
@@ -144,7 +154,7 @@ class TestGenerateConfigYaml:
         assert "director:" in yaml_str
         assert "executive:" in yaml_str
 
-    def test_job_types_public(self, public_config):
+    def test_job_types_public(self, public_config: ConfigPublic) -> None:
         """Teste de tipos de trabalho em YAML para configuração pública."""
         # Garantir que os valores estão definidos conforme esperado
         public_config.job_types.full_time = True
@@ -165,7 +175,7 @@ class TestGenerateConfigYaml:
             "true" in yaml_str.lower() or "True" in yaml_str
         )
 
-    def test_job_types_private(self, private_config):
+    def test_job_types_private(self, private_config: Config) -> None:
         """Teste de tipos de trabalho em YAML para configuração privada."""
         # Garantir que os valores estão definidos conforme esperado
         private_config.job_types = {
@@ -188,7 +198,7 @@ class TestGenerateConfigYaml:
             "true" in yaml_str.lower() or "True" in yaml_str
         )
 
-    def test_date_public(self, public_config):
+    def test_date_public(self, public_config: ConfigPublic) -> None:
         """Teste de datas em YAML para configuração pública."""
         # Garantir que os valores estão definidos conforme esperado
         public_config.date.all_time = True
@@ -202,7 +212,7 @@ class TestGenerateConfigYaml:
         assert "all time:" in yaml_str or "all_time:" in yaml_str
         assert "true" in yaml_str.lower() or "True" in yaml_str
 
-    def test_date_private(self, private_config):
+    def test_date_private(self, private_config: Config) -> None:
         """Teste de datas em YAML para configuração privada."""
         # Garantir que os valores estão definidos conforme esperado
         private_config.date = {
@@ -218,7 +228,7 @@ class TestGenerateConfigYaml:
         assert "all time:" in yaml_str or "all_time:" in yaml_str
         assert "true" in yaml_str.lower() or "True" in yaml_str
 
-    def test_positions_public(self, public_config):
+    def test_positions_public(self, public_config: ConfigPublic) -> None:
         """Teste de posições em YAML para configuração pública."""
         yaml_str = generate_config_yaml(public_config)
 
@@ -226,7 +236,7 @@ class TestGenerateConfigYaml:
         assert "  - Software Engineer" in yaml_str
         assert "  - Backend Developer" in yaml_str
 
-    def test_positions_private(self, private_config):
+    def test_positions_private(self, private_config: Config) -> None:
         """Teste de posições em YAML para configuração privada."""
         yaml_str = generate_config_yaml(private_config)
 
@@ -234,7 +244,7 @@ class TestGenerateConfigYaml:
         assert "  - Software Engineer" in yaml_str
         assert "  - Backend Developer" in yaml_str
 
-    def test_locations_public(self, public_config):
+    def test_locations_public(self, public_config: ConfigPublic) -> None:
         """Teste de localizações em YAML para configuração pública."""
         yaml_str = generate_config_yaml(public_config)
 
@@ -242,7 +252,7 @@ class TestGenerateConfigYaml:
         assert "  - New York" in yaml_str
         assert "  - San Francisco" in yaml_str
 
-    def test_locations_private(self, private_config):
+    def test_locations_private(self, private_config: Config) -> None:
         """Teste de localizações em YAML para configuração privada."""
         yaml_str = generate_config_yaml(private_config)
 
@@ -250,7 +260,7 @@ class TestGenerateConfigYaml:
         assert "  - New York" in yaml_str
         assert "  - San Francisco" in yaml_str
 
-    def test_blacklists_public(self, public_config):
+    def test_blacklists_public(self, public_config: ConfigPublic) -> None:
         """Teste de listas de exclusão em YAML para configuração pública."""
         yaml_str = generate_config_yaml(public_config)
 
@@ -261,7 +271,7 @@ class TestGenerateConfigYaml:
         assert "  - Marketing" in yaml_str
         assert "  - Antarctica" in yaml_str
 
-    def test_blacklists_private(self, private_config):
+    def test_blacklists_private(self, private_config: Config) -> None:
         """Teste de listas de exclusão em YAML para configuração privada."""
         yaml_str = generate_config_yaml(private_config)
 
@@ -272,21 +282,21 @@ class TestGenerateConfigYaml:
         assert "  - Marketing" in yaml_str
         assert "  - Antarctica" in yaml_str
 
-    def test_distance_public(self, public_config):
+    def test_distance_public(self, public_config: ConfigPublic) -> None:
         """Teste de distância em YAML para configuração pública."""
         yaml_str = generate_config_yaml(public_config)
 
         # Verificar campo de distância
         assert "distance: 50" in yaml_str
 
-    def test_distance_private(self, private_config):
+    def test_distance_private(self, private_config: Config) -> None:
         """Teste de distância em YAML para configuração privada."""
         yaml_str = generate_config_yaml(private_config)
 
         # Verificar campo de distância
         assert "distance: 50" in yaml_str
 
-    def test_apply_once_at_company_public(self, public_config):
+    def test_apply_once_at_company_public(self, public_config: ConfigPublic) -> None:
         """Teste de apply_once_at_company em YAML para configuração pública."""
         # Testar com True
         public_config.apply_once_at_company = True
@@ -298,7 +308,7 @@ class TestGenerateConfigYaml:
         yaml_str = generate_config_yaml(public_config)
         assert "apply_once_at_company: False" in yaml_str
 
-    def test_apply_once_at_company_private(self, private_config):
+    def test_apply_once_at_company_private(self, private_config: Config) -> None:
         """Teste de apply_once_at_company em YAML para configuração privada."""
         # Testar com True
         private_config.apply_once_at_company = True
@@ -310,7 +320,7 @@ class TestGenerateConfigYaml:
         yaml_str = generate_config_yaml(private_config)
         assert "apply_once_at_company: False" in yaml_str
 
-    def test_remote_public(self, public_config):
+    def test_remote_public(self, public_config: ConfigPublic) -> None:
         """Teste de remote em YAML para configuração pública."""
         # Testar com True
         public_config.remote = True
@@ -322,7 +332,7 @@ class TestGenerateConfigYaml:
         yaml_str = generate_config_yaml(public_config)
         assert "remote: False" in yaml_str
 
-    def test_remote_private(self, private_config):
+    def test_remote_private(self, private_config: Config) -> None:
         """Teste de remote em YAML para configuração privada."""
         # Testar com True
         private_config.remote = True
@@ -334,7 +344,9 @@ class TestGenerateConfigYaml:
         yaml_str = generate_config_yaml(private_config)
         assert "remote: False" in yaml_str
 
-    def test_with_job_applicants_threshold_private(self, private_config):
+    def test_with_job_applicants_threshold_private(
+        self, private_config: Config
+    ) -> None:
         """Teste com job_applicants_threshold definido para configuração privada."""
         # Adicionar job_applicants_threshold ao dicionário __dict__ para contornar a validação
         # já que esse campo não existe na classe Config
@@ -350,7 +362,7 @@ class TestGenerateConfigYaml:
         assert "  min_applicants: 10" in yaml_str
         assert "  max_applicants: 5000" in yaml_str
 
-    def test_with_llm_api_url_private(self, private_config):
+    def test_with_llm_api_url_private(self, private_config: Config) -> None:
         """Teste com llm_api_url definido para configuração privada."""
         # Adicionar llm_api_url ao dicionário __dict__ para contornar a validação
         # já que esse campo não existe na classe Config
@@ -361,7 +373,7 @@ class TestGenerateConfigYaml:
         # Verificar a URL da API LLM
         assert "# llm_api_url: 'https://api.example.com/v1'" in yaml_str
 
-    def test_llm_model_type_and_model_public(self, public_config):
+    def test_llm_model_type_and_model_public(self, public_config: ConfigPublic) -> None:
         """Teste de llm_model_type e llm_model em YAML para configuração pública."""
         yaml_str = generate_config_yaml(public_config)
 
@@ -369,7 +381,7 @@ class TestGenerateConfigYaml:
         assert "llm_model_type: openai" in yaml_str
         assert "llm_model: 'gpt-4o-mini'" in yaml_str
 
-    def test_llm_model_type_and_model_private(self, private_config):
+    def test_llm_model_type_and_model_private(self, private_config: Config) -> None:
         """Teste de llm_model_type e llm_model em YAML para configuração privada."""
         # Alterar valores
         private_config.llm_model_type = "anthropic"
@@ -381,7 +393,7 @@ class TestGenerateConfigYaml:
         assert "llm_model_type: anthropic" in yaml_str
         assert "llm_model: 'claude-3-opus'" in yaml_str
 
-    def test_empty_lists_public(self, public_config):
+    def test_empty_lists_public(self, public_config: ConfigPublic) -> None:
         """Teste de listas vazias em YAML para configuração pública."""
         # Definir listas vazias
         public_config.positions = []
@@ -399,7 +411,7 @@ class TestGenerateConfigYaml:
         assert "title_blacklist:" in yaml_str
         assert "location_blacklist:" in yaml_str
 
-    def test_empty_lists_private(self, private_config):
+    def test_empty_lists_private(self, private_config: Config) -> None:
         """Teste de listas vazias em YAML para configuração privada."""
         # Definir listas vazias
         private_config.positions = []
@@ -417,7 +429,7 @@ class TestGenerateConfigYaml:
         assert "title_blacklist:" in yaml_str
         assert "location_blacklist:" in yaml_str
 
-    def test_change_date_public(self, public_config):
+    def test_change_date_public(self, public_config: ConfigPublic) -> None:
         """Teste de alteração de data em YAML para configuração pública."""
         # Alterar valores de data
         public_config.date = Date(all_time=False, month=True, week=False, hours=False)
@@ -430,7 +442,7 @@ class TestGenerateConfigYaml:
             "true" in yaml_str.lower() or "True" in yaml_str
         )
 
-    def test_change_date_private(self, private_config):
+    def test_change_date_private(self, private_config: Config) -> None:
         """Teste de alteração de data em YAML para configuração privada."""
         # Alterar valores de data
         private_config.date = {
@@ -448,7 +460,9 @@ class TestGenerateConfigYaml:
             "true" in yaml_str.lower() or "True" in yaml_str
         )
 
-    def test_special_cases_typo_fix(self, public_config, private_config):
+    def test_special_cases_typo_fix(
+        self, public_config: ConfigPublic, private_config: Config
+    ) -> None:
         """Teste para o caso especial de correção de erro de digitação (intership vs internship)."""
         # Gerar YAML sem modificar valores (usar padrões)
 
@@ -462,7 +476,7 @@ class TestGenerateConfigYaml:
         assert "internship:" in yaml_str_public
         assert "internship:" in yaml_str_private
 
-    def test_end_to_end_public(self, public_config):
+    def test_end_to_end_public(self, public_config: ConfigPublic) -> None:
         """Teste de ponta a ponta para configuração pública."""
         yaml_str = generate_config_yaml(public_config)
 
@@ -482,7 +496,7 @@ class TestGenerateConfigYaml:
         assert "\nllm_model_type: openai" in yaml_str
         assert "llm_model: 'gpt-4o-mini'" in yaml_str
 
-    def test_end_to_end_private(self, private_config):
+    def test_end_to_end_private(self, private_config: Config) -> None:
         """Teste de ponta a ponta para configuração privada."""
         yaml_str = generate_config_yaml(private_config)
 
