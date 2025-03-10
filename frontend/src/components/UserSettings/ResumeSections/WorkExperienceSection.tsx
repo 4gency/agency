@@ -135,9 +135,6 @@ const WorkExperienceSection: React.FC<WorkExperienceSectionProps> = ({
     // Obtenha o valor diretamente do campo current
     const currentValue = watch(`work_experience.${index}.current`);
     
-    // Isso permitirá que vejamos o valor exato que está sendo usado
-    console.log(`Work experience ${index} current value:`, currentValue, "type:", typeof currentValue);
-    
     if (typeof currentValue === 'boolean') {
       return currentValue;
     }
@@ -149,8 +146,6 @@ const WorkExperienceSection: React.FC<WorkExperienceSectionProps> = ({
   // Handle current job checkbox change
   const handleCurrentChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
     const isChecked = e.target.checked;
-    console.log(`Changing work experience ${index} current to:`, isChecked, "type:", typeof isChecked);
-    
     // Definimos explicitamente como um booleano
     setValue(`work_experience.${index}.current`, Boolean(isChecked), { 
       shouldValidate: true, 
@@ -189,12 +184,6 @@ const WorkExperienceSection: React.FC<WorkExperienceSectionProps> = ({
     fields.forEach((field, index) => {
       const isCurrent = watch(`work_experience.${index}.current`);
       const endDate = watch(`work_experience.${index}.end_date`);
-      
-      console.log(`Work experience ${index} values:`, {
-        company: watch(`work_experience.${index}.company`),
-        current: isCurrent,
-        end_date: endDate
-      });
       
       // Se current for true, certifique-se de que end_date está vazio
       if (isCurrent && endDate) {

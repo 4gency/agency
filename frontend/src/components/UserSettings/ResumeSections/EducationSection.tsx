@@ -60,9 +60,7 @@ const EducationSection: React.FC<EducationSectionProps> = ({
 
   // Função para verificar se é um item atual
   const isCurrentEducation = (index: number): boolean => {
-    const currentValue = watch(`education.${index}.current`);
-    console.log(`Education ${index} current value:`, currentValue, "type:", typeof currentValue);
-    
+    const currentValue = watch(`education.${index}.current`);    
     if (typeof currentValue === 'boolean') {
       return currentValue;
     }
@@ -74,8 +72,6 @@ const EducationSection: React.FC<EducationSectionProps> = ({
   // Handle current education checkbox change
   const handleCurrentChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
     const isChecked = e.target.checked;
-    console.log(`Changing education ${index} current to:`, isChecked, "type:", typeof isChecked);
-    
     // Definimos explicitamente como um booleano
     setValue(`education.${index}.current`, Boolean(isChecked), { 
       shouldValidate: true, 
@@ -180,12 +176,6 @@ const EducationSection: React.FC<EducationSectionProps> = ({
     fields.forEach((field, index) => {
       const isCurrent = watch(`education.${index}.current`);
       const endDate = watch(`education.${index}.end_date`);
-      
-      console.log(`Education ${index} values:`, {
-        institution: watch(`education.${index}.institution`),
-        current: isCurrent,
-        end_date: endDate
-      });
       
       // Se current for true, certifique-se de que end_date está vazio
       if (isCurrent && endDate) {

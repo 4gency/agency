@@ -174,7 +174,6 @@ const SidebarItems = ({ onClose }: SidebarItemsProps) => {
     
     // Se o usuário veio de uma página de checkout e está na dashboard
     if (fromCheckout && (currentPath === '/' || currentPath === '/dashboard')) {
-      console.log('User came from checkout page, invalidating subscriptions cache')
       
       // Limpar os caches de itens do menu e status de assinante
       sessionStorage.removeItem(MENU_ITEMS_CACHE_KEY)

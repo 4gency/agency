@@ -107,7 +107,6 @@ const parseEmploymentPeriod = (period: string): { startDate: string; endDate: st
   let isCurrent = false;
   
   // Log original
-  console.log("Parsing employment period:", period);
   
   if (!period) {
     return { startDate, endDate, isCurrent };
@@ -178,9 +177,6 @@ const parseEmploymentPeriod = (period: string): { startDate: string; endDate: st
   
   // Verificar se temos uma data de fim
   isCurrent = isCurrent || !endDate || endDate.trim() === "";
-  
-  // Log dos resultados do parsing
-  console.log("Parsed result:", { startDate, endDate, isCurrent });
   
   return { startDate, endDate, isCurrent };
 };
@@ -299,12 +295,6 @@ const transformApiResponseToFormData = (
               // Verificando se o campo year_of_completion está vazio para marcar como current
               const isCurrent = !edu.year_of_completion || edu.year_of_completion.trim() === "";
               
-              console.log("Education item:", {
-                institution: edu.institution,
-                year_of_completion: edu.year_of_completion,
-                isCurrent
-              });
-              
               return {
                 institution: edu.institution || "",
                 degree: edu.education_level || "",
@@ -321,14 +311,6 @@ const transformApiResponseToFormData = (
           ? apiData.experience_details.map((exp) => {
               // Usar a função de parsing robusta
               const { startDate, endDate, isCurrent } = parseEmploymentPeriod(exp.employment_period);
-              
-              // Log detalhado
-              console.log(`Work experience parsed (${exp.company}):`, {
-                original: exp.employment_period,
-                startDate,
-                endDate,
-                isCurrent
-              });
               
               return {
                 company: exp.company || "",
@@ -437,9 +419,7 @@ const transformFormToApiData = (
         linkedin: data.personal_information.linkedin || "",
         github: data.personal_information.github || "",
       },
-      education_details: data.education.map((edu) => {
-        console.log(`Education ${edu.institution} - current:`, edu.current, "end_date:", edu.end_date);
-        
+      education_details: data.education.map((edu) => {        
         // Se for current, garantir que não enviamos year_of_completion
         const yearOfCompletion = edu.current ? "" : edu.end_date || "";
         
@@ -456,8 +436,6 @@ const transformFormToApiData = (
       experience_details: data.work_experience.map((exp) => {
         // Formatar employment_period de forma robusta
         let employmentPeriod = "";
-        
-        console.log(`Formatting work experience ${exp.company} - current:`, exp.current, "start_date:", exp.start_date, "end_date:", exp.end_date);
         
         if (exp.start_date) {
           // Inicia com a data de início
@@ -476,8 +454,6 @@ const transformFormToApiData = (
             employmentPeriod += " - Present";
           }
         }
-        
-        console.log("Formatted employment period:", employmentPeriod, "Current:", exp.current);
         
         return {
           company: exp.company,
@@ -728,20 +704,6 @@ export const ResumePage: React.FC = () => {
         setScrollPosition(currentScrollPosition)
 
         const formData = transformApiResponseToFormData(resumeData)
-        console.log("Form data after transformation:", formData);
-
-        // Log especificamente os campos current para debug
-        if (formData.education && formData.education.length > 0) {
-          formData.education.forEach((edu, index) => {
-            console.log(`Education ${index} (${edu.institution}) current:`, edu.current);
-          });
-        }
-        
-        if (formData.work_experience && formData.work_experience.length > 0) {
-          formData.work_experience.forEach((exp, index) => {
-            console.log(`Work experience ${index} (${exp.company}) current:`, exp.current);
-          });
-        }
 
         // Reset form with fetched data
         reset(formData, {
@@ -790,13 +752,6 @@ export const ResumePage: React.FC = () => {
       
       // Verificar se há experiências de trabalho com current false mas sem end_date
       data.work_experience.forEach((exp, index) => {
-        // Logging para debug
-        console.log(`Work experience ${index}:`, {
-          company: exp.company,
-          current: exp.current,
-          end_date: exp.end_date
-        });
-        
         if (exp.current === false && (!exp.end_date || exp.end_date.trim() === "")) {
           setValue(`work_experience.${index}.end_date`, "", { 
             shouldValidate: true,
@@ -809,13 +764,6 @@ export const ResumePage: React.FC = () => {
       
       // Verificar se há educações com current false mas sem end_date
       data.education.forEach((edu, index) => {
-        // Logging para debug
-        console.log(`Education ${index}:`, {
-          institution: edu.institution,
-          current: edu.current,
-          end_date: edu.end_date
-        });
-        
         if (edu.current === false && (!edu.end_date || edu.end_date.trim() === "")) {
           setValue(`education.${index}.end_date`, "", { 
             shouldValidate: true,
