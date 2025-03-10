@@ -50,11 +50,28 @@ const ArrayInputField: React.FC<ArrayInputFieldProps> = ({
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
+    if (e.key === "Enter" || e.key === ",") {
       e.preventDefault()
       handleAdd()
     }
   }
+
+  // Função para lidar com colagem de texto com múltiplos itens separados por vírgula
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const pasteData = e.clipboardData.getData('text');
+    if (pasteData.includes(',')) {
+      e.preventDefault();
+      
+      const newItems = pasteData
+        .split(',')
+        .map(item => item.trim())
+        .filter(item => item !== '' && !items.includes(item));
+      
+      if (newItems.length > 0) {
+        onChange([...items, ...newItems]);
+      }
+    }
+  };
 
   return (
     <FormControl mb={4}>
@@ -64,6 +81,7 @@ const ArrayInputField: React.FC<ArrayInputFieldProps> = ({
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           onKeyPress={handleKeyPress}
+          onPaste={handlePaste}
           placeholder={placeholder}
           onBlur={onBlur}
         />

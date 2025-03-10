@@ -16,28 +16,25 @@ import {
   type Control,
   type FieldErrors,
   type UseFormRegister,
-  type UseFormWatch,
   useFieldArray,
 } from "react-hook-form"
 import type { ResumeForm } from "../types"
 import SectionContainer from "./SectionContainer"
 
-interface ProjectsSectionProps {
+interface CertificationsSectionProps {
   register: UseFormRegister<ResumeForm>
   errors: FieldErrors<ResumeForm>
   control: Control<ResumeForm>
-  watch?: UseFormWatch<ResumeForm>
 }
 
-const ProjectsSection: React.FC<ProjectsSectionProps> = ({
+const CertificationsSection: React.FC<CertificationsSectionProps> = ({
   register,
   errors,
   control,
-  watch,
 }) => {
   const { fields, append, remove } = useFieldArray({
     control,
-    name: "projects",
+    name: "certifications",
   })
 
   const buttonBg = useColorModeValue("#00766C", "#00766C")
@@ -46,7 +43,7 @@ const ProjectsSection: React.FC<ProjectsSectionProps> = ({
 
   return (
     <SectionContainer
-      title="Projects"
+      title="Certifications"
       actionButton={
         <Button
           leftIcon={<AddIcon />}
@@ -55,14 +52,13 @@ const ProjectsSection: React.FC<ProjectsSectionProps> = ({
             append({
               name: "",
               description: "",
-              url: "",
             })
           }
           bg={buttonBg}
           color={buttonColor}
           _hover={{ bg: buttonHoverBg }}
         >
-          Add Project
+          Add Certification
         </Button>
       }
     >
@@ -89,26 +85,16 @@ const ProjectsSection: React.FC<ProjectsSectionProps> = ({
 
           <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={4}>
             <GridItem colSpan={{ base: 1, md: 2 }}>
-              <FormControl isInvalid={!!errors.projects?.[index]?.name} mb={4}>
-                <FormLabel>Project Name</FormLabel>
+              <FormControl isInvalid={!!errors.certifications?.[index]?.name} mb={4}>
+                <FormLabel>Certification Name</FormLabel>
                 <Input
-                  {...register(`projects.${index}.name` as const, {
-                    required: "Project name is required",
+                  {...register(`certifications.${index}.name` as const, {
+                    required: "Certification name is required",
                   })}
                 />
                 <FormErrorMessage>
-                  {errors.projects?.[index]?.name?.message}
+                  {errors.certifications?.[index]?.name?.message}
                 </FormErrorMessage>
-              </FormControl>
-            </GridItem>
-
-            <GridItem colSpan={{ base: 1, md: 2 }}>
-              <FormControl mb={4}>
-                <FormLabel>URL</FormLabel>
-                <Input
-                  {...register(`projects.${index}.url` as const)}
-                  placeholder="https://..."
-                />
               </FormControl>
             </GridItem>
 
@@ -116,9 +102,14 @@ const ProjectsSection: React.FC<ProjectsSectionProps> = ({
               <FormControl mb={4}>
                 <FormLabel>Description</FormLabel>
                 <Textarea
-                  {...register(`projects.${index}.description` as const)}
+                  {...register(`certifications.${index}.description` as const, {
+                    required: "Description is required",
+                  })}
                   rows={3}
                 />
+                <FormErrorMessage>
+                  {errors.certifications?.[index]?.description?.message}
+                </FormErrorMessage>
               </FormControl>
             </GridItem>
           </Grid>
@@ -133,14 +124,13 @@ const ProjectsSection: React.FC<ProjectsSectionProps> = ({
               append({
                 name: "",
                 description: "",
-                url: "",
               })
             }
             bg={buttonBg}
             color={buttonColor}
             _hover={{ bg: buttonHoverBg }}
           >
-            Add Project
+            Add Certification
           </Button>
         </Flex>
       )}
@@ -148,4 +138,4 @@ const ProjectsSection: React.FC<ProjectsSectionProps> = ({
   )
 }
 
-export default ProjectsSection
+export default CertificationsSection 
