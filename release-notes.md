@@ -4,6 +4,7 @@
 
 ### Features
 
+* Configs feature. PR [#59](https://github.com/4gency/agency/pull/59) by [@gustavosett](https://github.com/gustavosett).
 * Dashboard feature. PR [#56](https://github.com/4gency/agency/pull/56) by [@gustavosett](https://github.com/gustavosett).
 * base kubernetes feature. PR [#55](https://github.com/4gency/agency/pull/55) by [@gustavosett](https://github.com/gustavosett).
 * Feat checkout expiration. PR [#53](https://github.com/4gency/agency/pull/53) by [@gustavosett](https://github.com/gustavosett).
