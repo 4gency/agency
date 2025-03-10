@@ -4,7 +4,7 @@ from typing import cast
 from uuid import UUID
 
 from fastapi import HTTPException, status
-from sqlmodel import Session, or_, select
+from sqlmodel import Session, select
 
 from app.core.config import settings
 from app.models.bot import BotSession, BotSessionStatus, BotStyleChoice
@@ -83,26 +83,25 @@ class BotService:
         user: User,
         skip: int = 0,
         limit: int = 100,
-        status: list[str] | None = None,
     ) -> tuple[list[BotSession], int]:
         """Get all bot sessions for a user with pagination and filtering"""
         # Build query
         query = select(BotSession).where(BotSession.user_id == user.id)
 
-        # Apply status filter if provided
-        if status:
-            status_conditions = []
-            for s in status:
-                try:
-                    status_conditions.append(
-                        BotSession.status == BotSessionStatus[s.upper()]
-                    )
-                except (KeyError, ValueError):
-                    logger.warning(f"Invalid session status value: {s}")
-                    continue
+        # # Apply status filter if provided
+        # if status:
+        #     status_conditions = []
+        #     for s in status:
+        #         try:
+        #             status_conditions.append(
+        #                 BotSession.status == BotSessionStatus[s.upper()]
+        #             )
+        #         except (KeyError, ValueError):
+        #             logger.warning(f"Invalid session status value: {s}")
+        #             continue
 
-            if status_conditions:
-                query = query.where(or_(*status_conditions))
+        #     if status_conditions:
+        #         query = query.where(or_(*status_conditions))
 
         # Get total count for pagination
         all_sessions = self.db.exec(query).all()
