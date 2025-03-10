@@ -180,12 +180,18 @@ const WorkExperienceSection: React.FC<WorkExperienceSectionProps> = ({
   useEffect(() => {
     if (!watch) return;
     
-    // Para cada experiência de trabalho, monitore as alterações em current e end_date
-    fields.forEach((field, index) => {
+    // Monitor each work experience for changes to current and end_date
+    fields.forEach((_, index) => {
       const isCurrent = watch(`work_experience.${index}.current`);
       const endDate = watch(`work_experience.${index}.end_date`);
       
-      // Se current for true, certifique-se de que end_date está vazio
+      console.log(`Work Experience ${index} values:`, {
+        company: watch(`work_experience.${index}.company`),
+        current: isCurrent,
+        end_date: endDate
+      });
+      
+      // If current is true, ensure end_date is empty
       if (isCurrent && endDate) {
         setValue(`work_experience.${index}.end_date`, "");
       }

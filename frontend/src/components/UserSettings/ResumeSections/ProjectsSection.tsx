@@ -16,7 +16,6 @@ import {
   type Control,
   type FieldErrors,
   type UseFormRegister,
-  type UseFormWatch,
   useFieldArray,
 } from "react-hook-form"
 import type { ResumeForm } from "../types"
@@ -26,14 +25,12 @@ interface ProjectsSectionProps {
   register: UseFormRegister<ResumeForm>
   errors: FieldErrors<ResumeForm>
   control: Control<ResumeForm>
-  watch?: UseFormWatch<ResumeForm>
 }
 
 const ProjectsSection: React.FC<ProjectsSectionProps> = ({
   register,
   errors,
   control,
-  watch,
 }) => {
   const { fields, append, remove } = useFieldArray({
     control,

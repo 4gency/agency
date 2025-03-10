@@ -833,7 +833,6 @@ export const ResumePage: React.FC = () => {
             <Card variant="outline" p={4}>
               <SelfIdentificationSection
                 register={register}
-                errors={errors}
               />
             </Card>
 
@@ -862,7 +861,6 @@ export const ResumePage: React.FC = () => {
                 register={register}
                 errors={errors}
                 control={control}
-                watch={watch}
               />
             </Card>
 

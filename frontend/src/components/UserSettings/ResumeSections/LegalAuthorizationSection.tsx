@@ -7,7 +7,6 @@ import {
   Box,
   Checkbox,
   FormControl,
-  FormLabel,
   Grid,
   GridItem,
   Text,

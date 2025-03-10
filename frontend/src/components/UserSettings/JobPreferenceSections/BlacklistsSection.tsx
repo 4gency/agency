@@ -1,4 +1,4 @@
-import { Heading, VStack } from "@chakra-ui/react"
+import { VStack } from "@chakra-ui/react"
 import type React from "react"
 import JobSectionContainer from "./JobSectionContainer"
 import ArrayInputField from "./ArrayInputField"

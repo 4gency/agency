@@ -8,18 +8,16 @@ import {
   Input,
   Select,
 } from "@chakra-ui/react"
-import { type FieldErrors, type UseFormRegister } from "react-hook-form"
+import { type UseFormRegister } from "react-hook-form"
 import type { ResumeForm } from "../types"
 import SectionContainer from "./SectionContainer"
 
 interface SelfIdentificationSectionProps {
   register: UseFormRegister<ResumeForm>
-  errors: FieldErrors<ResumeForm>
 }
 
 const SelfIdentificationSection: React.FC<SelfIdentificationSectionProps> = ({
   register,
-  errors,
 }) => {
   const genderOptions = [
     { value: "", label: "Select gender" },

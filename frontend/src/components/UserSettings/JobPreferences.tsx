@@ -10,7 +10,6 @@ import {
   Skeleton,
   SkeletonText,
   Stack,
-  useColorModeValue,
 } from "@chakra-ui/react"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import type React from "react"

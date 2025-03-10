@@ -9,7 +9,6 @@ import {
   Tag,
   TagCloseButton,
   TagLabel,
-  useColorModeValue,
 } from "@chakra-ui/react"
 import type React from "react"
 import { useState } from "react"
@@ -33,11 +32,6 @@ const ArrayInputField: React.FC<ArrayInputFieldProps> = ({
   onBlur,
 }) => {
   const [inputValue, setInputValue] = useState("")
-
-  // Cores para o botão
-  const buttonBg = useColorModeValue("#00766C", "#00766C")
-  const buttonHoverBg = useColorModeValue("#005f57", "#005f57")
-  const buttonColor = useColorModeValue("white", "white")
 
   const handleAdd = () => {
     const trimmed = inputValue.trim()

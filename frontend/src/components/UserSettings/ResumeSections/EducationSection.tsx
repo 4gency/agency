@@ -11,7 +11,6 @@ import {
   GridItem,
   IconButton,
   Input,
-  Textarea,
   useColorModeValue,
   Tag,
   TagLabel,
@@ -172,8 +171,7 @@ const EducationSection: React.FC<EducationSectionProps> = ({
 
   // Adicione um efeito para monitorar as mudanças nos valores da educação
   useEffect(() => {
-    // Para cada educação, monitore as alterações em current e end_date
-    fields.forEach((field, index) => {
+    fields.forEach((_, index) => {
       const isCurrent = watch(`education.${index}.current`);
       const endDate = watch(`education.${index}.end_date`);
       

@@ -1,6 +1,5 @@
 import {
   FormControl,
-  FormLabel,
   Slider,
   SliderTrack,
   SliderFilledTrack,

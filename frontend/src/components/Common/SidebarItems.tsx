@@ -1,6 +1,6 @@
 import { Box, Flex, Icon, Text, useColorModeValue } from "@chakra-ui/react"
 import { useQueryClient } from "@tanstack/react-query"
-import { Link, useMatchRoute, useNavigate, useRouterState } from "@tanstack/react-router"
+import { Link, useMatchRoute, useNavigate } from "@tanstack/react-router"
 import { useEffect, useState, useRef } from "react"
 import { FiBriefcase, FiHome, FiSettings, FiUsers } from "react-icons/fi"
 import { HiOutlineDocumentText } from "react-icons/hi"
@@ -140,8 +140,6 @@ const SidebarItems = ({ onClose }: SidebarItemsProps) => {
   
   // Referência para controlar se já verificamos a rota anterior
   const hasCheckedPrevRoute = useRef(false)
-  // Obter o estado do router para verificar a rota anterior
-  const routerState = useRouterState()
 
   // Estado para armazenar os itens do menu
   const [menuItems, setMenuItems] = useState<MenuItem[]>(() => {
