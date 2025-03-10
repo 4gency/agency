@@ -733,7 +733,7 @@ export class ConfigsService {
     data: UpdateConfigData,
   ): CancelablePromise<UpdateConfigResponse> {
     return __request(OpenAPI, {
-      method: "PATCH",
+      method: "PUT",
       url: "/api/v1/configs/job-preferences",
       body: data.requestBody,
       mediaType: "application/json",
@@ -773,7 +773,7 @@ export class ConfigsService {
     data: UpdatePlainTextResumeData,
   ): CancelablePromise<UpdatePlainTextResumeResponse> {
     return __request(OpenAPI, {
-      method: "PATCH",
+      method: "PUT",
       url: "/api/v1/configs/resume",
       body: data.requestBody,
       mediaType: "application/json",
