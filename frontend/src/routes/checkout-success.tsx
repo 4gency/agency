@@ -104,7 +104,10 @@ function CheckoutSuccess() {
               _hover={{
                 opacity: 0.9,
               }}
-              onClick={() => navigate({ to: "/" })}
+              onClick={() => {
+                // Use window.location para forçar um recarregamento completo
+                window.location.href = "/";
+              }}
             >
               Your dashboard
             </Button>

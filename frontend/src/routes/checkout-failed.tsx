@@ -95,7 +95,10 @@ function CheckoutFailed() {
               _hover={{
                 opacity: 0.9,
               }}
-              onClick={() => navigate({ to: "/" })}
+              onClick={() => {
+                // Use window.location para forçar um recarregamento completo
+                window.location.href = "/";
+              }}
             >
               Return to Dashboard
             </Button>
