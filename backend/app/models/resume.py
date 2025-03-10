@@ -6,7 +6,9 @@ from pydantic import BaseModel, EmailStr
 from pydantic import Field as PField
 from sqlalchemy import ForeignKey
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
-from sqlmodel import JSON, Column, Field, SQLModel
+from sqlmodel import JSON, Column, Field, Relationship, SQLModel
+
+from app.models.core import User
 
 
 class PersonalInformation(BaseModel):
@@ -232,6 +234,7 @@ class PlainTextResume(SQLModel, table=True):
             nullable=False,
         )
     )
+    user: User = Relationship(back_populates="plain_text_resume")
 
     personal_information: dict[str, Any] = Field(sa_column=Column(JSON))
     education_details: list[dict[str, Any]] = Field(sa_column=Column(JSON))

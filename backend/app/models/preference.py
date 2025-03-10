@@ -4,7 +4,9 @@ from uuid import UUID
 from pydantic import BaseModel, model_validator
 from sqlalchemy import JSON, Column, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, Relationship, SQLModel
+
+from app.models.core import User
 
 
 class ExperienceLevel(BaseModel):
@@ -46,14 +48,15 @@ class Date(BaseModel):
             self.month = False
             self.week = False
             self.hours = False
+            temp = self.model_dump()
             # Then set the one with highest priority to True
-            if self.model_dump()["all_time"]:
+            if temp["all_time"]:
                 self.all_time = True
-            elif self.model_dump()["month"]:
+            elif temp["month"]:
                 self.month = True
-            elif self.model_dump()["week"]:
+            elif temp["week"]:
                 self.week = True
-            elif self.model_dump()["hours"]:
+            elif temp["hours"]:
                 self.hours = True
         return self
 
@@ -99,6 +102,7 @@ class Config(SQLModel, table=True):
             nullable=False,
         )
     )
+    user: User = Relationship(back_populates="config")
 
     llm_model_type: str = "openai"
     llm_model: str = "gpt-4o-mini"
