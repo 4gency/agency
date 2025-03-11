@@ -4,6 +4,7 @@
 
 ### Features
 
+* Bot webhook feature. PR [#60](https://github.com/4gency/agency/pull/60) by [@gustavosett](https://github.com/gustavosett).
 * Configs feature. PR [#59](https://github.com/4gency/agency/pull/59) by [@gustavosett](https://github.com/gustavosett).
 * Dashboard feature. PR [#56](https://github.com/4gency/agency/pull/56) by [@gustavosett](https://github.com/gustavosett).
 * base kubernetes feature. PR [#55](https://github.com/4gency/agency/pull/55) by [@gustavosett](https://github.com/gustavosett).
