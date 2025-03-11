@@ -39,6 +39,8 @@ class SessionPublic(SQLModel):
     total_success: int
     total_failed: int
 
+    api_key: str  # TODO: REMOVE THIS FIELD FOR PRODUCTION
+
     # Controle de tempo
     created_at: datetime
     started_at: datetime | None = None
@@ -127,15 +129,12 @@ def get_bot_sessions(
     user: CurrentUser,
     skip: int = 0,
     limit: int = 100,
-    status: list[str] | None = None,
 ) -> Any:
     """
     Get all bot sessions for the current user.
     """
     bot_service = BotService(session)
-    sessions, total = bot_service.get_user_sessions(
-        user=user, skip=skip, limit=limit, status=status
-    )
+    sessions, total = bot_service.get_user_sessions(user=user, skip=skip, limit=limit)
 
     return {
         "total": total,

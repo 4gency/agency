@@ -82,9 +82,29 @@ export type Body_login_login_access_token = {
 }
 
 /**
+ * Request model for creating a new apply record
+ */
+export type BotApplyCreate = {
+  status?: BotApplyStatus
+  total_time?: number
+  job_title?: string | null
+  job_url?: string | null
+  company_name?: string | null
+  failed_reason?: string | null
+}
+
+/**
  * Status possíveis para uma aplicação.
  */
 export type BotApplyStatus = "success" | "failed"
+
+/**
+ * Response model for bot configuration
+ */
+export type BotConfigResponse = {
+  user_config: string
+  user_resume: string
+}
 
 /**
  * Sessão do bot.
@@ -678,6 +698,7 @@ export type SessionPublic = {
   total_applied: number
   total_success: number
   total_failed: number
+  api_key: string
   created_at: string
   started_at?: string | null
   finished_at?: string | null
@@ -1047,7 +1068,6 @@ export type CreateBotSessionResponse = SessionPublic
 
 export type GetBotSessionsData = {
   limit?: number
-  requestBody?: Array<string> | null
   skip?: number
 }
 
@@ -1090,6 +1110,25 @@ export type ResumeBotSessionData = {
 export type ResumeBotSessionResponse = SessionPublic
 
 export type GetUserDashboardStatsResponse = UserDashboardStats
+
+export type RegisterApplyData = {
+  /**
+   * Bot API Key
+   */
+  apiKey: string
+  requestBody: BotApplyCreate
+}
+
+export type RegisterApplyResponse = Message
+
+export type GetBotConfigData = {
+  /**
+   * Bot API Key
+   */
+  apiKey: string
+}
+
+export type GetBotConfigResponse = BotConfigResponse
 
 export type StripeSuccessData = {
   sessionId: string

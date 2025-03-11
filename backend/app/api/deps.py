@@ -2,15 +2,16 @@ from collections.abc import Generator
 from typing import Annotated
 
 import jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jwt.exceptions import InvalidTokenError
 from pydantic import ValidationError
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from app.core import security
 from app.core.config import settings
 from app.core.db import engine
+from app.models.bot import BotSession
 from app.models.core import TokenPayload, User
 
 reusable_oauth2 = OAuth2PasswordBearer(
@@ -102,3 +103,34 @@ def get_current_active_subscriber(
 
 
 CurrentSubscriber = Annotated[User, Depends(get_current_active_subscriber)]
+
+
+def get_bot_session_by_api_key(
+    session: SessionDep,
+    api_key: str = Header(..., description="Bot API Key"),
+) -> BotSession:
+    """
+    Validate Bot API Key and return the associated BotSession.
+    Used for authentication in bot-only routes.
+    """
+    if not api_key:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="API Key is required",
+        )
+
+    bot_session = session.exec(
+        select(BotSession).where(BotSession.api_key == api_key)
+    ).first()
+
+    if not bot_session:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid API Key",
+        )
+
+    return bot_session
+
+
+# Dependency for bot authentication
+BotSessionDep = Annotated[BotSession, Depends(get_bot_session_by_api_key)]

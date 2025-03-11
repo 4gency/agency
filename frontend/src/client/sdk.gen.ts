@@ -31,6 +31,10 @@ import type {
   ResumeBotSessionData,
   ResumeBotSessionResponse,
   GetUserDashboardStatsResponse,
+  RegisterApplyData,
+  RegisterApplyResponse,
+  GetBotConfigData,
+  GetBotConfigResponse,
   StripeSuccessData,
   StripeSuccessResponse,
   GetStripeCheckoutSessionByIdData,
@@ -317,7 +321,6 @@ export class BotsService {
    * @param data The data for the request.
    * @param data.skip
    * @param data.limit
-   * @param data.requestBody
    * @returns SessionsResponse Successful Response
    * @throws ApiError
    */
@@ -331,8 +334,6 @@ export class BotsService {
         skip: data.skip,
         limit: data.limit,
       },
-      body: data.requestBody,
-      mediaType: "application/json",
       errors: {
         401: "Authentication error",
         403: "Permission error",
@@ -518,6 +519,62 @@ export class BotsService {
       errors: {
         401: "Authentication error",
         403: "Permission error",
+      },
+    })
+  }
+}
+
+export class BotWebhookService {
+  /**
+   * Register Apply
+   * Register a new job application (success or failed) by the bot.
+   * Requires the bot session's API key for authentication.
+   * @param data The data for the request.
+   * @param data.apiKey Bot API Key
+   * @param data.requestBody
+   * @returns Message Successful Response
+   * @throws ApiError
+   */
+  public static registerApply(
+    data: RegisterApplyData,
+  ): CancelablePromise<RegisterApplyResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/bot-webhook/apply",
+      headers: {
+        "api-key": data.apiKey,
+      },
+      body: data.requestBody,
+      mediaType: "application/json",
+      errors: {
+        401: "Authentication error",
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Get Bot Config
+   * Get the configuration and resume for the bot in YAML format.
+   * Requires the bot session's API key for authentication.
+   * @param data The data for the request.
+   * @param data.apiKey Bot API Key
+   * @returns BotConfigResponse Successful Response
+   * @throws ApiError
+   */
+  public static getBotConfig(
+    data: GetBotConfigData,
+  ): CancelablePromise<GetBotConfigResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/bot-webhook/config",
+      headers: {
+        "api-key": data.apiKey,
+      },
+      errors: {
+        401: "Authentication error",
+        404: "Configuration not found",
+        422: "Validation Error",
       },
     })
   }

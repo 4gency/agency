@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from app.api.routes import (
     actions,
     applies,
+    bot_webhook,
     bots,
     checkout,
     configs,
@@ -36,3 +37,8 @@ api_router.include_router(actions.router, prefix="/bots", tags=["actions"])
 api_router.include_router(events.router, prefix="/bots", tags=["events"])
 api_router.include_router(applies.router, prefix="/bots", tags=["applies"])
 api_router.include_router(monitoring.router, prefix="/monitoring", tags=["monitoring"])
+
+# Bot webhook routes (authenticated via API key)
+api_router.include_router(
+    bot_webhook.router, prefix="/bot-webhook", tags=["bot-webhook"]
+)
