@@ -7,6 +7,7 @@ from app.api import deps
 from app.models.bot import (
     BotApply,
     BotApplyStatus,
+    BotSessionStatus,
     UserActionType,
 )
 from app.models.core import ErrorMessage, Message, User
@@ -125,6 +126,10 @@ def create_event(
     """
     Create a new event for the bot session.
     Requires the bot session's API key for authentication.
+
+    Special events with type matching BotSessionStatus values
+    (e.g., "running", "paused", "stopping", "completed", "failed", "waiting")
+    will update the bot session status accordingly.
     """
     # Create the event service
     event_service = EventService(session)
@@ -144,12 +149,63 @@ def create_event(
             detail="Failed to create event",
         )
 
+    # Check if the event type should update the session status
+    status_updated = False
+
+    # Special handling for 'waiting' event type that maps to WAITING_INPUT
+    if event_data.type.lower() == "waiting":
+        old_status = bot_session.status
+        new_status = BotSessionStatus.WAITING_INPUT
+        status_updated = True
+    else:
+        try:
+            # Try to convert event type to BotSessionStatus enum
+            status_value = event_data.type.upper()
+            if hasattr(BotSessionStatus, status_value):
+                # Get the new status enum value
+                new_status = BotSessionStatus[status_value]
+                old_status = bot_session.status
+                status_updated = True
+            else:
+                status_updated = False
+        except (KeyError, ValueError, AttributeError):
+            # Not a valid status event - will just log the event without status change
+            status_updated = False
+
+    # Update session status if needed
+    if status_updated:
+        # Update the session status without validating current status
+        bot_session.status = new_status
+
+        # Add status-specific handling
+        if new_status == BotSessionStatus.RUNNING:
+            if old_status == BotSessionStatus.STARTING:
+                bot_session.started_at = event.created_at
+            elif old_status == BotSessionStatus.PAUSED:
+                bot_session.resumed_at = event.created_at
+        elif new_status == BotSessionStatus.PAUSED:
+            bot_session.paused_at = event.created_at
+        elif new_status == BotSessionStatus.COMPLETED:
+            bot_session.finished_at = event.created_at
+        elif new_status == BotSessionStatus.FAILED:
+            bot_session.finished_at = event.created_at
+            if event_data.message:
+                bot_session.error_message = event_data.message
+
+        # Update last status message
+        bot_session.last_status_message = event_data.message
+
+        # Save the session changes
+        session.add(bot_session)
+        session.commit()
+
     return {
         "id": str(event.id),
         "message": "Event created successfully",
         "type": event.type,
         "severity": event.severity,
         "created_at": event.created_at.isoformat(),
+        "status_updated": status_updated,
     }
 
 
