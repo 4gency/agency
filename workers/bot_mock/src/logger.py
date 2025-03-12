@@ -38,7 +38,7 @@ def setup_logger(
     
     # Add console handler with colors if requested
     if console_output:
-        # Define colors for different levels
+        # Define colors for different levels using standard colorlog colors
         color_formatter = colorlog.ColoredFormatter(
             '%(log_color)s' + log_format,
             log_colors={
@@ -47,11 +47,16 @@ def setup_logger(
                 'WARNING': 'yellow',
                 'ERROR': 'red',
                 'CRITICAL': 'red,bg_white',
-            }
+            },
+            secondary_log_colors={},
+            style='%'
         )
         console_handler = logging.StreamHandler()
         console_handler.setFormatter(color_formatter)
         logger.addHandler(console_handler)
+        
+        # Make sure the logger propagates to the root logger
+        logger.propagate = True
     
     # Add file handler if requested
     if file_output:

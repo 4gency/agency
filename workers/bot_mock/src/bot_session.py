@@ -97,6 +97,11 @@ class BotSession:
     def run(self) -> None:
         """Runs the simulated bot."""
         try:
+            # Print startup banner
+            print("\n" + "#"*80)
+            print(" "*30 + "BOT SESSION STARTING")
+            print("#"*80 + "\n")
+            
             # Send start event
             self._change_status(BotStatus.STARTING)
             self.api_client.create_event(
@@ -107,7 +112,9 @@ class BotSession:
             )
             
             # Get user configurations
-            logger.info("Getting user configurations and resume")
+            logger.info("-"*60)
+            logger.info("STEP 1: LOADING USER CONFIGURATIONS AND RESUME")
+            logger.info("-"*60)
             try:
                 config_yaml, resume_yaml = self.api_client.get_config()
                 
@@ -136,7 +143,9 @@ class BotSession:
                 self.user_resume = {}
             
             # Simulate LinkedIn login
-            logger.info("Logging into LinkedIn")
+            logger.info("-"*60)
+            logger.info("STEP 2: LOGGING INTO LINKEDIN")
+            logger.info("-"*60)
             self._simulate_login()
             
             # Change to running status
@@ -149,9 +158,15 @@ class BotSession:
             )
             
             # Simulate navigation and applications
+            logger.info("-"*60)
+            logger.info("STEP 3: STARTING JOB SEARCH AND APPLICATIONS")
+            logger.info("-"*60)
             self._simulate_job_search_and_apply()
             
             # Finalize the bot
+            logger.info("-"*60)
+            logger.info("STEP 4: FINALIZING BOT EXECUTION")
+            logger.info("-"*60)
             self._finalize_bot()
             
         except Exception as e:
@@ -193,12 +208,14 @@ class BotSession:
         # Delay to simulate page loading
         time.sleep(2)
         
-        # Randomly decide if 2FA is needed (30% chance)
-        needs_2fa = random.random() < 0.3
+        # Randomly decide if 2FA is needed (increased from 30% to 70% chance)
+        needs_2fa = random.random() < 0.7
         
         if needs_2fa:
             # Request 2FA code
-            logger.info("2FA code requested by LinkedIn")
+            logger.info("="*60)
+            logger.info("2FA VERIFICATION REQUIRED FOR LOGIN")
+            logger.info("="*60)
             self._change_status(BotStatus.WAITING)
             
             # Send waiting event
@@ -225,18 +242,29 @@ class BotSession:
             
             if not self.action_response:
                 logger.warning("Time limit exceeded for user action")
-                self._handle_failure("Time limit exceeded for 2FA code")
-                return
-            
-            # Reset flags
-            self.waiting_for_action.clear()
-            code = self.action_response.get("input", "")
-            logger.info(f"2FA code received: {code}")
-            self.action_response = None
-            self.current_action_id = None
-            
-            # Simulating code validation
-            time.sleep(2)
+                # Registrar erro de 2FA, mas continuar a execução
+                self.api_client.create_event(
+                    "verification_timeout",
+                    "2FA verification code not provided in time",
+                    "warning",
+                    {"verification_type": "login_2fa"}
+                )
+                # Limpar flags para continuar
+                self.waiting_for_action.clear()
+                self.current_action_id = None
+                
+                # Simular login mesmo assim (é apenas um mock)
+                logger.info("Continuing without 2FA (mock simulation)")
+            else:
+                # Reset flags
+                self.waiting_for_action.clear()
+                code = self.action_response.get("input", "")
+                logger.info(f"2FA code received: {code}")
+                self.action_response = None
+                self.current_action_id = None
+                
+                # Simulating code validation
+                time.sleep(2)
             
             # Successful login event with 2FA
             self.api_client.create_event(
@@ -431,8 +459,8 @@ class BotSession:
                     job.to_dict()
                 )
                 
-                # Randomly decide if CAPTCHA needs to be solved (15% chance)
-                needs_captcha = random.random() < 0.15
+                # Apenas chance para CAPTCHA durante aplicação (5% chance)
+                needs_captcha = random.random() < 0.05
                 
                 if needs_captcha:
                     # Request CAPTCHA solution
@@ -463,15 +491,25 @@ class BotSession:
                     
                     if not self.action_response:
                         logger.warning("Time limit exceeded for CAPTCHA solution")
-                        self._handle_failure("Time limit exceeded for CAPTCHA solution")
-                        return
-                    
-                    # Reset flags
-                    self.waiting_for_action.clear()
-                    captcha_solution = self.action_response.get("input", "")
-                    logger.info(f"CAPTCHA solved: {captcha_solution}")
-                    self.action_response = None
-                    self.current_action_id = None
+                        # Registrar erro de CAPTCHA, mas continuar a execução
+                        self.api_client.create_event(
+                            "verification_timeout",
+                            "CAPTCHA solution not provided in time",
+                            "warning",
+                            {"verification_type": "captcha"}
+                        )
+                        # Limpar flags para continuar
+                        self.waiting_for_action.clear()
+                        self.current_action_id = None
+                        
+                        logger.info("Continuing application without CAPTCHA solution (mock simulation)")
+                    else:
+                        # Reset flags
+                        self.waiting_for_action.clear()
+                        captcha_solution = self.action_response.get("input", "")
+                        logger.info(f"CAPTCHA solved: {captcha_solution}")
+                        self.action_response = None
+                        self.current_action_id = None
                     
                     # Return to RUNNING status
                     self._change_status(BotStatus.RUNNING)
@@ -493,6 +531,9 @@ class BotSession:
                 
                 # 10% chance of application failure
                 will_fail = random.random() < 0.1
+                logger.info("="*80)
+                logger.info(f"APPLICATION RESULT: {'FAILURE (10% chance)' if will_fail else 'SUCCESS (90% chance)'}")
+                logger.info("="*80)
                 
                 # Register application
                 apply_start_time = datetime.now(timezone.utc)
@@ -509,6 +550,7 @@ class BotSession:
                             "Profile incompatible with requirements",
                         ]
                         failed_reason = random.choice(failure_reasons)
+                        logger.warning(f"SIMULATION FAILURE: {failed_reason}")
                         
                         # Register the failure
                         apply_data = {
@@ -520,8 +562,9 @@ class BotSession:
                             "failed_reason": failed_reason
                         }
                         
+                        logger.info(f"Registering failed application: {job.title} at {job.company}")
                         response = self.api_client.register_apply(apply_data)
-                        logger.info(f"Failed application recorded: {response}")
+                        logger.info(f"Failed application recorded with ID: {response.get('id', 'unknown')}")
                         
                         # Increment counters
                         self.total_applied += 1
@@ -544,8 +587,9 @@ class BotSession:
                             "company_name": job.company
                         }
                         
+                        logger.info(f"Registering successful application: {job.title} at {job.company}")
                         response = self.api_client.register_apply(apply_data)
-                        logger.info(f"Successful application recorded: {response}")
+                        logger.info(f"Successful application recorded with ID: {response.get('id', 'unknown')}")
                         
                         # Increment counters
                         self.total_applied += 1
@@ -559,7 +603,15 @@ class BotSession:
                             {"job_title": job.title, "company": job.company}
                         )
                     
-                    # Update progress
+                    # Update progress with prominent logging
+                    logger.info("\n" + "*"*80)
+                    logger.info(f"PROGRESS UPDATE:")
+                    logger.info(f"COMPLETED: {self.total_applied}/{self.config.apply_limit} APPLICATIONS")
+                    logger.info(f"SUCCESS RATE: {self.total_success}/{self.total_applied} ({round(self.total_success/max(1, self.total_applied)*100, 1)}%)")
+                    logger.info(f"PROGRESS: {round(self.total_applied / self.config.apply_limit * 100, 1)}% COMPLETE")
+                    logger.info("*"*80)
+                    
+                    # Send progress update event to backend
                     self.api_client.create_event(
                         "progress_update",
                         f"Progress: {self.total_applied}/{self.config.apply_limit} applications completed",

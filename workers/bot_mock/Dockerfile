@@ -7,7 +7,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copiar código do bot
-COPY . .
+COPY ./src .
 
 # Expor a porta da API
 EXPOSE ${API_PORT}
