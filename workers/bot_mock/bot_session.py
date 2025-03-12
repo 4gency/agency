@@ -103,7 +103,7 @@ class BotSession:
                 "starting",
                 "Starting application bot",
                 "info",
-                {"bot_id": self.config.BOT_ID}
+                {"bot_id": self.config.bot_id}
             )
             
             # Get user configurations
@@ -349,7 +349,7 @@ class BotSession:
         time.sleep(3)
         
         # Enter application loop until reaching limit or receiving command to stop
-        while (self.total_applied < self.config.APPLY_LIMIT and not self.should_stop.is_set()):
+        while (self.total_applied < self.config.apply_limit and not self.should_stop.is_set()):
             # Check if the bot is paused
             if self.paused.is_set():
                 logger.info("Bot is paused, waiting for command to continue")
@@ -562,14 +562,14 @@ class BotSession:
                     # Update progress
                     self.api_client.create_event(
                         "progress_update",
-                        f"Progress: {self.total_applied}/{self.config.APPLY_LIMIT} applications completed",
+                        f"Progress: {self.total_applied}/{self.config.apply_limit} applications completed",
                         "info",
                         {
                             "total_applied": self.total_applied,
                             "total_success": self.total_success,
                             "total_failed": self.total_failed,
-                            "apply_limit": self.config.APPLY_LIMIT,
-                            "progress_percentage": round(self.total_applied / self.config.APPLY_LIMIT * 100, 1)
+                            "apply_limit": self.config.apply_limit,
+                            "progress_percentage": round(self.total_applied / self.config.apply_limit * 100, 1)
                         }
                     )
                 except Exception as e:
@@ -582,14 +582,14 @@ class BotSession:
                     )
                 
                 # Check if we reached the limit
-                if self.total_applied >= self.config.APPLY_LIMIT:
-                    logger.info(f"Application limit reached ({self.config.APPLY_LIMIT})")
+                if self.total_applied >= self.config.apply_limit:
+                    logger.info(f"Application limit reached ({self.config.apply_limit})")
                     self._change_status(BotStatus.STOPPING)
                     self.api_client.create_event(
                         "stopping",
-                        f"Application limit reached: {self.config.APPLY_LIMIT}",
+                        f"Application limit reached: {self.config.apply_limit}",
                         "info",
-                        {"apply_limit": self.config.APPLY_LIMIT}
+                        {"apply_limit": self.config.apply_limit}
                     )
             except Exception as e:
                 logger.error(f"Error during application: {e}", exc_info=True)

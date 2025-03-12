@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import os
-from pydantic import BaseSettings, Field
+from typing import Optional
+from pydantic import Field
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -32,7 +34,7 @@ class Settings(BaseSettings):
     bot_id: str = Field(..., description="Bot ID")
     
     # Optional services
-    gotenberg_url: str = Field(None, description="Gotenberg PDF service URL (optional)")
+    gotenberg_url: Optional[str] = Field(None, description="Gotenberg PDF service URL (optional)")
     
     class Config:
         env_file = ".env"

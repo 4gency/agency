@@ -14,7 +14,9 @@ from fastapi.responses import JSONResponse
 
 from config import load_config
 from logger import setup_logger
-from bot_session import BotSession
+from bot_session import BotSession, BotStatus
+from api_client import APIClient
+from models import BotSessionStatus
 
 logger = setup_logger("main")
 app = FastAPI(title="LinkedIn Bot Mock API")
@@ -39,10 +41,10 @@ async def startup_event():
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
-    status = "running"
+    status = "not_started"
     
     if bot_session:
-        status = bot_session.status
+        status = bot_session.status.value
     
     return {
         "status": "ok",
@@ -56,7 +58,7 @@ async def start_bot(background_tasks: BackgroundTasks):
     """Start bot endpoint."""
     global bot_session
     
-    if bot_session and bot_session.is_running():
+    if bot_session and bot_session.status == BotStatus.RUNNING:
         return {"status": "error", "message": "Bot is already running"}
     
     try:
@@ -76,7 +78,8 @@ async def stop_bot():
         return {"status": "error", "message": "Bot not started"}
     
     try:
-        bot_session.stop()
+        # Change the bot status to stopping
+        bot_session._change_status(BotStatus.STOPPING)
         return {"status": "success", "message": "Bot stopping"}
     except Exception as e:
         logger.error(f"Error stopping bot: {e}")
@@ -98,8 +101,8 @@ async def user_action(action_id: str, action_data: Dict[str, Any]):
         raise HTTPException(status_code=404, detail="Bot not started")
     
     try:
-        result = bot_session.process_user_action(action_id, action_data)
-        return {"status": "success", "message": "Action processed", "result": result}
+        bot_session.resolve_user_action(action_id, action_data)
+        return {"status": "success", "message": "Action processed"}
     except Exception as e:
         logger.error(f"Error processing user action: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -137,7 +140,7 @@ def signal_handler(sig, frame):
     
     global bot_session
     if bot_session:
-        bot_session.stop()
+        bot_session._change_status(BotStatus.STOPPING)
     
     sys.exit(0)
 
@@ -146,18 +149,26 @@ def run_bot():
     """Run the bot in a background task."""
     global bot_session, config
     
-    if bot_session and bot_session.is_running():
+    if bot_session and bot_session.status == BotStatus.RUNNING:
         logger.warning("Bot is already running, ignoring start request")
         return
     
     try:
         logger.info("Starting bot session")
-        bot_session = BotSession(
-            api_key=config.backend_token,
-            backend_url=config.backend_url,
-            bot_id=config.bot_id,
-            apply_limit=config.apply_limit
+        
+        # Make sure we have a valid config
+        if not config:
+            logger.error("No valid configuration found. Cannot start bot.")
+            return
+        
+        # First create the API client
+        api_client = APIClient(
+            base_url=config.backend_url,
+            api_key=config.backend_token
         )
+        
+        # Then create the bot session with config and api_client
+        bot_session = BotSession(config, api_client)
         bot_session.run()
     except Exception as e:
         logger.error(f"Error in bot execution: {e}")
@@ -177,13 +188,38 @@ def main():
         port = int(os.environ.get("API_PORT", "8080"))
     
     # Configure logging for uvicorn
-    log_config = uvicorn.config.LOGGING_CONFIG
-    log_config["formatters"]["access"]["fmt"] = "%(asctime)s - %(levelname)s - %(message)s"
-    log_config["formatters"]["default"]["fmt"] = "%(asctime)s - %(levelname)s - %(message)s"
+    logging_config = {
+        "version": 1,
+        "formatters": {
+            "default": {
+                "format": "%(asctime)s - %(levelname)s - %(message)s"
+            },
+            "access": {
+                "format": "%(asctime)s - %(levelname)s - %(message)s"
+            }
+        },
+        "handlers": {
+            "default": {
+                "formatter": "default",
+                "class": "logging.StreamHandler",
+                "stream": "ext://sys.stderr",
+            },
+            "access": {
+                "formatter": "access",
+                "class": "logging.StreamHandler",
+                "stream": "ext://sys.stdout",
+            },
+        },
+        "loggers": {
+            "uvicorn": {"handlers": ["default"], "level": "INFO"},
+            "uvicorn.error": {"level": "INFO"},
+            "uvicorn.access": {"handlers": ["access"], "level": "INFO", "propagate": False},
+        }
+    }
     
     # Start the API server
     logger.info(f"Starting Bot Mock API on port {port}")
-    uvicorn.run("main:app", host="0.0.0.0", port=port, log_config=log_config)
+    uvicorn.run("main:app", host="0.0.0.0", port=port, log_config=logging_config)
 
 
 if __name__ == "__main__":
