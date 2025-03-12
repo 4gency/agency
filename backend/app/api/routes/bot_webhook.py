@@ -1,13 +1,10 @@
-from re import S
 from typing import Any
 
-from app.services.apply import ApplyService
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
 
 from app.api import deps
 from app.models.bot import (
-    BotApply,
     BotApplyStatus,
     BotSessionStatus,
     UserActionType,
@@ -16,6 +13,7 @@ from app.models.core import ErrorMessage, Message, User
 from app.models.preference import generate_config_yaml
 from app.models.resume import generate_plain_text_resume_yaml
 from app.services.action import UserActionService
+from app.services.apply import ApplyService
 from app.services.event import EventService
 
 
@@ -86,7 +84,7 @@ def register_apply(
     Requires the bot session's API key for authentication.
     """
     apply_service = ApplyService(session)
-    
+
     bot_apply = apply_service.create_apply(
         session_id=bot_session.id,
         total_time=apply_data.total_time,
@@ -96,7 +94,7 @@ def register_apply(
         failed_reason=apply_data.failed_reason,
         status=apply_data.status,
     )
-    
+
     if not bot_apply:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
