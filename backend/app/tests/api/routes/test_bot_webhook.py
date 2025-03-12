@@ -11,9 +11,12 @@ from app.core.config import settings
 from app.models.bot import (
     BotApply,
     BotApplyStatus,
+    BotEvent,
     BotSession,
     BotSessionStatus,
+    BotUserAction,
     Credentials,
+    UserActionType,
 )
 from app.models.core import User
 from app.models.preference import Config
@@ -428,3 +431,287 @@ def test_get_bot_config_missing_config(
     db.delete(bot_session)
     db.delete(credentials)
     db.commit()
+
+
+def test_create_event_success(
+    client: TestClient, bot_session_with_api_key: tuple[BotSession, str], db: Session
+) -> None:
+    """Test creating an event through the bot webhook."""
+    bot_session, api_key = bot_session_with_api_key
+
+    # Prepare request data for an event
+    event_data = {
+        "type": "log",
+        "message": "Test event message",
+        "severity": "info",
+        "details": {
+            "source": "test_bot",
+            "action": "test_action",
+            "additional_info": "This is a test event",
+        },
+    }
+
+    # Make request with API key in header
+    response = client.post(
+        f"{settings.API_V1_STR}/bot-webhook/events",
+        headers={"api-key": api_key},
+        json=event_data,
+    )
+
+    # Check response
+    assert response.status_code == 200, f"Response: {response.text}"
+    data = response.json()
+    assert data["message"] == "Event created successfully"
+    assert data["type"] == "log"
+    assert data["severity"] == "info"
+    assert "id" in data
+    assert "created_at" in data
+
+    # Verify the event was created in the database
+    events = db.exec(
+        select(BotEvent).where(BotEvent.bot_session_id == bot_session.id)
+    ).all()
+
+    assert len(events) == 1
+    assert events[0].type == "log"
+    assert events[0].message == "Test event message"
+    assert events[0].severity == "info"
+
+    # Clean up the created event
+    db.delete(events[0])
+    db.commit()
+
+
+def test_create_event_with_warning_severity(
+    client: TestClient, bot_session_with_api_key: tuple[BotSession, str], db: Session
+) -> None:
+    """Test creating an event with warning severity."""
+    bot_session, api_key = bot_session_with_api_key
+
+    # Prepare request data for an event with warning severity
+    event_data = {
+        "type": "warning",
+        "message": "This is a warning event",
+        "severity": "warning",
+        "details": {"source": "test_bot", "issue": "potential_problem"},
+    }
+
+    # Make request with API key in header
+    response = client.post(
+        f"{settings.API_V1_STR}/bot-webhook/events",
+        headers={"api-key": api_key},
+        json=event_data,
+    )
+
+    # Check response
+    assert response.status_code == 200, f"Response: {response.text}"
+    data = response.json()
+    assert data["severity"] == "warning"
+
+    # Verify the event was created with correct severity
+    events = db.exec(
+        select(BotEvent).where(BotEvent.bot_session_id == bot_session.id)
+    ).all()
+
+    assert len(events) == 1
+    assert events[0].severity == "warning"
+
+    # Clean up the created event
+    db.delete(events[0])
+    db.commit()
+
+
+def test_create_event_invalid_api_key(client: TestClient) -> None:
+    """Test creating an event with an invalid API key."""
+    # Prepare request data
+    event_data = {
+        "type": "log",
+        "message": "Test message",
+    }
+
+    # Make request with invalid API key
+    response = client.post(
+        f"{settings.API_V1_STR}/bot-webhook/events",
+        headers={"api-key": "invalid_key"},
+        json=event_data,
+    )
+
+    # Check response
+    assert response.status_code == 401
+    assert "Invalid API Key" in response.text
+
+
+def test_request_user_action_2fa(
+    client: TestClient, bot_session_with_api_key: tuple[BotSession, str], db: Session
+) -> None:
+    """Test requesting a 2FA code action from the user through the bot webhook."""
+    bot_session, api_key = bot_session_with_api_key
+
+    # Prepare request data for a 2FA action
+    action_data = {
+        "action_type": UserActionType.PROVIDE_2FA.value,
+        "description": "Please provide the 2FA code from your authenticator app",
+        "input_field": "2fa_code",
+    }
+
+    # Make request with API key in header
+    response = client.post(
+        f"{settings.API_V1_STR}/bot-webhook/user-actions",
+        headers={"api-key": api_key},
+        json=action_data,
+    )
+
+    # Check response
+    assert response.status_code == 200, f"Response: {response.text}"
+    data = response.json()
+    assert data["message"] == "User action requested successfully"
+    assert data["action_type"] == UserActionType.PROVIDE_2FA.value
+    assert (
+        data["description"] == "Please provide the 2FA code from your authenticator app"
+    )
+    assert data["input_field"] == "2fa_code"
+    assert "id" in data
+    assert "requested_at" in data
+
+    # Verify the action was created in the database
+    actions = db.exec(
+        select(BotUserAction).where(BotUserAction.bot_session_id == bot_session.id)
+    ).all()
+
+    assert len(actions) == 1
+    assert actions[0].action_type == UserActionType.PROVIDE_2FA
+    assert (
+        actions[0].description
+        == "Please provide the 2FA code from your authenticator app"
+    )
+    assert actions[0].input_field == "2fa_code"
+    assert actions[0].is_completed is False
+
+    # Verify that the bot session status was updated to WAITING_INPUT
+    db.refresh(bot_session)
+    assert bot_session.status == BotSessionStatus.WAITING_INPUT
+
+    # Verify that an event was created for this action
+    events = db.exec(
+        select(BotEvent).where(BotEvent.bot_session_id == bot_session.id)
+    ).all()
+
+    assert len(events) > 0
+    assert any(event.type == "user_action" for event in events)
+
+    # Clean up the created action and events
+    for action in actions:
+        db.delete(action)
+    for event in events:
+        db.delete(event)
+    db.commit()
+
+
+def test_request_user_action_captcha(
+    client: TestClient, bot_session_with_api_key: tuple[BotSession, str], db: Session
+) -> None:
+    """Test requesting a CAPTCHA solving action from the user through the bot webhook."""
+    bot_session, api_key = bot_session_with_api_key
+
+    # Prepare request data for a CAPTCHA action
+    action_data = {
+        "action_type": UserActionType.SOLVE_CAPTCHA.value,
+        "description": "Please solve the CAPTCHA to continue",
+        "input_field": "captcha_solution",
+    }
+
+    # Make request with API key in header
+    response = client.post(
+        f"{settings.API_V1_STR}/bot-webhook/user-actions",
+        headers={"api-key": api_key},
+        json=action_data,
+    )
+
+    # Check response
+    assert response.status_code == 200, f"Response: {response.text}"
+    data = response.json()
+    assert data["action_type"] == UserActionType.SOLVE_CAPTCHA.value
+
+    # Verify the action was created in the database
+    actions = db.exec(
+        select(BotUserAction).where(BotUserAction.bot_session_id == bot_session.id)
+    ).all()
+
+    assert len(actions) == 1
+    assert actions[0].action_type == UserActionType.SOLVE_CAPTCHA
+
+    # Clean up the created action
+    db.delete(actions[0])
+
+    # Also clean up any events created
+    events = db.exec(
+        select(BotEvent).where(BotEvent.bot_session_id == bot_session.id)
+    ).all()
+    for event in events:
+        db.delete(event)
+
+    db.commit()
+
+
+def test_request_user_action_question(
+    client: TestClient, bot_session_with_api_key: tuple[BotSession, str], db: Session
+) -> None:
+    """Test requesting a custom question action from the user through the bot webhook."""
+    bot_session, api_key = bot_session_with_api_key
+
+    # Prepare request data for a custom question action
+    action_data = {
+        "action_type": UserActionType.ANSWER_QUESTION.value,
+        "description": "Do you want to apply for jobs requiring relocation?",
+        "input_field": "relocation_answer",
+    }
+
+    # Make request with API key in header
+    response = client.post(
+        f"{settings.API_V1_STR}/bot-webhook/user-actions",
+        headers={"api-key": api_key},
+        json=action_data,
+    )
+
+    # Check response
+    assert response.status_code == 200, f"Response: {response.text}"
+
+    # Verify the action was created in the database
+    actions = db.exec(
+        select(BotUserAction).where(BotUserAction.bot_session_id == bot_session.id)
+    ).all()
+
+    assert len(actions) == 1
+    assert actions[0].action_type == UserActionType.ANSWER_QUESTION
+    assert (
+        actions[0].description == "Do you want to apply for jobs requiring relocation?"
+    )
+
+    # Clean up the created action and any events
+    db.delete(actions[0])
+    events = db.exec(
+        select(BotEvent).where(BotEvent.bot_session_id == bot_session.id)
+    ).all()
+    for event in events:
+        db.delete(event)
+    db.commit()
+
+
+def test_request_user_action_invalid_api_key(client: TestClient) -> None:
+    """Test requesting a user action with an invalid API key."""
+    # Prepare request data
+    action_data = {
+        "action_type": UserActionType.PROVIDE_2FA.value,
+        "description": "Please provide the 2FA code",
+    }
+
+    # Make request with invalid API key
+    response = client.post(
+        f"{settings.API_V1_STR}/bot-webhook/user-actions",
+        headers={"api-key": "invalid_key"},
+        json=action_data,
+    )
+
+    # Check response
+    assert response.status_code == 401
+    assert "Invalid API Key" in response.text
