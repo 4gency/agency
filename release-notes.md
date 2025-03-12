@@ -4,6 +4,7 @@
 
 ### Features
 
+* Add mock bot feature and webhook API endpoints. PR [#61](https://github.com/4gency/agency/pull/61) by [@gustavosett](https://github.com/gustavosett).
 * Bot webhook feature. PR [#60](https://github.com/4gency/agency/pull/60) by [@gustavosett](https://github.com/gustavosett).
 * Configs feature. PR [#59](https://github.com/4gency/agency/pull/59) by [@gustavosett](https://github.com/gustavosett).
 * Dashboard feature. PR [#56](https://github.com/4gency/agency/pull/56) by [@gustavosett](https://github.com/gustavosett).
