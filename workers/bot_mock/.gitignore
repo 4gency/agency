@@ -1,0 +1,35 @@
+# Bytecode compiled
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Environment variables
+.env
+
+# Logs
+logs/
+*.log
+
+# Virtual environments
+venv/
+ENV/
+env/
+
+# Config files gerados
+configs/
+
+# IDEs e editores
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Cache do mypy/pytest
+.mypy_cache/
+.pytest_cache/ 
+.ruff_cache

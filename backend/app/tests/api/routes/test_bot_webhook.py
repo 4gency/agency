@@ -1,6 +1,6 @@
 import uuid
 from collections.abc import Generator
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import pytest
@@ -11,9 +11,12 @@ from app.core.config import settings
 from app.models.bot import (
     BotApply,
     BotApplyStatus,
+    BotEvent,
     BotSession,
     BotSessionStatus,
+    BotUserAction,
     Credentials,
+    UserActionType,
 )
 from app.models.core import User
 from app.models.preference import Config
@@ -428,3 +431,603 @@ def test_get_bot_config_missing_config(
     db.delete(bot_session)
     db.delete(credentials)
     db.commit()
+
+
+def test_create_event_success(
+    client: TestClient, bot_session_with_api_key: tuple[BotSession, str], db: Session
+) -> None:
+    """Test creating a regular event that doesn't change the session status."""
+    bot_session, api_key = bot_session_with_api_key
+
+    # Prepare request data for an event
+    event_data = {
+        "type": "log",
+        "message": "Test event message",
+        "severity": "info",
+        "details": {
+            "source": "test_bot",
+            "action": "test_action",
+            "additional_info": "This is a test event",
+        },
+    }
+
+    # Make request with API key in header
+    response = client.post(
+        f"{settings.API_V1_STR}/bot-webhook/events",
+        headers={"api-key": api_key},
+        json=event_data,
+    )
+
+    # Check response
+    assert response.status_code == 200, f"Response: {response.text}"
+    data = response.json()
+    assert data["message"] == "Event created successfully"
+    assert data["type"] == "log"
+    assert data["severity"] == "info"
+    assert data["status_updated"] is False
+    assert "id" in data
+    assert "created_at" in data
+
+    # Verify the event was created in the database
+    events = db.exec(
+        select(BotEvent).where(BotEvent.bot_session_id == bot_session.id)
+    ).all()
+
+    assert len(events) == 1
+    assert events[0].type == "log"
+    assert events[0].message == "Test event message"
+    assert events[0].severity == "info"
+
+    # Verify the session status did not change
+    db.refresh(bot_session)
+    assert bot_session.status == BotSessionStatus.RUNNING  # Still in the initial state
+
+    # Clean up the created event
+    db.delete(events[0])
+    db.commit()
+
+
+def test_create_event_status_running(
+    client: TestClient, bot_session_with_api_key: tuple[BotSession, str], db: Session
+) -> None:
+    """Test creating an event that changes session status to RUNNING."""
+    bot_session, api_key = bot_session_with_api_key
+
+    # Set the session to STARTING first
+    bot_session.status = BotSessionStatus.STARTING
+    db.add(bot_session)
+    db.commit()
+    db.refresh(bot_session)
+
+    # Prepare request data for a status change event
+    event_data = {
+        "type": "running",  # This will trigger status change
+        "message": "Bot is now running",
+        "severity": "info",
+        "details": {"source": "test_bot", "previous_status": "starting"},
+    }
+
+    # Make request with API key in header
+    response = client.post(
+        f"{settings.API_V1_STR}/bot-webhook/events",
+        headers={"api-key": api_key},
+        json=event_data,
+    )
+
+    # Check response
+    assert response.status_code == 200, f"Response: {response.text}"
+    data = response.json()
+    assert data["status_updated"] is True
+
+    # Verify the event was created and session status was updated
+    db.refresh(bot_session)
+    assert bot_session.status == BotSessionStatus.RUNNING
+    assert bot_session.started_at is not None
+    assert bot_session.last_status_message == "Bot is now running"
+
+    # Verify event was created
+    events = db.exec(
+        select(BotEvent).where(BotEvent.bot_session_id == bot_session.id)
+    ).all()
+
+    # Should only have the original event now
+    assert len(events) == 1
+    assert events[0].type == "running"
+
+    # Clean up events before cleaning up the session
+    for event in events:
+        db.delete(event)
+    db.commit()
+
+
+def test_create_event_status_paused(
+    client: TestClient, bot_session_with_api_key: tuple[BotSession, str], db: Session
+) -> None:
+    """Test creating an event that changes session status to PAUSED."""
+    bot_session, api_key = bot_session_with_api_key
+
+    # Ensure session is in RUNNING state
+    bot_session.status = BotSessionStatus.RUNNING
+    db.add(bot_session)
+    db.commit()
+
+    # Prepare request data for a status change event
+    event_data = {
+        "type": "paused",  # This will trigger status change
+        "message": "Bot has been paused",
+        "severity": "info",
+        "details": {"source": "test_bot", "reason": "user requested pause"},
+    }
+
+    # Make request with API key in header
+    response = client.post(
+        f"{settings.API_V1_STR}/bot-webhook/events",
+        headers={"api-key": api_key},
+        json=event_data,
+    )
+
+    # Check response
+    assert response.status_code == 200, f"Response: {response.text}"
+    data = response.json()
+    assert data["status_updated"] is True
+
+    # Verify the event was created and session status was updated
+    db.refresh(bot_session)
+    assert bot_session.status == BotSessionStatus.PAUSED
+    assert bot_session.paused_at is not None
+    assert bot_session.last_status_message == "Bot has been paused"
+
+    # Clean up all events
+    events = db.exec(
+        select(BotEvent).where(BotEvent.bot_session_id == bot_session.id)
+    ).all()
+    for event in events:
+        db.delete(event)
+    db.commit()
+
+
+def test_create_event_status_completed(
+    client: TestClient, bot_session_with_api_key: tuple[BotSession, str], db: Session
+) -> None:
+    """Test creating an event that changes session status to COMPLETED."""
+    bot_session, api_key = bot_session_with_api_key
+
+    # Prepare request data for a status change event
+    event_data = {
+        "type": "completed",  # This will trigger status change
+        "message": "Bot has completed all tasks",
+        "severity": "info",
+        "details": {"source": "test_bot", "total_applies": 42, "success_rate": "85%"},
+    }
+
+    # Make request with API key in header
+    response = client.post(
+        f"{settings.API_V1_STR}/bot-webhook/events",
+        headers={"api-key": api_key},
+        json=event_data,
+    )
+
+    # Check response
+    assert response.status_code == 200, f"Response: {response.text}"
+    data = response.json()
+    assert data["status_updated"] is True
+
+    # Verify the event was created and session status was updated
+    db.refresh(bot_session)
+    assert bot_session.status == BotSessionStatus.COMPLETED
+    assert bot_session.finished_at is not None
+    assert bot_session.last_status_message == "Bot has completed all tasks"
+
+    # Clean up all events
+    events = db.exec(
+        select(BotEvent).where(BotEvent.bot_session_id == bot_session.id)
+    ).all()
+    for event in events:
+        db.delete(event)
+    db.commit()
+
+
+def test_create_event_status_failed(
+    client: TestClient, bot_session_with_api_key: tuple[BotSession, str], db: Session
+) -> None:
+    """Test creating an event that changes session status to FAILED."""
+    bot_session, api_key = bot_session_with_api_key
+
+    # Prepare request data for a status change event
+    event_data = {
+        "type": "failed",  # This will trigger status change
+        "message": "Bot has failed due to authentication error",
+        "severity": "error",
+        "details": {
+            "source": "test_bot",
+            "error_code": "AUTH_FAILED",
+            "error_details": "LinkedIn rejected the login attempt",
+        },
+    }
+
+    # Make request with API key in header
+    response = client.post(
+        f"{settings.API_V1_STR}/bot-webhook/events",
+        headers={"api-key": api_key},
+        json=event_data,
+    )
+
+    # Check response
+    assert response.status_code == 200, f"Response: {response.text}"
+    data = response.json()
+    assert data["status_updated"] is True
+
+    # Verify the event was created and session status was updated
+    db.refresh(bot_session)
+    assert bot_session.status == BotSessionStatus.FAILED
+    assert bot_session.finished_at is not None
+    assert bot_session.error_message == "Bot has failed due to authentication error"
+
+    # Clean up all events
+    events = db.exec(
+        select(BotEvent).where(BotEvent.bot_session_id == bot_session.id)
+    ).all()
+    for event in events:
+        db.delete(event)
+    db.commit()
+
+
+def test_create_event_status_waiting(
+    client: TestClient, bot_session_with_api_key: tuple[BotSession, str], db: Session
+) -> None:
+    """Test creating an event that changes session status to WAITING_INPUT."""
+    bot_session, api_key = bot_session_with_api_key
+
+    # Prepare request data for a status change event
+    event_data = {
+        "type": "waiting",  # This will trigger status change to WAITING_INPUT
+        "message": "Bot is waiting for user action",
+        "severity": "info",
+        "details": {"source": "test_bot", "wait_reason": "authentication challenge"},
+    }
+
+    # Make request with API key in header
+    response = client.post(
+        f"{settings.API_V1_STR}/bot-webhook/events",
+        headers={"api-key": api_key},
+        json=event_data,
+    )
+
+    # Check response
+    assert response.status_code == 200, f"Response: {response.text}"
+    data = response.json()
+    assert data["status_updated"] is True
+
+    # Verify the event was created and session status was updated
+    db.refresh(bot_session)
+    assert bot_session.status == BotSessionStatus.WAITING_INPUT
+    assert bot_session.last_status_message == "Bot is waiting for user action"
+
+    # Clean up the created event
+    events = db.exec(
+        select(BotEvent).where(BotEvent.bot_session_id == bot_session.id)
+    ).all()
+    for event in events:
+        db.delete(event)
+    db.commit()
+
+
+def test_create_custom_bot_events(
+    client: TestClient, bot_session_with_api_key: tuple[BotSession, str], db: Session
+) -> None:
+    """Test creating custom bot events that don't change status."""
+    bot_session, api_key = bot_session_with_api_key
+
+    # Set a known status
+    bot_session.status = BotSessionStatus.RUNNING
+    db.add(bot_session)
+    db.commit()
+
+    # List of custom events to test
+    custom_events = [
+        {
+            "type": "logged_in",
+            "message": "Successfully logged in to LinkedIn",
+            "severity": "info",
+        },
+        {
+            "type": "search_started",
+            "message": "Started searching for jobs",
+            "severity": "info",
+        },
+        {
+            "type": "job_found",
+            "message": "Found job: Software Developer at Example Corp",
+            "severity": "info",
+            "details": {"job_id": "12345", "company": "Example Corp"},
+        },
+        {
+            "type": "apply_started",
+            "message": "Starting application process",
+            "severity": "info",
+        },
+        {
+            "type": "error",
+            "message": "Error during job search",
+            "severity": "error",
+            "details": {"error": "Network timeout"},
+        },
+    ]
+
+    # First, clean up any existing events
+    existing_events = db.exec(
+        select(BotEvent).where(BotEvent.bot_session_id == bot_session.id)
+    ).all()
+    for event in existing_events:
+        db.delete(event)
+    db.commit()
+
+    for event_data in custom_events:
+        # Make request with API key in header
+        response = client.post(
+            f"{settings.API_V1_STR}/bot-webhook/events",
+            headers={"api-key": api_key},
+            json=event_data,
+        )
+
+        # Check response
+        assert response.status_code == 200, f"Response: {response.text}"
+        data = response.json()
+        assert data["status_updated"] is False
+        assert data["type"] == event_data["type"]  # type: ignore
+        assert data["severity"] == event_data["severity"]  # type: ignore
+
+    # Verify the events were created
+    events = db.exec(
+        select(BotEvent).where(BotEvent.bot_session_id == bot_session.id)
+    ).all()
+
+    assert len(events) == len(custom_events)
+
+    # Verify the session status did not change
+    db.refresh(bot_session)
+    assert bot_session.status == BotSessionStatus.RUNNING
+
+    # Clean up all the created events
+    for event in events:
+        db.delete(event)
+    db.commit()
+
+
+def test_resume_paused_session(
+    client: TestClient, bot_session_with_api_key: tuple[BotSession, str], db: Session
+) -> None:
+    """Test resuming a paused session with a running event."""
+    bot_session, api_key = bot_session_with_api_key
+
+    # Set session to PAUSED first
+    bot_session.status = BotSessionStatus.PAUSED
+    bot_session.paused_at = datetime.now(timezone.utc) - timedelta(minutes=5)
+    db.add(bot_session)
+    db.commit()
+
+    # Prepare request data for a status change event
+    event_data = {
+        "type": "running",  # This will trigger status change from PAUSED to RUNNING
+        "message": "Bot resumed operation",
+        "severity": "info",
+    }
+
+    # Make request with API key in header
+    response = client.post(
+        f"{settings.API_V1_STR}/bot-webhook/events",
+        headers={"api-key": api_key},
+        json=event_data,
+    )
+
+    # Check response
+    assert response.status_code == 200, f"Response: {response.text}"
+
+    # Verify the event was created and session status was updated
+    db.refresh(bot_session)
+    assert bot_session.status == BotSessionStatus.RUNNING
+    assert bot_session.resumed_at is not None
+
+    # Clean up the created event
+    events = db.exec(
+        select(BotEvent).where(BotEvent.bot_session_id == bot_session.id)
+    ).all()
+    for event in events:
+        db.delete(event)
+    db.commit()
+
+
+def test_request_user_action_2fa(
+    client: TestClient, bot_session_with_api_key: tuple[BotSession, str], db: Session
+) -> None:
+    """Test requesting a 2FA code action from the user through the bot webhook."""
+    bot_session, api_key = bot_session_with_api_key
+
+    # Prepare request data for a 2FA action
+    action_data = {
+        "action_type": UserActionType.PROVIDE_2FA.value,
+        "description": "Please provide the 2FA code from your authenticator app",
+        "input_field": "2fa_code",
+    }
+
+    # Make request with API key in header
+    response = client.post(
+        f"{settings.API_V1_STR}/bot-webhook/user-actions",
+        headers={"api-key": api_key},
+        json=action_data,
+    )
+
+    # Check response
+    assert response.status_code == 200, f"Response: {response.text}"
+    data = response.json()
+    assert data["message"] == "User action requested successfully"
+    assert data["action_type"] == UserActionType.PROVIDE_2FA.value
+    assert (
+        data["description"] == "Please provide the 2FA code from your authenticator app"
+    )
+    assert data["input_field"] == "2fa_code"
+    assert "id" in data
+    assert "requested_at" in data
+
+    # Verify the action was created in the database
+    actions = db.exec(
+        select(BotUserAction).where(BotUserAction.bot_session_id == bot_session.id)
+    ).all()
+
+    assert len(actions) == 1
+    assert actions[0].action_type == UserActionType.PROVIDE_2FA
+    assert (
+        actions[0].description
+        == "Please provide the 2FA code from your authenticator app"
+    )
+    assert actions[0].input_field == "2fa_code"
+    assert actions[0].is_completed is False
+
+    # Verify that the bot session status was updated to WAITING_INPUT
+    db.refresh(bot_session)
+    assert bot_session.status == BotSessionStatus.WAITING_INPUT
+
+    # Verify that an event was created for this action
+    events = db.exec(
+        select(BotEvent).where(BotEvent.bot_session_id == bot_session.id)
+    ).all()
+
+    assert len(events) > 0
+    assert any(event.type == "user_action" for event in events)
+
+    # Clean up the created action and events
+    for action in actions:
+        db.delete(action)
+    for event in events:
+        db.delete(event)
+    db.commit()
+
+
+def test_request_user_action_captcha(
+    client: TestClient, bot_session_with_api_key: tuple[BotSession, str], db: Session
+) -> None:
+    """Test requesting a CAPTCHA solving action from the user through the bot webhook."""
+    bot_session, api_key = bot_session_with_api_key
+
+    # Prepare request data for a CAPTCHA action
+    action_data = {
+        "action_type": UserActionType.SOLVE_CAPTCHA.value,
+        "description": "Please solve the CAPTCHA to continue",
+        "input_field": "captcha_solution",
+    }
+
+    # Make request with API key in header
+    response = client.post(
+        f"{settings.API_V1_STR}/bot-webhook/user-actions",
+        headers={"api-key": api_key},
+        json=action_data,
+    )
+
+    # Check response
+    assert response.status_code == 200, f"Response: {response.text}"
+    data = response.json()
+    assert data["action_type"] == UserActionType.SOLVE_CAPTCHA.value
+
+    # Verify the action was created in the database
+    actions = db.exec(
+        select(BotUserAction).where(BotUserAction.bot_session_id == bot_session.id)
+    ).all()
+
+    assert len(actions) == 1
+    assert actions[0].action_type == UserActionType.SOLVE_CAPTCHA
+
+    # Clean up the created action
+    db.delete(actions[0])
+
+    # Also clean up any events created
+    events = db.exec(
+        select(BotEvent).where(BotEvent.bot_session_id == bot_session.id)
+    ).all()
+    for event in events:
+        db.delete(event)
+
+    db.commit()
+
+
+def test_request_user_action_question(
+    client: TestClient, bot_session_with_api_key: tuple[BotSession, str], db: Session
+) -> None:
+    """Test requesting a custom question action from the user through the bot webhook."""
+    bot_session, api_key = bot_session_with_api_key
+
+    # Prepare request data for a custom question action
+    action_data = {
+        "action_type": UserActionType.ANSWER_QUESTION.value,
+        "description": "Do you want to apply for jobs requiring relocation?",
+        "input_field": "relocation_answer",
+    }
+
+    # Make request with API key in header
+    response = client.post(
+        f"{settings.API_V1_STR}/bot-webhook/user-actions",
+        headers={"api-key": api_key},
+        json=action_data,
+    )
+
+    # Check response
+    assert response.status_code == 200, f"Response: {response.text}"
+
+    # Verify the action was created in the database
+    actions = db.exec(
+        select(BotUserAction).where(BotUserAction.bot_session_id == bot_session.id)
+    ).all()
+
+    assert len(actions) == 1
+    assert actions[0].action_type == UserActionType.ANSWER_QUESTION
+    assert (
+        actions[0].description == "Do you want to apply for jobs requiring relocation?"
+    )
+
+    # Clean up the created action and any events
+    db.delete(actions[0])
+    events = db.exec(
+        select(BotEvent).where(BotEvent.bot_session_id == bot_session.id)
+    ).all()
+    for event in events:
+        db.delete(event)
+    db.commit()
+
+
+def test_request_user_action_invalid_api_key(client: TestClient) -> None:
+    """Test requesting a user action with an invalid API key."""
+    # Prepare request data
+    action_data = {
+        "action_type": UserActionType.PROVIDE_2FA.value,
+        "description": "Please provide the 2FA code",
+    }
+
+    # Make request with invalid API key
+    response = client.post(
+        f"{settings.API_V1_STR}/bot-webhook/user-actions",
+        headers={"api-key": "invalid_key"},
+        json=action_data,
+    )
+
+    # Check response
+    assert response.status_code == 401
+    assert "Invalid API Key" in response.text
+
+
+def test_create_event_invalid_api_key(client: TestClient) -> None:
+    """Test creating an event with an invalid API key."""
+    # Prepare request data
+    event_data = {
+        "type": "log",
+        "message": "Test message",
+    }
+
+    # Make request with invalid API key
+    response = client.post(
+        f"{settings.API_V1_STR}/bot-webhook/events",
+        headers={"api-key": "invalid_key"},
+        json=event_data,
+    )
+
+    # Check response
+    assert response.status_code == 401
+    assert "Invalid API Key" in response.text
