@@ -44,7 +44,7 @@ class Settings(BaseSettings):
 def load_config() -> Settings:
     """Loads and validates environment variables."""
     try:
-        config = Settings()
+        config = Settings()  # type: ignore
         return config
     except Exception as e:
         raise ValueError(f"Error loading configuration: {e}")
