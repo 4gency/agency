@@ -107,6 +107,18 @@ export type BotConfigResponse = {
 }
 
 /**
+ * Request model for creating a new event record
+ */
+export type BotEventCreate = {
+  type: string
+  message: string
+  severity?: string
+  details?: {
+    [key: string]: unknown
+  } | null
+}
+
+/**
  * Sessão do bot.
  */
 export type BotSession = {
@@ -157,6 +169,15 @@ export type BotStyleChoice =
   | "Modern Grey"
   | "Default"
   | "Clean Blue"
+
+/**
+ * Request model for creating a new user action request
+ */
+export type BotUserActionCreate = {
+  action_type: UserActionType
+  description: string
+  input_field?: string | null
+}
 
 export type Certification = {
   /**
@@ -898,6 +919,18 @@ export type UserActionPublic = {
 }
 
 /**
+ * Response model for user action creation
+ */
+export type UserActionResponse = {
+  id: string
+  message: string
+  action_type: UserActionType
+  description: string
+  input_field?: string | null
+  requested_at: string
+}
+
+/**
  * Modelo para resposta de listagem de ações
  */
 export type UserActionsResponse = {
@@ -1121,6 +1154,18 @@ export type RegisterApplyData = {
 
 export type RegisterApplyResponse = Message
 
+export type CreateEventData = {
+  /**
+   * Bot API Key
+   */
+  apiKey: string
+  requestBody: BotEventCreate
+}
+
+export type CreateEventResponse = {
+  [key: string]: unknown
+}
+
 export type GetBotConfigData = {
   /**
    * Bot API Key
@@ -1129,6 +1174,16 @@ export type GetBotConfigData = {
 }
 
 export type GetBotConfigResponse = BotConfigResponse
+
+export type RequestUserActionData = {
+  /**
+   * Bot API Key
+   */
+  apiKey: string
+  requestBody: BotUserActionCreate
+}
+
+export type RequestUserActionResponse = UserActionResponse
 
 export type StripeSuccessData = {
   sessionId: string
