@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 from enum import Enum
-from typing import Dict, Any, Optional, List
-from pydantic import BaseModel, Field
+from typing import Dict, Any, Optional
+from pydantic import BaseModel
 
 
 class BotSessionStatus(str, Enum):
     """Possible statuses for a bot session."""
+
     STARTING = "starting"
     RUNNING = "running"
     PAUSED = "paused"
@@ -17,12 +18,14 @@ class BotSessionStatus(str, Enum):
 
 class BotApplyStatus(str, Enum):
     """Possible statuses for a job application."""
+
     SUCCESS = "success"
     FAILED = "failed"
 
 
 class UserActionType(str, Enum):
     """Types of actions that can be requested from the user."""
+
     PROVIDE_2FA = "provide_2fa"
     SOLVE_CAPTCHA = "solve_captcha"
     ANSWER_QUESTION = "answer_question"
@@ -31,6 +34,7 @@ class UserActionType(str, Enum):
 
 class BotApplyCreate(BaseModel):
     """Model for creating an application record."""
+
     status: BotApplyStatus = BotApplyStatus.SUCCESS
     total_time: int = 0
     job_title: Optional[str] = None
@@ -41,6 +45,7 @@ class BotApplyCreate(BaseModel):
 
 class BotEventCreate(BaseModel):
     """Model for creating a bot event."""
+
     type: str
     message: str
     severity: str = "info"
@@ -49,6 +54,7 @@ class BotEventCreate(BaseModel):
 
 class BotUserActionCreate(BaseModel):
     """Model for creating a user action request."""
+
     action_type: UserActionType
     description: str
     input_field: Optional[str] = None
@@ -56,6 +62,7 @@ class BotUserActionCreate(BaseModel):
 
 class UserActionResponse(BaseModel):
     """Model for a user action request response."""
+
     id: str
     message: str
     action_type: UserActionType
@@ -66,5 +73,6 @@ class UserActionResponse(BaseModel):
 
 class BotConfigResponse(BaseModel):
     """Model for bot configuration response."""
+
     user_config: str
-    user_resume: str 
+    user_resume: str
