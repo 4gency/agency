@@ -2,54 +2,68 @@
 import os
 import logging
 import colorlog
+from typing import Optional
 
 
-def setup_logger(name, level=logging.INFO):
-    """Configura e retorna um logger colorido."""
-    # Criar o logger
+def setup_logger(
+    name: str,
+    level: int = logging.INFO,
+    console_output: bool = True,
+    file_output: bool = True,
+    log_file: Optional[str] = None
+) -> logging.Logger:
+    """
+    Configure a logger with colored console output and file output.
+    
+    Args:
+        name: Logger name
+        level: Logging level (default: INFO)
+        console_output: Whether to output to console (default: True)
+        file_output: Whether to output to file (default: True)
+        log_file: Custom log file path (default: None)
+    
+    Returns:
+        Configured logger instance
+    """
+    # Create logger
     logger = logging.getLogger(name)
     logger.setLevel(level)
     
-    # Remover handlers existentes
-    for handler in logger.handlers[:]:
-        logger.removeHandler(handler)
+    # Clear existing handlers
+    if logger.handlers:
+        logger.handlers.clear()
     
-    # Criar um handler para o console
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(level)
+    # Define format for logs
+    log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     
-    # Definir o formato com cores
-    formatter = colorlog.ColoredFormatter(
-        "%(log_color)s%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-        log_colors={
-            'DEBUG': 'cyan',
-            'INFO': 'green',
-            'WARNING': 'yellow',
-            'ERROR': 'red',
-            'CRITICAL': 'red,bg_white',
-        }
-    )
-    console_handler.setFormatter(formatter)
+    # Add console handler with colors if requested
+    if console_output:
+        # Define colors for different levels
+        color_formatter = colorlog.ColoredFormatter(
+            '%(log_color)s' + log_format,
+            log_colors={
+                'DEBUG': 'cyan',
+                'INFO': 'green',
+                'WARNING': 'yellow',
+                'ERROR': 'red',
+                'CRITICAL': 'red,bg_white',
+            }
+        )
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(color_formatter)
+        logger.addHandler(console_handler)
     
-    # Adicionar o handler ao logger
-    logger.addHandler(console_handler)
-    
-    # Criar um handler para arquivo
-    logs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs")
-    os.makedirs(logs_dir, exist_ok=True)
-    
-    file_handler = logging.FileHandler(os.path.join(logs_dir, f"{name}.log"))
-    file_handler.setLevel(level)
-    
-    # Definir o formato sem cores para o arquivo
-    file_formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S"
-    )
-    file_handler.setFormatter(file_formatter)
-    
-    # Adicionar o handler ao logger
-    logger.addHandler(file_handler)
+    # Add file handler if requested
+    if file_output:
+        if log_file is None:
+            # Create logs directory if it doesn't exist
+            logs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs")
+            os.makedirs(logs_dir, exist_ok=True)
+            log_file = os.path.join(logs_dir, f"{name}.log")
+        
+        file_formatter = logging.Formatter(log_format)
+        file_handler = logging.FileHandler(log_file)
+        file_handler.setFormatter(file_formatter)
+        logger.addHandler(file_handler)
     
     return logger 

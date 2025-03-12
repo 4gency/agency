@@ -1,25 +1,32 @@
+version: '3.8'
+
 services:
-  bot:
+  bot-mock:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: linkedin_bot_mock
-    restart: unless-stopped
-    environment:
-      - API_PORT=5000
-      - LINKEDIN_EMAIL=teste@teste.com
-      - LINKEDIN_PASSWORD=supersecretpassword
-      - APPLY_LIMIT=200
-      - STYLE_CHOICE=Modern Blue
-      - SEC_CH_UA='"Chromium";v="130", "Google Chrome";v="130", "Not?A_Brand";v="99"'
-      - SEC_CH_UA_PLATFORM=Windows
-      - USER_AGENT=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36
-      - BACKEND_TOKEN=ezLHVhbnseGRfaNFxTRPdw
-      - BACKEND_URL=http://localhost:8000
-      - BOT_ID=753880ef-c57a-4380-b36c-cd1a008cb078
-      - GOTENBERG_URL=http://gotenberg:3000
+    container_name: linkedin-bot-mock
     ports:
-      - "5000:5000"
+      - "8080:8080"
+    environment:
+      - API_PORT=8080
+      - LINKEDIN_EMAIL=${LINKEDIN_EMAIL:-test@example.com}
+      - LINKEDIN_PASSWORD=${LINKEDIN_PASSWORD:-password123}
+      - APPLY_LIMIT=${APPLY_LIMIT:-200}
+      - STYLE_CHOICE=${STYLE_CHOICE:-Modern Blue}
+      - SEC_CH_UA=${SEC_CH_UA:-"Google Chrome";v="111"}
+      - SEC_CH_UA_PLATFORM=${SEC_CH_UA_PLATFORM:-Windows}
+      - USER_AGENT=${USER_AGENT:-Mozilla/5.0 (Windows NT 10.0; Win64; x64)}
+      - BACKEND_TOKEN=${BACKEND_TOKEN}
+      - BACKEND_URL=${BACKEND_URL:-http://localhost:5000}
+      - BOT_ID=${BOT_ID:-1}
+      - GOTENBERG_URL=${GOTENBERG_URL:-http://gotenberg:3000}
     volumes:
       - ./logs:/app/logs
-      - ./configs:/app/configs 
+      - ./configs:/app/configs
+    networks:
+      - bot-network
+
+networks:
+  bot-network:
+    driver: bridge 

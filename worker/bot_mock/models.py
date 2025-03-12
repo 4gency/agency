@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 
 
 class BotSessionStatus(str, Enum):
-    """Status possíveis para uma sessão de bot."""
+    """Possible statuses for a bot session."""
     STARTING = "starting"
     RUNNING = "running"
     PAUSED = "paused"
@@ -16,13 +16,13 @@ class BotSessionStatus(str, Enum):
 
 
 class BotApplyStatus(str, Enum):
-    """Status possíveis para uma aplicação de emprego."""
+    """Possible statuses for a job application."""
     SUCCESS = "success"
     FAILED = "failed"
 
 
 class UserActionType(str, Enum):
-    """Tipos de ações que podem ser solicitadas ao usuário."""
+    """Types of actions that can be requested from the user."""
     PROVIDE_2FA = "provide_2fa"
     SOLVE_CAPTCHA = "solve_captcha"
     ANSWER_QUESTION = "answer_question"
@@ -30,7 +30,7 @@ class UserActionType(str, Enum):
 
 
 class BotApplyCreate(BaseModel):
-    """Modelo para criar um registro de aplicação."""
+    """Model for creating an application record."""
     status: BotApplyStatus = BotApplyStatus.SUCCESS
     total_time: int = 0
     job_title: Optional[str] = None
@@ -40,7 +40,7 @@ class BotApplyCreate(BaseModel):
 
 
 class BotEventCreate(BaseModel):
-    """Modelo para criar um evento do bot."""
+    """Model for creating a bot event."""
     type: str
     message: str
     severity: str = "info"
@@ -48,14 +48,14 @@ class BotEventCreate(BaseModel):
 
 
 class BotUserActionCreate(BaseModel):
-    """Modelo para criar uma solicitação de ação do usuário."""
+    """Model for creating a user action request."""
     action_type: UserActionType
     description: str
     input_field: Optional[str] = None
 
 
 class UserActionResponse(BaseModel):
-    """Modelo para resposta de uma solicitação de ação do usuário."""
+    """Model for a user action request response."""
     id: str
     message: str
     action_type: UserActionType
@@ -65,6 +65,6 @@ class UserActionResponse(BaseModel):
 
 
 class BotConfigResponse(BaseModel):
-    """Modelo para resposta da configuração do bot."""
+    """Model for bot configuration response."""
     user_config: str
     user_resume: str 

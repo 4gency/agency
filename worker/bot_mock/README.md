@@ -1,36 +1,36 @@
 # LinkedIn Bot Mock
 
-Este é um bot mock para simulação de aplicações de emprego no LinkedIn, projetado para integrar-se com o sistema de backend por meio das APIs webhook.
+This is a mock bot for simulating job applications on LinkedIn, designed to integrate with the backend system through webhook APIs.
 
-## Funcionalidades
+## Features
 
-- Simulação do processo de login no LinkedIn (com possibilidade de 2FA)
-- Busca de vagas baseada nas configurações do usuário
-- Aplicação para vagas com intervalo aleatório entre 10 e 60 segundos
-- Suporte a solicitações de ação do usuário (2FA, CAPTCHA, perguntas)
-- Registro de aplicações bem-sucedidas e falhas (10% de chance de falha)
-- Eventos detalhados para acompanhamento do progresso
-- Validação de configurações YAML
-- Suporte a limitação de aplicações
+- Simulation of the LinkedIn login process (with 2FA possibility)
+- Job search based on user configurations
+- Job applications with random intervals between 10 and 60 seconds
+- Support for user action requests (2FA, CAPTCHA, questions)
+- Registration of successful and failed applications (10% chance of failure)
+- Detailed events for progress tracking
+- YAML configuration validation
+- Support for application limits
 
-## Variáveis de ambiente
+## Environment Variables
 
 ```
-API_PORT=8080                 # Porta para a API do bot
-LINKEDIN_EMAIL=email@exemplo.com # Email do LinkedIn
-LINKEDIN_PASSWORD=senha123     # Senha do LinkedIn
-APPLY_LIMIT=200               # Limite de aplicações
-STYLE_CHOICE=Modern Blue      # Estilo do currículo
-SEC_CH_UA=...                 # Header User-Agent Client Hints
-SEC_CH_UA_PLATFORM=Windows    # Plataforma do User-Agent
-USER_AGENT=...                # User-Agent completo
-BACKEND_TOKEN=chave_secreta   # Token para autenticação com o backend
-BACKEND_URL=http://api:5000   # URL do backend
-BOT_ID=1234                   # ID do bot
-GOTENBERG_URL=http://gotenberg:3000 # URL do serviço Gotenberg (opcional)
+API_PORT=8080                 # Port for the bot API
+LINKEDIN_EMAIL=email@example.com # LinkedIn email
+LINKEDIN_PASSWORD=password123  # LinkedIn password
+APPLY_LIMIT=200               # Application limit
+STYLE_CHOICE=Modern Blue      # Resume style
+SEC_CH_UA=...                 # User-Agent Client Hints header
+SEC_CH_UA_PLATFORM=Windows    # User-Agent platform
+USER_AGENT=...                # Complete User-Agent
+BACKEND_TOKEN=secret_key      # Token for backend authentication
+BACKEND_URL=http://api:5000   # Backend URL
+BOT_ID=1234                   # Bot ID
+GOTENBERG_URL=http://gotenberg:3000 # Gotenberg service URL (optional)
 ```
 
-## Estilos disponíveis
+## Available Styles
 
 - "Cloyola Grey"
 - "Modern Blue" 
@@ -38,80 +38,80 @@ GOTENBERG_URL=http://gotenberg:3000 # URL do serviço Gotenberg (opcional)
 - "Default"
 - "Clean Blue"
 
-## Executando com Docker
+## Running with Docker
 
-Para executar o bot usando Docker:
+To run the bot using Docker:
 
 ```bash
 docker build -t linkedin-bot-mock .
 docker run -p 8080:8080 --env-file .env linkedin-bot-mock
 ```
 
-## Executando com Docker Compose
+## Running with Docker Compose
 
-Para executar o bot usando Docker Compose:
+To run the bot using Docker Compose:
 
 ```bash
 docker-compose up -d
 ```
 
-## API do Bot
+## Bot API
 
-O bot expõe uma API para interagir com ele:
+The bot exposes an API to interact with it:
 
-- `GET /health` - Verifica se o bot está funcionando
-- `POST /action/<action_id>` - Endpoint para receber respostas de ações do usuário
+- `GET /health` - Checks if the bot is working
+- `POST /action/<action_id>` - Endpoint to receive responses for user actions
 
-## Fluxo de Execução
+## Execution Flow
 
-1. Bot inicia e valida as variáveis de ambiente
-2. Bot obtém configurações e currículo do backend
-3. Bot simula login no LinkedIn (pode solicitar 2FA)
-4. Bot navega para a página de busca de vagas
-5. Bot inicia o loop de busca e aplicação:
-   - Encontra uma vaga
-   - Verifica se empresa/título está na lista negra
-   - Simula o processo de aplicação (pode solicitar CAPTCHA)
-   - Registra aplicação (sucesso ou falha)
-   - Aguarda entre 10 e 60 segundos antes da próxima aplicação
-6. Bot finaliza quando atinge o limite de aplicações
+1. Bot starts and validates environment variables
+2. Bot retrieves configurations and resume from the backend
+3. Bot simulates LinkedIn login (may request 2FA)
+4. Bot navigates to the job search page
+5. Bot starts the search and application loop:
+   - Finds a job
+   - Checks if company/title is blacklisted
+   - Simulates the application process (may request CAPTCHA)
+   - Registers application (success or failure)
+   - Waits between 10 and 60 seconds before the next application
+6. Bot finishes when it reaches the application limit
 
-## Eventos Gerados
+## Generated Events
 
-O bot gera diversos eventos para monitoramento:
+The bot generates various events for monitoring:
 
-- `starting` - Iniciando o bot
-- `running` - Bot em execução
-- `paused` - Bot pausado
-- `waiting` - Aguardando ação do usuário
-- `completed` - Bot finalizado com sucesso
-- `failed` - Bot finalizado com erro
-- `stopping` - Bot finalizando
+- `starting` - Starting the bot
+- `running` - Bot running
+- `paused` - Bot paused
+- `waiting` - Waiting for user action
+- `completed` - Bot successfully completed
+- `failed` - Bot finished with error
+- `stopping` - Bot finishing
 
-Além desses, outros eventos específicos são gerados durante o processo de aplicação, como:
+In addition to these, other specific events are generated during the application process, such as:
 
-- `navigating` - Navegando para uma página
-- `login` - Preenchendo credenciais
-- `logged_in` - Login realizado com sucesso
-- `search_started` - Iniciando busca por vagas
-- `job_found` - Vaga encontrada
-- `job_skipped` - Vaga pulada
-- `apply_started` - Iniciando aplicação
-- `apply_success` - Aplicação bem-sucedida
-- `apply_failed` - Falha na aplicação
-- `progress_update` - Atualização de progresso
+- `navigating` - Navigating to a page
+- `login` - Filling credentials
+- `logged_in` - Login successful
+- `search_started` - Starting job search
+- `job_found` - Job found
+- `job_skipped` - Job skipped
+- `apply_started` - Starting application
+- `apply_success` - Application successful
+- `apply_failed` - Application failure
+- `progress_update` - Progress update
 
-## Ações do Usuário
+## User Actions
 
-O bot pode solicitar ações do usuário em determinados momentos:
+The bot may request user actions at certain times:
 
-- `PROVIDE_2FA` - Fornecer código de verificação em dois fatores
-- `SOLVE_CAPTCHA` - Resolver um CAPTCHA
-- `ANSWER_QUESTION` - Responder a uma pergunta personalizada
+- `PROVIDE_2FA` - Provide two-factor verification code
+- `SOLVE_CAPTCHA` - Solve a CAPTCHA
+- `ANSWER_QUESTION` - Answer a custom question
 
 ## Logs
 
-O bot gera logs detalhados em:
+The bot generates detailed logs in:
 
-- Console (colorido)
-- Arquivo `logs/bot_mock.log` 
+- Console (colored)
+- File `logs/bot_mock.log` 

@@ -1,38 +1,47 @@
 #!/usr/bin/env python3
 import os
-from dataclasses import dataclass
+from pydantic import BaseSettings, Field
 
 
-@dataclass
-class Config:
-    """Classe para armazenar as configurações do bot."""
+class Settings(BaseSettings):
+    """Configuration class that loads from environment variables."""
     
-    def __init__(self):
-        """Inicializa as configurações a partir das variáveis de ambiente."""
-        # Configurações da API
-        self.API_PORT = int(os.environ.get("API_PORT", "5000"))
-        
-        # Credenciais do LinkedIn
-        self.LINKEDIN_EMAIL = os.environ.get("LINKEDIN_EMAIL", "")
-        self.LINKEDIN_PASSWORD = os.environ.get("LINKEDIN_PASSWORD", "")
-        
-        # Configurações de aplicação
-        self.APPLY_LIMIT = int(os.environ.get("APPLY_LIMIT", "200"))
-        self.STYLE_CHOICE = os.environ.get("STYLE_CHOICE", "Modern Blue")
-        
-        # Headers do navegador
-        self.SEC_CH_UA = os.environ.get("SEC_CH_UA", "")
-        self.SEC_CH_UA_PLATFORM = os.environ.get("SEC_CH_UA_PLATFORM", "")
-        self.USER_AGENT = os.environ.get("USER_AGENT", "")
-        
-        # Configurações do backend
-        self.BACKEND_TOKEN = os.environ.get("BACKEND_TOKEN", "")
-        self.BACKEND_URL = os.environ.get("BACKEND_URL", "").rstrip("/")
-        self.BOT_ID = os.environ.get("BOT_ID", "")
-        
-        # URL do serviço Gotenberg (opcional)
-        self.GOTENBERG_URL = os.environ.get("GOTENBERG_URL", "")
-        
-        # Diretórios
-        self.CONFIG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "configs")
-        os.makedirs(self.CONFIG_DIR, exist_ok=True) 
+    # Basic configurations
+    api_port: int = Field(8080, description="Port for the bot API")
+    linkedin_email: str = Field(..., description="LinkedIn email account")
+    linkedin_password: str = Field(..., description="LinkedIn password")
+    apply_limit: int = Field(200, description="Maximum number of applications")
+    
+    # Style
+    style_choice: str = Field("Modern Blue", description="Resume style choice")
+    
+    # Browser fingerprinting
+    sec_ch_ua: str = Field(
+        '"Google Chrome";v="111", "Not(A:Brand";v="8", "Chromium";v="111"',
+        description="User-Agent Client Hints header"
+    )
+    sec_ch_ua_platform: str = Field("Windows", description="User-Agent platform")
+    user_agent: str = Field(
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36",
+        description="Complete User-Agent header"
+    )
+    
+    # Integration
+    backend_token: str = Field(..., description="Authentication token for the backend")
+    backend_url: str = Field(..., description="Backend API URL")
+    bot_id: str = Field(..., description="Bot ID")
+    
+    # Optional services
+    gotenberg_url: str = Field(None, description="Gotenberg PDF service URL (optional)")
+    
+    class Config:
+        env_file = ".env"
+
+
+def load_config() -> Settings:
+    """Loads and validates environment variables."""
+    try:
+        config = Settings()
+        return config
+    except Exception as e:
+        raise ValueError(f"Error loading configuration: {e}") 

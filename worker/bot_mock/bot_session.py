@@ -19,7 +19,7 @@ faker = Faker()
 
 
 class BotStatus(Enum):
-    """Estados possíveis do bot."""
+    """Possible bot states."""
     STARTING = "starting"
     RUNNING = "running" 
     PAUSED = "paused"
@@ -30,16 +30,16 @@ class BotStatus(Enum):
 
 
 class ApplyStatus(Enum):
-    """Estados possíveis de uma aplicação."""
+    """Possible application states."""
     SUCCESS = "success"
     FAILED = "failed"
 
 
 class JobInfo:
-    """Informações simuladas de uma vaga."""
+    """Simulated job information."""
     
     def __init__(self):
-        """Gera uma vaga simulada com dados aleatórios."""
+        """Generates a simulated job with random data."""
         self.id = str(uuid.uuid4())
         self.title = faker.job()
         self.company = faker.company()
@@ -49,7 +49,7 @@ class JobInfo:
         self.posted_at = faker.date_time_between(start_date="-30d", end_date="now")
         
     def to_dict(self) -> Dict[str, Any]:
-        """Converte a vaga para dicionário."""
+        """Converts the job to a dictionary."""
         return {
             "job_id": self.id,
             "job_title": self.title,
@@ -62,113 +62,113 @@ class JobInfo:
 
 
 class BotSession:
-    """Sessão do bot que simula o comportamento do bot real."""
+    """Bot session that simulates the behavior of the real bot."""
     
     def __init__(self, config, api_client):
         """
-        Inicializa a sessão do bot.
+        Initializes the bot session.
         
         Args:
-            config: Configurações do bot
-            api_client: Cliente para comunicação com o backend
+            config: Bot configuration
+            api_client: Client for API communication
         """
         self.config = config
         self.api_client = api_client
         self.status = BotStatus.STARTING
         
-        # Contador de aplicações
+        # Application counter
         self.total_applied = 0
         self.total_success = 0
         self.total_failed = 0
         
-        # Flag para controle de pausas
+        # Flags for pause control
         self.paused = threading.Event()
         self.should_stop = threading.Event()
         
-        # Flag para aguardar ação do usuário
+        # Flag to wait for user action
         self.waiting_for_action = threading.Event()
         self.current_action_id = None
         self.action_response = None
         
-        # Configurações lidas do YAML
+        # YAML configurations
         self.user_config = None
         self.user_resume = None
     
     def run(self) -> None:
-        """Executa o bot simulado."""
+        """Runs the simulated bot."""
         try:
-            # Enviar evento de início
+            # Send start event
             self._change_status(BotStatus.STARTING)
             self.api_client.create_event(
                 "starting",
-                "Iniciando o bot de aplicação",
+                "Starting application bot",
                 "info",
                 {"bot_id": self.config.BOT_ID}
             )
             
-            # Obter as configurações do usuário
-            logger.info("Obtendo configurações e currículo do usuário")
+            # Get user configurations
+            logger.info("Getting user configurations and resume")
             try:
                 config_yaml, resume_yaml = self.api_client.get_config()
                 
-                # Carregar configurações
+                # Load configurations
                 try:
                     self.user_config = yaml.safe_load(config_yaml)
-                    logger.info("Configuração do usuário carregada com sucesso")
+                    logger.info("User configuration loaded successfully")
                 except yaml.YAMLError as e:
-                    logger.error(f"Erro ao carregar configuração YAML: {e}")
+                    logger.error(f"Error loading YAML configuration: {e}")
                     self.user_config = {}
                 
                 try:
                     self.user_resume = yaml.safe_load(resume_yaml)
-                    logger.info("Currículo do usuário carregado com sucesso")
+                    logger.info("User resume loaded successfully")
                 except yaml.YAMLError as e:
-                    logger.error(f"Erro ao carregar currículo YAML: {e}")
+                    logger.error(f"Error loading YAML resume: {e}")
                     self.user_resume = {}
                 
-                # Verificar se temos configurações mínimas necessárias
+                # Check if we have the minimum necessary configurations
                 if not self.user_config:
-                    logger.warning("Configuração do usuário está vazia ou inválida")
+                    logger.warning("User configuration is empty or invalid")
                 
             except Exception as e:
-                logger.error(f"Falha ao obter configurações do usuário: {e}")
+                logger.error(f"Failed to get user configurations: {e}")
                 self.user_config = {}
                 self.user_resume = {}
             
-            # Simular login no LinkedIn
-            logger.info("Realizando login no LinkedIn")
+            # Simulate LinkedIn login
+            logger.info("Logging into LinkedIn")
             self._simulate_login()
             
-            # Mudando para status executando
+            # Change to running status
             self._change_status(BotStatus.RUNNING)
             self.api_client.create_event(
                 "running",
-                "Bot iniciado com sucesso e executando",
+                "Bot started successfully and running",
                 "info",
                 {"status": "running", "bot_version": "1.0.0"}
             )
             
-            # Simular navegação e aplicações
+            # Simulate navigation and applications
             self._simulate_job_search_and_apply()
             
-            # Finalizar o bot
+            # Finalize the bot
             self._finalize_bot()
             
         except Exception as e:
-            logger.error(f"Erro durante a execução do bot: {e}", exc_info=True)
+            logger.error(f"Error during bot execution: {e}", exc_info=True)
             self._handle_failure(str(e))
     
     def _change_status(self, new_status: BotStatus) -> None:
         """
-        Altera o status do bot.
+        Changes the bot status.
         
         Args:
-            new_status: Novo status do bot
+            new_status: New bot status
         """
-        logger.info(f"Alterando status de {self.status.value} para {new_status.value}")
+        logger.info(f"Changing status from {self.status.value} to {new_status.value}")
         self.status = new_status
         
-        # Configurar eventos relacionados ao status
+        # Configure events related to status
         if new_status == BotStatus.PAUSED:
             self.paused.set()
         elif new_status == BotStatus.RUNNING:
@@ -177,192 +177,192 @@ class BotSession:
             self.waiting_for_action.set()
         elif new_status == BotStatus.STOPPING or new_status == BotStatus.COMPLETED or new_status == BotStatus.FAILED:
             self.should_stop.set()
-            self.paused.clear()  # Desbloquear threads pausadas para que possam terminar
-            self.waiting_for_action.set()  # Desbloquear threads esperando ação
+            self.paused.clear()  # Unblock paused threads so they can finish
+            self.waiting_for_action.set()  # Unblock threads waiting for action
     
     def _simulate_login(self) -> None:
-        """Simula o processo de login no LinkedIn."""
-        # Evento de navegação até a página de login
+        """Simulates the LinkedIn login process."""
+        # Event for navigating to login page
         self.api_client.create_event(
             "navigating",
-            "Navegando para a página de login do LinkedIn",
+            "Navigating to LinkedIn login page",
             "info",
             {"url": "https://www.linkedin.com/login"}
         )
         
-        # Atraso para simular carregamento da página
+        # Delay to simulate page loading
         time.sleep(2)
         
-        # Decidir aleatoriamente se vamos precisar de 2FA (30% de chance)
+        # Randomly decide if 2FA is needed (30% chance)
         needs_2fa = random.random() < 0.3
         
         if needs_2fa:
-            # Solicitar código 2FA
-            logger.info("Código 2FA solicitado pelo LinkedIn")
+            # Request 2FA code
+            logger.info("2FA code requested by LinkedIn")
             self._change_status(BotStatus.WAITING)
             
-            # Enviar evento de espera
+            # Send waiting event
             self.api_client.create_event(
                 "waiting",
-                "Aguardando código de verificação 2FA",
+                "Waiting for 2FA verification code",
                 "info",
                 {"reason": "2FA required"}
             )
             
-            # Solicitar ação do usuário
+            # Request user action
             response = self.api_client.request_user_action(
                 UserActionType.PROVIDE_2FA.value,
-                "Por favor, forneça o código de verificação em dois fatores do LinkedIn",
+                "Please provide the LinkedIn two-factor authentication code",
                 "2fa_code"
             )
             
-            # Armazenar o ID da ação atual
+            # Store the current action ID
             self.current_action_id = response["id"]
             
-            # Aguardar a resposta do usuário
-            logger.info(f"Aguardando resposta do usuário para ação {self.current_action_id}")
-            self.waiting_for_action.wait(timeout=300)  # Timeout de 5 minutos
+            # Wait for user response
+            logger.info(f"Waiting for user response for action {self.current_action_id}")
+            self.waiting_for_action.wait(timeout=300)  # 5 minute timeout
             
             if not self.action_response:
-                logger.warning("Tempo limite excedido para ação do usuário")
-                self._handle_failure("Tempo limite excedido para código 2FA")
+                logger.warning("Time limit exceeded for user action")
+                self._handle_failure("Time limit exceeded for 2FA code")
                 return
             
-            # Resetar as flags
+            # Reset flags
             self.waiting_for_action.clear()
             code = self.action_response.get("input", "")
-            logger.info(f"Código 2FA recebido: {code}")
+            logger.info(f"2FA code received: {code}")
             self.action_response = None
             self.current_action_id = None
             
-            # Simulando validação do código
+            # Simulating code validation
             time.sleep(2)
             
-            # Evento de login bem-sucedido com 2FA
+            # Successful login event with 2FA
             self.api_client.create_event(
                 "logged_in",
-                "Login no LinkedIn realizado com sucesso usando 2FA",
+                "Successfully logged into LinkedIn using 2FA",
                 "info"
             )
         else:
-            # Evento de preenchimento de credenciais
+            # Event for filling credentials
             self.api_client.create_event(
                 "login",
-                "Preenchendo credenciais de login",
+                "Filling login credentials",
                 "info"
             )
             
-            # Atraso para simular o preenchimento
+            # Delay to simulate filling
             time.sleep(1)
             
-            # Evento de submissão de formulário
+            # Form submission event
             self.api_client.create_event(
                 "form_submit",
-                "Enviando formulário de login",
+                "Submitting login form",
                 "info"
             )
             
-            # Atraso para simular o processamento do login
+            # Delay to simulate login processing
             time.sleep(2)
             
-            # Evento de login bem-sucedido
+            # Successful login event
             self.api_client.create_event(
                 "logged_in",
-                "Login no LinkedIn realizado com sucesso",
+                "Successfully logged into LinkedIn",
                 "info"
             )
     
     def _simulate_job_search_and_apply(self) -> None:
-        """Simula a busca e aplicação para vagas."""
-        # Simular navegação para página de busca
+        """Simulates the job search and application process."""
+        # Simulate navigation to search page
         self.api_client.create_event(
             "navigating",
-            "Navegando para a página de busca de vagas",
+            "Navigating to job search page",
             "info",
             {"url": "https://www.linkedin.com/jobs/"}
         )
         
-        # Atraso para simular carregamento da página
+        # Delay to simulate page loading
         time.sleep(2)
         
-        # Simular pesquisa com os termos do usuário
-        # Verificar se user_config existe e fornecer defaults se necessário
+        # Simulate search with user terms
+        # Check if user_config exists and provide defaults if necessary
         if self.user_config is None:
-            logger.warning("Configuração do usuário não está disponível, usando valores padrão")
+            logger.warning("User configuration is not available, using default values")
             positions = ["Software Developer"]
             locations = ["Remote"]
             company_blacklist = []
             title_blacklist = []
         else:
-            logger.info(f"Usando configuração do usuário: {type(self.user_config)}")
+            logger.info(f"Using user configuration: {type(self.user_config)}")
             try:
                 positions = self.user_config.get("positions", ["Software Developer"])
-                # Validar positions
+                # Validate positions
                 if not positions or not isinstance(positions, list):
-                    logger.warning(f"Configuração de posições inválida: {positions}, usando padrão")
+                    logger.warning(f"Invalid position configuration: {positions}, using default")
                     positions = ["Software Developer"]
-                logger.info(f"Posições configuradas: {positions}")
+                logger.info(f"Configured positions: {positions}")
                 
                 locations = self.user_config.get("locations", ["Remote"])
-                # Validar locations
+                # Validate locations
                 if not locations or not isinstance(locations, list):
-                    logger.warning(f"Configuração de localizações inválida: {locations}, usando padrão")
+                    logger.warning(f"Invalid location configuration: {locations}, using default")
                     locations = ["Remote"]
-                logger.info(f"Localizações configuradas: {locations}")
+                logger.info(f"Configured locations: {locations}")
                 
                 company_blacklist = self.user_config.get("company_blacklist", [])
-                # Validar company_blacklist
+                # Validate company_blacklist
                 if company_blacklist is None or not isinstance(company_blacklist, list):
-                    logger.warning(f"Lista negra de empresas inválida: {company_blacklist}, usando lista vazia")
+                    logger.warning(f"Invalid company blacklist: {company_blacklist}, using empty list")
                     company_blacklist = []
-                logger.info(f"Lista negra de empresas: {company_blacklist}")
+                logger.info(f"Company blacklist: {company_blacklist}")
                 
                 title_blacklist = self.user_config.get("title_blacklist", [])
-                # Validar title_blacklist
+                # Validate title_blacklist
                 if title_blacklist is None or not isinstance(title_blacklist, list):
-                    logger.warning(f"Lista negra de títulos inválida: {title_blacklist}, usando lista vazia")
+                    logger.warning(f"Invalid title blacklist: {title_blacklist}, using empty list")
                     title_blacklist = []
-                logger.info(f"Lista negra de títulos: {title_blacklist}")
+                logger.info(f"Title blacklist: {title_blacklist}")
             except Exception as e:
-                logger.error(f"Erro ao processar configuração do usuário: {e}")
+                logger.error(f"Error processing user configuration: {e}")
                 positions = ["Software Developer"]
                 locations = ["Remote"]
                 company_blacklist = []
                 title_blacklist = []
         
-        # Assegurar que temos ao menos um valor em cada lista para random.choice
+        # Ensure we have at least one value in each list for random.choice
         if not positions:
             positions = ["Software Developer"]
         if not locations:
             locations = ["Remote"]
             
-        search_query = f"{random.choice(positions)} em {random.choice(locations)}"
+        search_query = f"{random.choice(positions)} in {random.choice(locations)}"
         
         self.api_client.create_event(
             "search_started",
-            f"Iniciando busca por: {search_query}",
+            f"Starting search for: {search_query}",
             "info",
             {"query": search_query}
         )
         
-        # Atraso para simular a busca
+        # Delay to simulate search
         time.sleep(3)
         
-        # Entrar no loop de aplicações até atingir o limite ou receber comando para parar
+        # Enter application loop until reaching limit or receiving command to stop
         while (self.total_applied < self.config.APPLY_LIMIT and not self.should_stop.is_set()):
-            # Verificar se o bot está pausado
+            # Check if the bot is paused
             if self.paused.is_set():
-                logger.info("Bot está pausado, aguardando comando para continuar")
-                self.paused.wait()  # Aguardar até que o bot seja despausado
+                logger.info("Bot is paused, waiting for command to continue")
+                self.paused.wait()  # Wait until bot is unpaused
                 if self.should_stop.is_set():
                     break
                 
             try:
-                # Gerar tempo de espera entre 10 e 60 segundos
+                # Generate wait time between 10 and 60 seconds
                 wait_time = random.randint(10, 60)
-                logger.info(f"Aguardando {wait_time} segundos antes da próxima aplicação")
+                logger.info(f"Waiting {wait_time} seconds before next application")
                 
-                # Aguardar, checando a cada segundo se o bot deve parar
+                # Wait, checking each second if the bot should stop
                 for _ in range(wait_time):
                     if self.should_stop.is_set() or self.paused.is_set():
                         break
@@ -374,143 +374,143 @@ class BotSession:
                 if self.paused.is_set():
                     continue
                 
-                # Simular encontrar uma vaga
+                # Simulate finding a job
                 job = JobInfo()
                 
                 self.api_client.create_event(
                     "job_found",
-                    f"Vaga encontrada: {job.title} na {job.company}",
+                    f"Job found: {job.title} at {job.company}",
                     "info",
                     job.to_dict()
                 )
                 
-                # Atraso para simular a abertura da vaga
+                # Delay to simulate opening the job
                 time.sleep(2)
                 
-                # Verificar se a empresa está na lista negra
+                # Check if company is blacklisted
                 try:
                     if company_blacklist is None:
                         company_blacklist = []
-                        logger.warning("company_blacklist é None, usando lista vazia")
+                        logger.warning("company_blacklist is None, using empty list")
                     
                     if any(blacklisted.lower() in job.company.lower() for blacklisted in company_blacklist):
-                        logger.info(f"Empresa {job.company} está na lista negra, pulando")
+                        logger.info(f"Company {job.company} is blacklisted, skipping")
                         self.api_client.create_event(
                             "job_skipped",
-                            f"Vaga pulada: empresa {job.company} está na lista negra",
+                            f"Job skipped: company {job.company} is blacklisted",
                             "info",
                             {"reason": "blacklisted_company"}
                         )
                         continue
                 except Exception as e:
-                    logger.error(f"Erro ao verificar lista negra de empresas: {e}")
+                    logger.error(f"Error checking company blacklist: {e}")
                 
-                # Verificar se o título está na lista negra
+                # Check if title is blacklisted
                 try:
                     if title_blacklist is None:
                         title_blacklist = []
-                        logger.warning("title_blacklist é None, usando lista vazia")
+                        logger.warning("title_blacklist is None, using empty list")
                         
                     if any(blacklisted.lower() in job.title.lower() for blacklisted in title_blacklist):
-                        logger.info(f"Título {job.title} está na lista negra, pulando")
+                        logger.info(f"Title {job.title} is blacklisted, skipping")
                         self.api_client.create_event(
                             "job_skipped",
-                            f"Vaga pulada: título {job.title} está na lista negra",
+                            f"Job skipped: title {job.title} is blacklisted",
                             "info",
                             {"reason": "blacklisted_title"}
                         )
                         continue
                 except Exception as e:
-                    logger.error(f"Erro ao verificar lista negra de títulos: {e}")
+                    logger.error(f"Error checking title blacklist: {e}")
                 
-                # Simular clique no botão de aplicar
+                # Simulate clicking the apply button
                 self.api_client.create_event(
                     "apply_started",
-                    f"Iniciando aplicação para: {job.title} na {job.company}",
+                    f"Starting application for: {job.title} at {job.company}",
                     "info",
                     job.to_dict()
                 )
                 
-                # Decidir aleatoriamente se vamos precisar resolver um CAPTCHA (15% de chance)
+                # Randomly decide if CAPTCHA needs to be solved (15% chance)
                 needs_captcha = random.random() < 0.15
                 
                 if needs_captcha:
-                    # Solicitar resolução de CAPTCHA
-                    logger.info("CAPTCHA detectado no processo de aplicação")
+                    # Request CAPTCHA solution
+                    logger.info("CAPTCHA detected in application process")
                     self._change_status(BotStatus.WAITING)
                     
-                    # Enviar evento de espera
+                    # Send waiting event
                     self.api_client.create_event(
                         "waiting",
-                        "CAPTCHA detectado no processo de aplicação",
+                        "CAPTCHA detected in application process",
                         "info",
                         {"reason": "captcha_detected"}
                     )
                     
-                    # Solicitar ação do usuário
+                    # Request user action
                     response = self.api_client.request_user_action(
                         UserActionType.SOLVE_CAPTCHA.value,
-                        "Por favor, resolva o CAPTCHA para continuar com a aplicação",
+                        "Please solve the CAPTCHA to continue with the application",
                         "captcha_solution"
                     )
                     
-                    # Armazenar o ID da ação atual
+                    # Store the current action ID
                     self.current_action_id = response["id"]
                     
-                    # Aguardar a resposta do usuário
-                    logger.info(f"Aguardando resolução do CAPTCHA pelo usuário para ação {self.current_action_id}")
-                    self.waiting_for_action.wait(timeout=300)  # Timeout de 5 minutos
+                    # Wait for user response
+                    logger.info(f"Waiting for CAPTCHA solution from user for action {self.current_action_id}")
+                    self.waiting_for_action.wait(timeout=300)  # 5 minute timeout
                     
                     if not self.action_response:
-                        logger.warning("Tempo limite excedido para resolução do CAPTCHA")
-                        self._handle_failure("Tempo limite excedido para resolução do CAPTCHA")
+                        logger.warning("Time limit exceeded for CAPTCHA solution")
+                        self._handle_failure("Time limit exceeded for CAPTCHA solution")
                         return
                     
-                    # Resetar as flags
+                    # Reset flags
                     self.waiting_for_action.clear()
                     captcha_solution = self.action_response.get("input", "")
-                    logger.info(f"CAPTCHA resolvido: {captcha_solution}")
+                    logger.info(f"CAPTCHA solved: {captcha_solution}")
                     self.action_response = None
                     self.current_action_id = None
                     
-                    # Voltar ao status RUNNING
+                    # Return to RUNNING status
                     self._change_status(BotStatus.RUNNING)
                     self.api_client.create_event(
                         "running",
-                        "Continuando a aplicação após resolução do CAPTCHA",
+                        "Continuing application after CAPTCHA resolution",
                         "info"
                     )
                 
-                # Simular preenchimento do formulário
+                # Simulate form filling
                 self.api_client.create_event(
                     "form_filling",
-                    "Preenchendo formulário de aplicação",
+                    "Filling application form",
                     "info"
                 )
                 
-                # Atraso para simular o preenchimento
+                # Delay to simulate filling
                 time.sleep(random.uniform(3, 8))
                 
-                # 10% de chance de falha na aplicação
+                # 10% chance of application failure
                 will_fail = random.random() < 0.1
                 
-                # Registrar aplicação
+                # Register application
                 apply_start_time = datetime.now(timezone.utc)
-                apply_duration = random.randint(15, 120)  # Duração em segundos
+                apply_duration = random.randint(15, 120)  # Duration in seconds
                 
                 try:
                     if will_fail:
-                        # Falha aleatória na aplicação
+                        # Random application failure
                         failure_reasons = [
-                            "Erro no formulário de aplicação",
-                            "Problemas de conexão",
-                            "Aplicação já realizada anteriormente",
-                            "Vaga não está mais disponível",
-                            "Perfil incompatível com os requisitos",
+                            "Error in application form",
+                            "Connection problems",
+                            "Application already submitted previously",
+                            "Job is no longer available",
+                            "Profile incompatible with requirements",
                         ]
                         failed_reason = random.choice(failure_reasons)
                         
-                        # Registrar a falha
+                        # Register the failure
                         apply_data = {
                             "status": BotApplyStatus.FAILED.value,
                             "total_time": apply_duration,
@@ -521,21 +521,21 @@ class BotSession:
                         }
                         
                         response = self.api_client.register_apply(apply_data)
-                        logger.info(f"Aplicação falha registrada: {response}")
+                        logger.info(f"Failed application recorded: {response}")
                         
-                        # Incrementar contadores
+                        # Increment counters
                         self.total_applied += 1
                         self.total_failed += 1
                         
-                        # Enviar evento de falha
+                        # Send failure event
                         self.api_client.create_event(
                             "apply_failed",
-                            f"Falha na aplicação: {failed_reason}",
+                            f"Application failure: {failed_reason}",
                             "warning",
                             {"job_title": job.title, "company": job.company, "reason": failed_reason}
                         )
                     else:
-                        # Aplicação bem-sucedida
+                        # Successful application
                         apply_data = {
                             "status": BotApplyStatus.SUCCESS.value,
                             "total_time": apply_duration,
@@ -545,24 +545,24 @@ class BotSession:
                         }
                         
                         response = self.api_client.register_apply(apply_data)
-                        logger.info(f"Aplicação bem-sucedida registrada: {response}")
+                        logger.info(f"Successful application recorded: {response}")
                         
-                        # Incrementar contadores
+                        # Increment counters
                         self.total_applied += 1
                         self.total_success += 1
                         
-                        # Enviar evento de sucesso
+                        # Send success event
                         self.api_client.create_event(
                             "apply_success",
-                            f"Aplicação enviada com sucesso para: {job.title} na {job.company}",
+                            f"Application successfully submitted for: {job.title} at {job.company}",
                             "info",
                             {"job_title": job.title, "company": job.company}
                         )
                     
-                    # Atualizar o progresso
+                    # Update progress
                     self.api_client.create_event(
                         "progress_update",
-                        f"Progresso: {self.total_applied}/{self.config.APPLY_LIMIT} aplicações completadas",
+                        f"Progress: {self.total_applied}/{self.config.APPLY_LIMIT} applications completed",
                         "info",
                         {
                             "total_applied": self.total_applied,
@@ -573,51 +573,51 @@ class BotSession:
                         }
                     )
                 except Exception as e:
-                    logger.error(f"Erro ao registrar aplicação: {e}", exc_info=True)
+                    logger.error(f"Error registering application: {e}", exc_info=True)
                     self.api_client.create_event(
                         "error",
-                        f"Erro ao registrar aplicação: {e}",
+                        f"Error registering application: {e}",
                         "error",
                         {"error_details": str(e)}
                     )
                 
-                # Verificar se atingimos o limite
+                # Check if we reached the limit
                 if self.total_applied >= self.config.APPLY_LIMIT:
-                    logger.info(f"Limite de aplicações atingido ({self.config.APPLY_LIMIT})")
+                    logger.info(f"Application limit reached ({self.config.APPLY_LIMIT})")
                     self._change_status(BotStatus.STOPPING)
                     self.api_client.create_event(
                         "stopping",
-                        f"Limite de aplicações atingido: {self.config.APPLY_LIMIT}",
+                        f"Application limit reached: {self.config.APPLY_LIMIT}",
                         "info",
                         {"apply_limit": self.config.APPLY_LIMIT}
                     )
             except Exception as e:
-                logger.error(f"Erro durante a aplicação: {e}", exc_info=True)
+                logger.error(f"Error during application: {e}", exc_info=True)
                 
-                # Reportar erro como evento
+                # Report error as event
                 self.api_client.create_event(
                     "error",
-                    f"Erro durante a aplicação: {str(e)}",
+                    f"Error during application: {str(e)}",
                     "error",
                     {"error_details": str(e)}
                 )
                 
-                # Continuar tentando
+                # Continue trying
                 continue
     
     def _finalize_bot(self) -> None:
-        """Finaliza o bot e envia os eventos de conclusão."""
-        # Verificar o status para decidir como finalizar
+        """Finalizes the bot and sends completion events."""
+        # Check status to decide how to finalize
         if self.status == BotStatus.STOPPING:
-            # Finalizar como completo
+            # Finalize as complete
             self._change_status(BotStatus.COMPLETED)
             
             success_rate = 0 if self.total_applied == 0 else round(self.total_success / self.total_applied * 100, 1)
             
-            # Evento de conclusão
+            # Completion event
             self.api_client.create_event(
                 "completed",
-                f"Bot concluído com sucesso. Aplicações: {self.total_applied}, Taxa de sucesso: {success_rate}%",
+                f"Bot completed successfully. Applications: {self.total_applied}, Success rate: {success_rate}%",
                 "info",
                 {
                     "total_applies": self.total_applied,
@@ -627,55 +627,55 @@ class BotSession:
                 }
             )
             
-            logger.info(f"Bot concluído com sucesso. Aplicações: {self.total_applied}, Taxa de sucesso: {success_rate}%")
+            logger.info(f"Bot completed successfully. Applications: {self.total_applied}, Success rate: {success_rate}%")
         elif self.status == BotStatus.FAILED:
-            # Já enviamos o evento de falha no _handle_failure
-            logger.info("Bot finalizado com status de falha.")
+            # We already sent the failure event in _handle_failure
+            logger.info("Bot finalized with failure status.")
     
     def _handle_failure(self, reason: str) -> None:
         """
-        Trata uma falha fatal do bot.
+        Handles a fatal bot failure.
         
         Args:
-            reason: Motivo da falha
+            reason: Failure reason
         """
-        logger.error(f"Falha fatal do bot: {reason}")
+        logger.error(f"Fatal bot failure: {reason}")
         
-        # Mudar o status para falha
+        # Change status to failure
         self._change_status(BotStatus.FAILED)
         
-        # Enviar evento de falha
+        # Send failure event
         self.api_client.create_event(
             "failed",
-            f"Falha do bot: {reason}",
+            f"Bot failure: {reason}",
             "error",
             {"reason": reason}
         )
     
     def resolve_user_action(self, action_id: str, data: Dict[str, Any]) -> None:
         """
-        Resolve uma ação do usuário.
+        Resolves a user action.
         
         Args:
-            action_id: ID da ação
-            data: Dados da resposta do usuário
+            action_id: Action ID
+            data: User response data
         """
         if self.current_action_id == action_id:
-            logger.info(f"Ação do usuário resolvida: {action_id}")
+            logger.info(f"User action resolved: {action_id}")
             self.action_response = data
             
-            # Desbloquear a thread que está esperando
+            # Unblock the waiting thread
             self.waiting_for_action.set()
             
-            # Enviar evento de continuação
+            # Send continuation event
             self.api_client.create_event(
                 "user_action_completed",
-                f"Ação do usuário #{action_id} foi concluída",
+                f"User action #{action_id} has been completed",
                 "info",
                 {"action_id": action_id}
             )
             
-            # Voltar ao status executando
+            # Return to running status
             self._change_status(BotStatus.RUNNING)
         else:
-            logger.warning(f"Recebida resposta para ação {action_id}, mas a ação atual é {self.current_action_id}") 
+            logger.warning(f"Received response for action {action_id}, but current action is {self.current_action_id}") 

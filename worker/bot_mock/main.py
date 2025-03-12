@@ -1,149 +1,190 @@
 #!/usr/bin/env python3
+import asyncio
 import os
+import signal
 import sys
 import time
-import random
-import logging
-import uuid
 import threading
-from datetime import datetime, timezone
-
-from flask import Flask, request, jsonify
-from waitress import serve
-import requests
+import logging
+import uvicorn
 import yaml
-import backoff
+from typing import Dict, Any, Optional
+from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi.responses import JSONResponse
 
-from config import Config
+from config import load_config
 from logger import setup_logger
 from bot_session import BotSession
-from api_client import APIClient
 
-# Configurar logger
-logger = setup_logger("bot_mock")
+logger = setup_logger("main")
+app = FastAPI(title="LinkedIn Bot Mock API")
 
-def validate_env_vars() -> bool:
-    """Valida as variáveis de ambiente necessárias."""
-    required_vars = [
-        "API_PORT",
-        "LINKEDIN_EMAIL",
-        "LINKEDIN_PASSWORD",
-        "APPLY_LIMIT",
-        "STYLE_CHOICE",
-        "SEC_CH_UA",
-        "SEC_CH_UA_PLATFORM",
-        "USER_AGENT",
-        "BACKEND_TOKEN",
-        "BACKEND_URL",
-        "BOT_ID"
-    ]
+# Global variables
+bot_session = None
+config = None
 
-    for var in required_vars:
-        if not os.environ.get(var):
-            logger.error(f"Variável de ambiente {var} não definida")
-            return False
 
-    # Validar style choice
-    valid_styles = [
-        "Cloyola Grey",
-        "Modern Blue",
-        "Modern Grey",
-        "Default",
-        "Clean Blue"
-    ]
-    style = os.environ.get("STYLE_CHOICE")
-    if style not in valid_styles:
-        logger.error(f"STYLE_CHOICE deve ser um dos seguintes: {', '.join(valid_styles)}")
-        return False
-
-    # Validar valor do APPLY_LIMIT
+@app.on_event("startup")
+async def startup_event():
+    """FastAPI startup event handler."""
+    global config
     try:
-        apply_limit = int(os.environ.get("APPLY_LIMIT", "0"))
-        if apply_limit <= 0:
-            logger.error("APPLY_LIMIT deve ser um número maior que zero")
-            return False
-    except ValueError:
-        logger.error("APPLY_LIMIT deve ser um número válido")
-        return False
+        config = load_config()
+        logger.info("Configuration loaded successfully")
+    except Exception as e:
+        logger.error(f"Error loading configuration: {e}")
+        sys.exit(1)
 
-    # Validar que a porta é um número
-    try:
-        port = int(os.environ.get("API_PORT", "0"))
-        if port <= 0 or port > 65535:
-            logger.error("API_PORT deve ser um número válido entre 1 e 65535")
-            return False
-    except ValueError:
-        logger.error("API_PORT deve ser um número válido")
-        return False
 
-    return True
-
-def create_app():
-    """Cria a aplicação Flask."""
-    app = Flask(__name__)
-
-    @app.route('/health', methods=['GET'])
-    def health_check():
-        return jsonify({"status": "healthy", "timestamp": datetime.now(timezone.utc).isoformat()})
-
-    @app.route('/action/<action_id>', methods=['POST'])
-    def handle_action(action_id):
-        """Endpoint para receber resposta de ações do usuário."""
-        try:
-            data = request.json
-            logger.info(f"Recebida resposta para ação {action_id}: {data}")
-            
-            # Notificar o bot para continuar o processo
-            if hasattr(app, 'bot_session'):
-                app.bot_session.resolve_user_action(action_id, data)
-                return jsonify({"status": "success", "message": "Ação processada com sucesso"})
-            else:
-                return jsonify({"status": "error", "message": "Bot não está inicializado"}), 500
-        except Exception as e:
-            logger.error(f"Erro ao processar ação do usuário: {e}")
-            return jsonify({"status": "error", "message": str(e)}), 500
+@app.get("/health")
+async def health_check():
+    """Health check endpoint."""
+    status = "running"
     
-    return app
+    if bot_session:
+        status = bot_session.status
+    
+    return {
+        "status": "ok",
+        "bot_status": status,
+        "config_loaded": config is not None
+    }
 
-def start_api_server(app, port):
-    """Inicia o servidor API."""
-    logger.info(f"Iniciando API na porta {port}")
-    serve(app, host='0.0.0.0', port=port)
+
+@app.post("/start")
+async def start_bot(background_tasks: BackgroundTasks):
+    """Start bot endpoint."""
+    global bot_session
+    
+    if bot_session and bot_session.is_running():
+        return {"status": "error", "message": "Bot is already running"}
+    
+    try:
+        background_tasks.add_task(run_bot)
+        return {"status": "success", "message": "Bot starting in the background"}
+    except Exception as e:
+        logger.error(f"Error starting bot: {e}")
+        return {"status": "error", "message": str(e)}
+
+
+@app.post("/stop")
+async def stop_bot():
+    """Stop bot endpoint."""
+    global bot_session
+    
+    if not bot_session:
+        return {"status": "error", "message": "Bot not started"}
+    
+    try:
+        bot_session.stop()
+        return {"status": "success", "message": "Bot stopping"}
+    except Exception as e:
+        logger.error(f"Error stopping bot: {e}")
+        return {"status": "error", "message": str(e)}
+
+
+@app.post("/action/{action_id}")
+async def user_action(action_id: str, action_data: Dict[str, Any]):
+    """
+    Endpoint for receiving user action responses.
+    
+    Params:
+        action_id: Action identifier
+        action_data: Action response data (typically containing an input field)
+    """
+    global bot_session
+    
+    if not bot_session:
+        raise HTTPException(status_code=404, detail="Bot not started")
+    
+    try:
+        result = bot_session.process_user_action(action_id, action_data)
+        return {"status": "success", "message": "Action processed", "result": result}
+    except Exception as e:
+        logger.error(f"Error processing user action: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/fake-configs")
+async def set_fake_configs(config_data: Dict[str, Any]):
+    """
+    Endpoint for setting fake configurations for testing.
+    Used only for debugging.
+    """
+    try:
+        # Create configs directory if it doesn't exist
+        configs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "configs")
+        os.makedirs(configs_dir, exist_ok=True)
+        
+        # Save configs to file
+        if "user_config" in config_data:
+            with open(os.path.join(configs_dir, "user_config.yaml"), "w") as f:
+                f.write(config_data["user_config"])
+        
+        if "user_resume" in config_data:
+            with open(os.path.join(configs_dir, "user_resume.yaml"), "w") as f:
+                f.write(config_data["user_resume"])
+        
+        return {"status": "success", "message": "Fake configurations set"}
+    except Exception as e:
+        logger.error(f"Error setting fake configurations: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+def signal_handler(sig, frame):
+    """Handle termination signals."""
+    logger.info("Received termination signal, shutting down...")
+    
+    global bot_session
+    if bot_session:
+        bot_session.stop()
+    
+    sys.exit(0)
+
+
+def run_bot():
+    """Run the bot in a background task."""
+    global bot_session, config
+    
+    if bot_session and bot_session.is_running():
+        logger.warning("Bot is already running, ignoring start request")
+        return
+    
+    try:
+        logger.info("Starting bot session")
+        bot_session = BotSession(
+            api_key=config.backend_token,
+            backend_url=config.backend_url,
+            bot_id=config.bot_id,
+            apply_limit=config.apply_limit
+        )
+        bot_session.run()
+    except Exception as e:
+        logger.error(f"Error in bot execution: {e}")
+
 
 def main():
-    """Função principal do bot."""
-    # Verificar variáveis de ambiente
-    if not validate_env_vars():
-        logger.error("Falha na validação das variáveis de ambiente. Encerrando.")
-        sys.exit(1)
+    """Main entry point."""
+    # Register signal handlers
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
     
-    # Carregar configuração
-    config = Config()
-    
-    # Inicializar cliente API
-    api_client = APIClient(config.BACKEND_URL, config.BACKEND_TOKEN)
-    
-    # Criar a sessão do bot
-    bot = BotSession(config, api_client)
-    
-    # Inicializar aplicação Flask
-    app = create_app()
-    app.bot_session = bot
-    
-    # Iniciar o servidor API em uma thread separada
-    api_thread = threading.Thread(target=start_api_server, args=(app, config.API_PORT), daemon=True)
-    api_thread.start()
-    
+    # Get port from config or environment
     try:
-        # Iniciar o bot
-        bot.run()
-    except KeyboardInterrupt:
-        logger.info("Bot interrompido pelo usuário")
-    except Exception as e:
-        logger.error(f"Erro ao executar o bot: {e}")
-    finally:
-        logger.info("Encerrando bot")
-        sys.exit(0)
+        config = load_config()
+        port = config.api_port
+    except Exception:
+        port = int(os.environ.get("API_PORT", "8080"))
+    
+    # Configure logging for uvicorn
+    log_config = uvicorn.config.LOGGING_CONFIG
+    log_config["formatters"]["access"]["fmt"] = "%(asctime)s - %(levelname)s - %(message)s"
+    log_config["formatters"]["default"]["fmt"] = "%(asctime)s - %(levelname)s - %(message)s"
+    
+    # Start the API server
+    logger.info(f"Starting Bot Mock API on port {port}")
+    uvicorn.run("main:app", host="0.0.0.0", port=port, log_config=log_config)
+
 
 if __name__ == "__main__":
     main() 
