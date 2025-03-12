@@ -42,11 +42,7 @@ config = None
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
-    status = "not_started"
-
-    if bot_session:
-        status = bot_session.status.value
-
+    status = bot_session.status.value if bot_session else "not_started"
     return {"status": "ok", "bot_status": status, "config_loaded": config is not None}
 
 
