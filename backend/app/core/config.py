@@ -106,8 +106,8 @@ class Settings(BaseSettings):
     KUBERNETES_BOT_PREFIX: str = "applier"
 
     # Bot Configuration
-    BOT_IMAGE: str = "lambdagency/job-apply-bot:latest"
-    BOT_API_URL: str = "http://localhost:8000/api/v1"
+    BOT_IMAGE: str = "nitruusz/botmock:latest"
+    BOT_API_URL: str = "http://localhost:5000/"
     BOT_LOG_LEVEL: str = "INFO"
 
     # Kubernetes Bot Resources
