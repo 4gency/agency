@@ -56,8 +56,8 @@ class ApplyService:
             self.db.add(apply)
 
             # Update session metrics
+            session.total_applied += 1
             if status == BotApplyStatus.SUCCESS:
-                session.total_applied += 1
                 session.total_success += 1
             else:
                 session.total_failed += 1
