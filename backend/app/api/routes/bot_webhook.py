@@ -1,5 +1,7 @@
+from re import S
 from typing import Any
 
+from app.services.apply import ApplyService
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
 
@@ -83,29 +85,23 @@ def register_apply(
     Register a new job application (success or failed) by the bot.
     Requires the bot session's API key for authentication.
     """
-    # Create a new apply record
-    bot_apply = BotApply(
-        bot_session_id=bot_session.id,
-        status=apply_data.status,
+    apply_service = ApplyService(session)
+    
+    bot_apply = apply_service.create_apply(
+        session_id=bot_session.id,
         total_time=apply_data.total_time,
         job_title=apply_data.job_title,
         job_url=apply_data.job_url,
         company_name=apply_data.company_name,
         failed_reason=apply_data.failed_reason,
+        status=apply_data.status,
     )
-
-    # Add to DB
-    session.add(bot_apply)
-
-    # Update bot session statistics
-    if bot_apply.status == BotApplyStatus.SUCCESS:
-        bot_session.total_success += 1
-    else:
-        bot_session.total_failed += 1
-    bot_session.total_applied += 1
-
-    session.add(bot_session)
-    session.commit()
+    
+    if not bot_apply:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create apply record",
+        )
 
     return {"message": "Application recorded successfully"}
 
