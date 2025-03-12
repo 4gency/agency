@@ -76,39 +76,51 @@ class APIClient:
             Tupla com as configurações e currículo em formato YAML
         """
         logger.info("Obtendo configurações do usuário")
-        response = self._make_request("GET", "/config")
-        
-        if "user_config" not in response or "user_resume" not in response:
-            logger.error(f"Resposta da API incompleta: {response}")
-            raise ValueError("Resposta da API não contém os campos esperados")
-        
-        # Salvar as configurações em arquivo
-        configs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "configs")
-        os.makedirs(configs_dir, exist_ok=True)
-        
-        config_path = os.path.join(configs_dir, "user_config.yaml")
-        with open(config_path, "w") as f:
-            f.write(response["user_config"])
-        
-        resume_path = os.path.join(configs_dir, "user_resume.yaml")
-        with open(resume_path, "w") as f:
-            f.write(response["user_resume"])
-        
-        # Verificar se os YAMLs são válidos
         try:
-            config_yaml = yaml.safe_load(response["user_config"])
-            resume_yaml = yaml.safe_load(response["user_resume"])
+            response = self._make_request("GET", "/config")
             
-            logger.info("Configurações obtidas e validadas com sucesso")
+            if "user_config" not in response or "user_resume" not in response:
+                logger.error(f"Resposta da API incompleta: {response}")
+                raise ValueError("Resposta da API não contém os campos esperados")
             
-            # Armazenar para uso posterior
-            self.config_yaml = config_yaml
-            self.resume_yaml = resume_yaml
+            # Log do tamanho dos YAMLs para debug
+            user_config = response["user_config"]
+            user_resume = response["user_resume"]
             
-            return response["user_config"], response["user_resume"]
-        except yaml.YAMLError as e:
-            logger.error(f"Erro ao validar YAML: {e}")
-            raise
+            logger.info(f"Recebido user_config com {len(user_config)} caracteres")
+            logger.info(f"Recebido user_resume com {len(user_resume)} caracteres")
+            
+            # Salvar as configurações em arquivo para debug
+            configs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "configs")
+            os.makedirs(configs_dir, exist_ok=True)
+            
+            config_path = os.path.join(configs_dir, "user_config.yaml")
+            with open(config_path, "w") as f:
+                f.write(user_config)
+            logger.info(f"Configuração salva em {config_path}")
+            
+            resume_path = os.path.join(configs_dir, "user_resume.yaml")
+            with open(resume_path, "w") as f:
+                f.write(user_resume)
+            logger.info(f"Currículo salvo em {resume_path}")
+            
+            # Verificar se os YAMLs são válidos sem atribuir o resultado
+            try:
+                # Apenas verificar se o parsing funciona
+                yaml.safe_load(user_config)
+                yaml.safe_load(user_resume)
+                logger.info("Configurações obtidas e validadas com sucesso")
+            except yaml.YAMLError as e:
+                logger.error(f"YAML inválido recebido da API: {e}")
+                # Não levantamos exceção aqui para permitir que o bot continue
+                # O processamento real do YAML acontecerá no bot_session.py
+            
+            return user_config, user_resume
+            
+        except Exception as e:
+            logger.error(f"Erro ao obter configurações: {e}")
+            # Retornar YAMLs vazios mas válidos em caso de erro
+            return "{}", "{}"
     
     def register_apply(self, apply_data: Dict) -> Dict:
         """
@@ -157,8 +169,12 @@ class APIClient:
         Returns:
             Dict com a resposta da API contendo o ID da ação
         """
+        # Convert action_type to lowercase as expected by the API
+        # (API expects 'provide_2fa' but our enum uses 'PROVIDE_2FA')
+        lowercase_action_type = action_type.lower()
+        
         action_data = {
-            "action_type": action_type,
+            "action_type": lowercase_action_type,
             "description": description,
             "input_field": input_field
         }

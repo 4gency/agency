@@ -12,7 +12,7 @@ from faker import Faker
 import yaml
 
 from logger import setup_logger
-from models import BotApplyStatus, UserActionType  # Import BotApplyStatus from models
+from models import BotApplyStatus, UserActionType  # Import both from models
 
 logger = setup_logger("bot_session")
 faker = Faker()
@@ -27,13 +27,6 @@ class BotStatus(Enum):
     COMPLETED = "completed"
     FAILED = "failed"
     STOPPING = "stopping"
-
-
-class UserActionType(Enum):
-    """Tipos de ações do usuário."""
-    PROVIDE_2FA = "PROVIDE_2FA"
-    SOLVE_CAPTCHA = "SOLVE_CAPTCHA"
-    ANSWER_QUESTION = "ANSWER_QUESTION"
 
 
 class ApplyStatus(Enum):
@@ -115,11 +108,32 @@ class BotSession:
             
             # Obter as configurações do usuário
             logger.info("Obtendo configurações e currículo do usuário")
-            config_yaml, resume_yaml = self.api_client.get_config()
-            
-            # Carregar configurações
-            self.user_config = yaml.safe_load(config_yaml)
-            self.user_resume = yaml.safe_load(resume_yaml)
+            try:
+                config_yaml, resume_yaml = self.api_client.get_config()
+                
+                # Carregar configurações
+                try:
+                    self.user_config = yaml.safe_load(config_yaml)
+                    logger.info("Configuração do usuário carregada com sucesso")
+                except yaml.YAMLError as e:
+                    logger.error(f"Erro ao carregar configuração YAML: {e}")
+                    self.user_config = {}
+                
+                try:
+                    self.user_resume = yaml.safe_load(resume_yaml)
+                    logger.info("Currículo do usuário carregado com sucesso")
+                except yaml.YAMLError as e:
+                    logger.error(f"Erro ao carregar currículo YAML: {e}")
+                    self.user_resume = {}
+                
+                # Verificar se temos configurações mínimas necessárias
+                if not self.user_config:
+                    logger.warning("Configuração do usuário está vazia ou inválida")
+                
+            except Exception as e:
+                logger.error(f"Falha ao obter configurações do usuário: {e}")
+                self.user_config = {}
+                self.user_resume = {}
             
             # Simular login no LinkedIn
             logger.info("Realizando login no LinkedIn")
@@ -272,9 +286,56 @@ class BotSession:
         time.sleep(2)
         
         # Simular pesquisa com os termos do usuário
-        positions = self.user_config.get("positions", ["Software Developer"])
-        locations = self.user_config.get("locations", ["Remote"])
+        # Verificar se user_config existe e fornecer defaults se necessário
+        if self.user_config is None:
+            logger.warning("Configuração do usuário não está disponível, usando valores padrão")
+            positions = ["Software Developer"]
+            locations = ["Remote"]
+            company_blacklist = []
+            title_blacklist = []
+        else:
+            logger.info(f"Usando configuração do usuário: {type(self.user_config)}")
+            try:
+                positions = self.user_config.get("positions", ["Software Developer"])
+                # Validar positions
+                if not positions or not isinstance(positions, list):
+                    logger.warning(f"Configuração de posições inválida: {positions}, usando padrão")
+                    positions = ["Software Developer"]
+                logger.info(f"Posições configuradas: {positions}")
+                
+                locations = self.user_config.get("locations", ["Remote"])
+                # Validar locations
+                if not locations or not isinstance(locations, list):
+                    logger.warning(f"Configuração de localizações inválida: {locations}, usando padrão")
+                    locations = ["Remote"]
+                logger.info(f"Localizações configuradas: {locations}")
+                
+                company_blacklist = self.user_config.get("company_blacklist", [])
+                # Validar company_blacklist
+                if company_blacklist is None or not isinstance(company_blacklist, list):
+                    logger.warning(f"Lista negra de empresas inválida: {company_blacklist}, usando lista vazia")
+                    company_blacklist = []
+                logger.info(f"Lista negra de empresas: {company_blacklist}")
+                
+                title_blacklist = self.user_config.get("title_blacklist", [])
+                # Validar title_blacklist
+                if title_blacklist is None or not isinstance(title_blacklist, list):
+                    logger.warning(f"Lista negra de títulos inválida: {title_blacklist}, usando lista vazia")
+                    title_blacklist = []
+                logger.info(f"Lista negra de títulos: {title_blacklist}")
+            except Exception as e:
+                logger.error(f"Erro ao processar configuração do usuário: {e}")
+                positions = ["Software Developer"]
+                locations = ["Remote"]
+                company_blacklist = []
+                title_blacklist = []
         
+        # Assegurar que temos ao menos um valor em cada lista para random.choice
+        if not positions:
+            positions = ["Software Developer"]
+        if not locations:
+            locations = ["Remote"]
+            
         search_query = f"{random.choice(positions)} em {random.choice(locations)}"
         
         self.api_client.create_event(
@@ -327,28 +388,40 @@ class BotSession:
                 time.sleep(2)
                 
                 # Verificar se a empresa está na lista negra
-                company_blacklist = self.user_config.get("company_blacklist", [])
-                if any(blacklisted.lower() in job.company.lower() for blacklisted in company_blacklist):
-                    logger.info(f"Empresa {job.company} está na lista negra, pulando")
-                    self.api_client.create_event(
-                        "job_skipped",
-                        f"Vaga pulada: empresa {job.company} está na lista negra",
-                        "info",
-                        {"reason": "blacklisted_company"}
-                    )
-                    continue
+                try:
+                    if company_blacklist is None:
+                        company_blacklist = []
+                        logger.warning("company_blacklist é None, usando lista vazia")
+                    
+                    if any(blacklisted.lower() in job.company.lower() for blacklisted in company_blacklist):
+                        logger.info(f"Empresa {job.company} está na lista negra, pulando")
+                        self.api_client.create_event(
+                            "job_skipped",
+                            f"Vaga pulada: empresa {job.company} está na lista negra",
+                            "info",
+                            {"reason": "blacklisted_company"}
+                        )
+                        continue
+                except Exception as e:
+                    logger.error(f"Erro ao verificar lista negra de empresas: {e}")
                 
                 # Verificar se o título está na lista negra
-                title_blacklist = self.user_config.get("title_blacklist", [])
-                if any(blacklisted.lower() in job.title.lower() for blacklisted in title_blacklist):
-                    logger.info(f"Título {job.title} está na lista negra, pulando")
-                    self.api_client.create_event(
-                        "job_skipped",
-                        f"Vaga pulada: título {job.title} está na lista negra",
-                        "info",
-                        {"reason": "blacklisted_title"}
-                    )
-                    continue
+                try:
+                    if title_blacklist is None:
+                        title_blacklist = []
+                        logger.warning("title_blacklist é None, usando lista vazia")
+                        
+                    if any(blacklisted.lower() in job.title.lower() for blacklisted in title_blacklist):
+                        logger.info(f"Título {job.title} está na lista negra, pulando")
+                        self.api_client.create_event(
+                            "job_skipped",
+                            f"Vaga pulada: título {job.title} está na lista negra",
+                            "info",
+                            {"reason": "blacklisted_title"}
+                        )
+                        continue
+                except Exception as e:
+                    logger.error(f"Erro ao verificar lista negra de títulos: {e}")
                 
                 # Simular clique no botão de aplicar
                 self.api_client.create_event(
@@ -425,77 +498,88 @@ class BotSession:
                 apply_start_time = datetime.now(timezone.utc)
                 apply_duration = random.randint(15, 120)  # Duração em segundos
                 
-                if will_fail:
-                    # Falha aleatória na aplicação
-                    failure_reasons = [
-                        "Erro no formulário de aplicação",
-                        "Problemas de conexão",
-                        "Aplicação já realizada anteriormente",
-                        "Vaga não está mais disponível",
-                        "Perfil incompatível com os requisitos",
-                    ]
-                    failed_reason = random.choice(failure_reasons)
+                try:
+                    if will_fail:
+                        # Falha aleatória na aplicação
+                        failure_reasons = [
+                            "Erro no formulário de aplicação",
+                            "Problemas de conexão",
+                            "Aplicação já realizada anteriormente",
+                            "Vaga não está mais disponível",
+                            "Perfil incompatível com os requisitos",
+                        ]
+                        failed_reason = random.choice(failure_reasons)
+                        
+                        # Registrar a falha
+                        apply_data = {
+                            "status": BotApplyStatus.FAILED.value,
+                            "total_time": apply_duration,
+                            "job_title": job.title,
+                            "job_url": job.url,
+                            "company_name": job.company,
+                            "failed_reason": failed_reason
+                        }
+                        
+                        response = self.api_client.register_apply(apply_data)
+                        logger.info(f"Aplicação falha registrada: {response}")
+                        
+                        # Incrementar contadores
+                        self.total_applied += 1
+                        self.total_failed += 1
+                        
+                        # Enviar evento de falha
+                        self.api_client.create_event(
+                            "apply_failed",
+                            f"Falha na aplicação: {failed_reason}",
+                            "warning",
+                            {"job_title": job.title, "company": job.company, "reason": failed_reason}
+                        )
+                    else:
+                        # Aplicação bem-sucedida
+                        apply_data = {
+                            "status": BotApplyStatus.SUCCESS.value,
+                            "total_time": apply_duration,
+                            "job_title": job.title,
+                            "job_url": job.url,
+                            "company_name": job.company
+                        }
+                        
+                        response = self.api_client.register_apply(apply_data)
+                        logger.info(f"Aplicação bem-sucedida registrada: {response}")
+                        
+                        # Incrementar contadores
+                        self.total_applied += 1
+                        self.total_success += 1
+                        
+                        # Enviar evento de sucesso
+                        self.api_client.create_event(
+                            "apply_success",
+                            f"Aplicação enviada com sucesso para: {job.title} na {job.company}",
+                            "info",
+                            {"job_title": job.title, "company": job.company}
+                        )
                     
-                    # Registrar a falha
-                    apply_data = {
-                        "status": BotApplyStatus.FAILED.value,
-                        "total_time": apply_duration,
-                        "job_title": job.title,
-                        "job_url": job.url,
-                        "company_name": job.company,
-                        "failed_reason": failed_reason
-                    }
-                    
-                    self.api_client.register_apply(apply_data)
-                    
-                    # Incrementar contadores
-                    self.total_applied += 1
-                    self.total_failed += 1
-                    
-                    # Enviar evento de falha
+                    # Atualizar o progresso
                     self.api_client.create_event(
-                        "apply_failed",
-                        f"Falha na aplicação: {failed_reason}",
-                        "warning",
-                        {"job_title": job.title, "company": job.company, "reason": failed_reason}
-                    )
-                else:
-                    # Aplicação bem-sucedida
-                    apply_data = {
-                        "status": BotApplyStatus.SUCCESS.value,
-                        "total_time": apply_duration,
-                        "job_title": job.title,
-                        "job_url": job.url,
-                        "company_name": job.company
-                    }
-                    
-                    self.api_client.register_apply(apply_data)
-                    
-                    # Incrementar contadores
-                    self.total_applied += 1
-                    self.total_success += 1
-                    
-                    # Enviar evento de sucesso
-                    self.api_client.create_event(
-                        "apply_success",
-                        f"Aplicação enviada com sucesso para: {job.title} na {job.company}",
+                        "progress_update",
+                        f"Progresso: {self.total_applied}/{self.config.APPLY_LIMIT} aplicações completadas",
                         "info",
-                        {"job_title": job.title, "company": job.company}
+                        {
+                            "total_applied": self.total_applied,
+                            "total_success": self.total_success,
+                            "total_failed": self.total_failed,
+                            "apply_limit": self.config.APPLY_LIMIT,
+                            "progress_percentage": round(self.total_applied / self.config.APPLY_LIMIT * 100, 1)
+                        }
                     )
-                
-                # Atualizar o progresso
-                self.api_client.create_event(
-                    "progress_update",
-                    f"Progresso: {self.total_applied}/{self.config.APPLY_LIMIT} aplicações completadas",
-                    "info",
-                    {
-                        "total_applied": self.total_applied,
-                        "total_success": self.total_success,
-                        "total_failed": self.total_failed,
-                        "apply_limit": self.config.APPLY_LIMIT,
-                        "progress_percentage": round(self.total_applied / self.config.APPLY_LIMIT * 100, 1)
-                    }
-                )
+                except Exception as e:
+                    logger.error(f"Erro ao registrar aplicação: {e}", exc_info=True)
+                    self.api_client.create_event(
+                        "error",
+                        f"Erro ao registrar aplicação: {e}",
+                        "error",
+                        {"error_details": str(e)}
+                    )
                 
                 # Verificar se atingimos o limite
                 if self.total_applied >= self.config.APPLY_LIMIT:

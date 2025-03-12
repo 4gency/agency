@@ -23,9 +23,10 @@ class BotApplyStatus(str, Enum):
 
 class UserActionType(str, Enum):
     """Tipos de ações que podem ser solicitadas ao usuário."""
-    PROVIDE_2FA = "PROVIDE_2FA"
-    SOLVE_CAPTCHA = "SOLVE_CAPTCHA"
-    ANSWER_QUESTION = "ANSWER_QUESTION"
+    PROVIDE_2FA = "provide_2fa"
+    SOLVE_CAPTCHA = "solve_captcha"
+    ANSWER_QUESTION = "answer_question"
+    CONFIRM_ACTION = "confirm_action"
 
 
 class BotApplyCreate(BaseModel):
