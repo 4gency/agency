@@ -1,0 +1,12 @@
+flask==2.3.3
+requests==2.31.0
+pyyaml==6.0.1
+python-dotenv==1.0.0
+pydantic==2.4.2
+werkzeug==2.3.7
+waitress==2.1.2
+colorlog==6.7.0
+faker==18.13.0
+backoff==2.2.1
+uuid==1.30
+pytz==2023.3 

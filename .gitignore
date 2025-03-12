@@ -8,6 +8,7 @@ node_modules/
 /playwright/.cache/
 *.env
 .docker/
+/configs
 
 # Python
 __pycache__
