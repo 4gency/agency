@@ -190,11 +190,11 @@ class BotSession:
             self.paused.clear()
         elif new_status == BotStatus.WAITING:
             self.waiting_for_action.set()
-        elif (
-            new_status == BotStatus.STOPPING
-            or new_status == BotStatus.COMPLETED
-            or new_status == BotStatus.FAILED
-        ):
+        elif new_status in [
+            BotStatus.STOPPING,
+            BotStatus.COMPLETED,
+            BotStatus.FAILED,
+        ]:
             self.should_stop.set()
             self.paused.clear()  # Unblock paused threads so they can finish
             self.waiting_for_action.set()  # Unblock threads waiting for action
