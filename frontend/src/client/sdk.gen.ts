@@ -33,8 +33,12 @@ import type {
   GetUserDashboardStatsResponse,
   RegisterApplyData,
   RegisterApplyResponse,
+  CreateEventData,
+  CreateEventResponse,
   GetBotConfigData,
   GetBotConfigResponse,
+  RequestUserActionData,
+  RequestUserActionResponse,
   StripeSuccessData,
   StripeSuccessResponse,
   GetStripeCheckoutSessionByIdData,
@@ -554,6 +558,38 @@ export class BotWebhookService {
   }
 
   /**
+   * Create Event
+   * Create a new event for the bot session.
+   * Requires the bot session's API key for authentication.
+   *
+   * Special events with type matching BotSessionStatus values
+   * (e.g., "running", "paused", "stopping", "completed", "failed", "waiting")
+   * will update the bot session status accordingly.
+   * @param data The data for the request.
+   * @param data.apiKey Bot API Key
+   * @param data.requestBody
+   * @returns unknown Successful Response
+   * @throws ApiError
+   */
+  public static createEvent(
+    data: CreateEventData,
+  ): CancelablePromise<CreateEventResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/bot-webhook/events",
+      headers: {
+        "api-key": data.apiKey,
+      },
+      body: data.requestBody,
+      mediaType: "application/json",
+      errors: {
+        401: "Authentication error",
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
    * Get Bot Config
    * Get the configuration and resume for the bot in YAML format.
    * Requires the bot session's API key for authentication.
@@ -575,6 +611,35 @@ export class BotWebhookService {
         401: "Authentication error",
         404: "Configuration not found",
         422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Request User Action
+   * Request an action from the user, such as providing 2FA code or solving a CAPTCHA.
+   * Requires the bot session's API key for authentication.
+   * @param data The data for the request.
+   * @param data.apiKey Bot API Key
+   * @param data.requestBody
+   * @returns UserActionResponse Successful Response
+   * @throws ApiError
+   */
+  public static requestUserAction(
+    data: RequestUserActionData,
+  ): CancelablePromise<RequestUserActionResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/bot-webhook/user-actions",
+      headers: {
+        "api-key": data.apiKey,
+      },
+      body: data.requestBody,
+      mediaType: "application/json",
+      errors: {
+        401: "Authentication error",
+        422: "Validation Error",
+        500: "Failed to create user action",
       },
     })
   }
