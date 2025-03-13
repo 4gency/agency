@@ -34,6 +34,8 @@ class KubernetesPodStatus(Enum):
     PENDING = "pending"
     RUNNING = "running"
     SUCCEEDED = "succeeded"
+    STARTING = "starting"
+    PAUSED = "paused"
     FAILED = "failed"
     UNKNOWN = "unknown"
     TERMINATING = "terminating"
@@ -151,6 +153,8 @@ class BotSession(SQLModel, table=True):
     kubernetes_namespace: str = Field(default=settings.KUBERNETES_NAMESPACE)
     kubernetes_pod_status: KubernetesPodStatus | None = None
     kubernetes_pod_ip: str | None = None
+
+    is_deleted: bool = Field(default=False)
 
     # Métricas básicas
     total_applied: int = Field(default=0)

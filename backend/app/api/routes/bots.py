@@ -134,7 +134,9 @@ def get_bot_sessions(
     Get all bot sessions for the current user.
     """
     bot_service = BotService(session)
-    sessions, total = bot_service.get_user_sessions(user=user, skip=skip, limit=limit)
+    sessions, total = bot_service.get_user_sessions(
+        user=user, skip=skip, limit=limit, show_deleted=False
+    )
 
     return {
         "total": total,
@@ -158,7 +160,9 @@ def get_bot_session(*, session: SessionDep, user: CurrentUser, session_id: UUID)
     bot_service = BotService(session)
 
     try:
-        bot_session = bot_service.get_bot_session(session_id=session_id, user=user)
+        bot_session = bot_service.get_bot_session(
+            session_id=session_id, user=user, show_deleted=False
+        )
     except HTTPException as e:
         raise e
 

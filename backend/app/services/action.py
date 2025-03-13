@@ -6,6 +6,7 @@ from uuid import UUID
 from fastapi import HTTPException, status
 from sqlmodel import Session, select
 
+from app.integrations.kubernetes import kubernetes_manager
 from app.models.bot import BotSession, BotSessionStatus, BotUserAction, UserActionType
 from app.models.core import User
 
@@ -48,6 +49,8 @@ class UserActionService:
             # Update session status to waiting
             session.status = BotSessionStatus.WAITING_INPUT
             session.last_status_message = f"Waiting for user input: {description}"
+
+            # TODO: ALERT USER IN EMAIL AND INTERFACE
 
             # Add to database
             self.db.add(action)
@@ -185,6 +188,12 @@ class UserActionService:
                 select(BotSession).where(BotSession.id == action.bot_session_id)
             ).first()
 
+            if not session:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Session not found",
+                )
+
             if session and session.status == BotSessionStatus.WAITING_INPUT:
                 # Check if there are other pending actions for this session
                 other_pending = self.db.exec(
@@ -204,6 +213,21 @@ class UserActionService:
             self.db.add(action)
             self.db.commit()
             self.db.refresh(action)
+
+            if kubernetes_manager.initialized:
+                success, message, status_code = kubernetes_manager.send_request_to_bot(
+                    session.kubernetes_pod_name,
+                    "POST",
+                    f"/action/{action.id}",
+                    data=action.model_dump(mode="json"),
+                )
+
+                if not success or not (status_code and status_code < 399):
+                    logger.error(f"Error sending request to bot: {message}")
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail="Error sending request to bot",
+                    )
 
             return action
 
