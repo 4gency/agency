@@ -133,6 +133,7 @@ export type BotSession = {
   kubernetes_namespace?: string
   kubernetes_pod_status?: KubernetesPodStatus | null
   kubernetes_pod_ip?: string | null
+  is_deleted?: boolean
   total_applied?: number
   total_success?: number
   total_failed?: number
@@ -411,6 +412,8 @@ export type KubernetesPodStatus =
   | "pending"
   | "running"
   | "succeeded"
+  | "starting"
+  | "paused"
   | "failed"
   | "unknown"
   | "terminating"
