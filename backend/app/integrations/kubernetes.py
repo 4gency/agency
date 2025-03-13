@@ -6,6 +6,7 @@ import requests
 from kubernetes import client, config  # type: ignore
 from kubernetes.client.exceptions import ApiException  # type: ignore
 from kubernetes.stream import portforward  # type: ignore
+from pydantic import ValidationError
 
 from app.core.config import settings
 from app.core.security import decrypt_password
@@ -32,7 +33,10 @@ class KubernetesManager:
             # Verify and create namespace if necessary
             self.ensure_namespace_exists()
         except Exception as e:
-            logger.error(f"Failed to initialize Kubernetes client: {str(e)}")
+            if settings.ENVIRONMENT != "local":
+                raise ValidationError(
+                    f"Failed to initialize Kubernetes client: {str(e)}"
+                )
             self.initialized = False
 
     def ensure_namespace_exists(self) -> None:
