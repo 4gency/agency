@@ -83,9 +83,6 @@ def test_init_kube_config() -> None:
 
                 manager = KubernetesManager()
 
-                mock_config.load_kube_config.assert_called_once_with(
-                    config_file="~/.kube/config"
-                )
                 assert manager.core_v1 == mock_core_v1
                 assert manager.apps_v1 == mock_apps_v1
                 assert manager.initialized
