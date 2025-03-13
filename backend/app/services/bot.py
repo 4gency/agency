@@ -105,7 +105,10 @@ class BotService:
         # Build query
         query = select(BotSession).where(BotSession.user_id == user.id)
 
-        # # Apply status filter if provided
+        if not show_deleted:
+            query = query.where(BotSession.is_deleted == False)
+
+        # TODO: Apply status filter if provided
         # if status:
         #     status_conditions = []
         #     for s in status:
@@ -126,9 +129,6 @@ class BotService:
 
         # Apply pagination and ordering
         query = query.offset(skip).limit(limit).order_by(BotSession.created_at.desc())  # type: ignore
-
-        if not show_deleted:
-            query = query.where(BotSession.is_deleted is False)
 
         sessions = self.db.exec(query).all()
 
