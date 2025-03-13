@@ -35,7 +35,7 @@ class KubernetesManager:
                     )
 
                 config.load_kube_config(config_file=kubeconfig_path)
-                
+
                 # ensure clients after connection
                 self.core_v1 = client.CoreV1Api()
                 self.apps_v1 = client.AppsV1Api()
@@ -188,9 +188,9 @@ class KubernetesManager:
                 namespace=settings.KUBERNETES_NAMESPACE, body=deployment
             )
 
-            if response.status > 399:
-                logger.error(f"Error creating deployment: {response.status}")
-                return False, response.status
+            if not response:
+                logger.error(f"Error creating deployment: {response.__dict__}")
+                return False, str(response)
 
             # Create a service to access the bot
             service = client.V1Service(

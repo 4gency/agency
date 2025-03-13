@@ -1,5 +1,5 @@
 from collections.abc import Generator, MutableMapping
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 
 import pytest
 from kubernetes.client.exceptions import ApiException  # type: ignore
@@ -66,7 +66,8 @@ def test_ensure_namespace_exists_existing(
     kubernetes_manager_patched.ensure_namespace_exists()
 
     # Verify expected calls
-    mock_kubernetes["core_v1"].read_namespace.assert_called_once_with(
+    assert mock_kubernetes["core_v1"].read_namespace.call_count == 2
+    assert mock_kubernetes["core_v1"].read_namespace.call_args == call(
         name=settings.KUBERNETES_NAMESPACE
     )
     mock_kubernetes["core_v1"].create_namespace.assert_not_called()
@@ -84,7 +85,8 @@ def test_ensure_namespace_exists_create(
     kubernetes_manager_patched.ensure_namespace_exists()
 
     # Verify expected calls
-    mock_kubernetes["core_v1"].read_namespace.assert_called_once_with(
+    assert mock_kubernetes["core_v1"].read_namespace.call_count == 2
+    assert mock_kubernetes["core_v1"].read_namespace.call_args == call(
         name=settings.KUBERNETES_NAMESPACE
     )
     mock_kubernetes["core_v1"].create_namespace.assert_called_once()

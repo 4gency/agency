@@ -6,7 +6,6 @@ from uuid import UUID
 from fastapi import HTTPException, status
 from sqlmodel import Session, select
 
-from app.core.config import settings
 from app.integrations.kubernetes import kubernetes_manager
 from app.models.bot import (
     BotSession,
@@ -71,7 +70,7 @@ class BotService:
                         detail=f"Error creating bot deployment: {message}",
                     )
 
-            session.start()                    
+            session.start()
 
             self.db.commit()
         except Exception as e:
@@ -116,7 +115,7 @@ class BotService:
         query = select(BotSession).where(BotSession.user_id == user.id)
 
         if not show_deleted:
-            query = query.where(BotSession.is_deleted == False)
+            query = query.where(BotSession.is_deleted == False)  # noqa
 
         # TODO: Apply status filter if provided
         # if status:

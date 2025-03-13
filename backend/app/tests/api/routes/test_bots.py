@@ -40,13 +40,13 @@ def test_create_bot_session(
     created_session = r.json()
     assert created_session["credentials_id"] == str(credentials.id)
     assert created_session["applies_limit"] == 100
-    assert created_session["status"] == BotSessionStatus.STARTING.value
+    assert created_session["status"] == BotSessionStatus.RUNNING.value
     assert created_session["style"] == BotStyleChoice.DEFAULT.value
 
     # Verificar se foi realmente criado no banco de dados
     session_in_db = db.get(BotSession, uuid.UUID(created_session["id"]))
     assert session_in_db is not None
-    assert session_in_db.status == BotSessionStatus.STARTING
+    assert session_in_db.status == BotSessionStatus.RUNNING
     assert session_in_db.applies_limit == 100
     assert session_in_db.style == BotStyleChoice.DEFAULT
     assert session_in_db.user_id == user.id
