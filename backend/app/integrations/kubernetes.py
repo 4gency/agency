@@ -475,7 +475,7 @@ class KubernetesManager:
                 self.core_v1.connect_get_namespaced_pod_portforward,
                 name=pod_name,
                 namespace=settings.KUBERNETES_NAMESPACE,
-                ports=str(local_port) + ":" + str(target_port),
+                ports=f"{str(local_port)}:{target_port}",
             )
 
             # Start port forwarding in background
@@ -505,8 +505,8 @@ class KubernetesManager:
                 response = requests.request(
                     method=method.upper(),
                     url=url,
-                    json=json_data if json_data else None,
-                    data=data if not json_data else None,
+                    json=json_data or None,
+                    data=None if json_data else data,
                     headers=headers,
                     timeout=timeout,
                 )
