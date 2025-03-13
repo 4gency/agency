@@ -36,5 +36,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        
+      - name: Decode KUBECONFIG
+        run: |
+          if [ -n "${{ secrets.KUBECONFIG }}" ]; then
+            echo "${{ secrets.KUBECONFIG }}" | base64 -d > kubeconfig.yaml
+          fi
+          
       - run: docker compose -f docker-compose.yml build
       - run: docker compose -f docker-compose.yml up -d
