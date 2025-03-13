@@ -1,4 +1,5 @@
 import logging
+import os
 import socket
 from typing import Any
 
@@ -23,7 +24,14 @@ class KubernetesManager:
             if settings.KUBERNETES_IN_CLUSTER:
                 config.load_incluster_config()
             else:
-                config.load_kube_config(config_file="./kubeconfig.yaml")
+                # Check if kubeconfig file exists before trying to load it
+                kubeconfig_path = "./kubeconfig.yaml"
+                if not os.path.exists(kubeconfig_path):
+                    raise FileNotFoundError(
+                        f"Kubeconfig file not found at {kubeconfig_path}"
+                    )
+
+                config.load_kube_config(config_file=kubeconfig_path)
 
             self.core_v1 = client.CoreV1Api()
             self.apps_v1 = client.AppsV1Api()  # API for managing Deployments
@@ -32,11 +40,15 @@ class KubernetesManager:
             # Verify and create namespace if necessary
             self.ensure_namespace_exists()
         except Exception as e:
-            if settings.ENVIRONMENT != "local":
+            if settings.ENVIRONMENT == "production":
+                # Only raise an exception in production environment
                 raise Exception(
                     f"Failed to initialize Kubernetes client: {str(e)}"
                 ) from e
-            self.initialized = False
+            else:
+                # For staging and local environments, log the error but don't stop the application
+                logger.warning(f"Kubernetes client initialization failed: {str(e)}")
+                self.initialized = False
 
     def ensure_namespace_exists(self) -> None:
         """Checks if the namespace exists and creates it if necessary"""
