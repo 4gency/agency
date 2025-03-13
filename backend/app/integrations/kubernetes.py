@@ -35,6 +35,10 @@ class KubernetesManager:
                     )
 
                 config.load_kube_config(config_file=kubeconfig_path)
+                
+                # ensure clients after connection
+                self.core_v1 = client.CoreV1Api()
+                self.apps_v1 = client.AppsV1Api()
 
             self.initialized = True
 
