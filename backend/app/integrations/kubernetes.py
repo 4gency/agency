@@ -1,10 +1,11 @@
 import logging
 import socket
+from typing import Any
 
 import requests
-from kubernetes import client, config
-from kubernetes.client.exceptions import ApiException
-from kubernetes.stream import portforward
+from kubernetes import client, config  # type: ignore
+from kubernetes.client.exceptions import ApiException  # type: ignore
+from kubernetes.stream import portforward  # type: ignore
 
 from app.core.config import settings
 from app.core.security import decrypt_password
@@ -16,7 +17,7 @@ logger = logging.getLogger(__name__)
 class KubernetesManager:
     """Manages communication with the Kubernetes API"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initializes the Kubernetes client"""
         try:
             if settings.KUBERNETES_IN_CLUSTER:
@@ -34,7 +35,7 @@ class KubernetesManager:
             logger.error(f"Failed to initialize Kubernetes client: {str(e)}")
             self.initialized = False
 
-    def ensure_namespace_exists(self):
+    def ensure_namespace_exists(self) -> None:
         """Checks if the namespace exists and creates it if necessary"""
         try:
             self.core_v1.read_namespace(name=settings.KUBERNETES_NAMESPACE)
@@ -189,7 +190,7 @@ class KubernetesManager:
             logger.error(f"Error creating deployment: {str(e)}")
             return False, str(e)
 
-    def pause_bot(self, deployment_name: str) -> tuple[bool, str] | tuple[bool, None]:
+    def pause_bot(self, deployment_name: str) -> tuple[bool, str | None]:
         """Pauses a bot by scaling the deployment to 0 replicas"""
         if not self.initialized:
             return False, "Kubernetes client not initialized"
@@ -219,7 +220,7 @@ class KubernetesManager:
             logger.error(f"Error pausing bot: {str(e)}")
             return False, str(e)
 
-    def resume_bot(self, deployment_name: str) -> tuple[bool, str] | tuple[bool, None]:
+    def resume_bot(self, deployment_name: str) -> tuple[bool, str | None]:
         """Resumes a bot by scaling the deployment to 1 replica"""
         if not self.initialized:
             return False, "Kubernetes client not initialized"
@@ -249,7 +250,7 @@ class KubernetesManager:
             logger.error(f"Error resuming bot: {str(e)}")
             return False, str(e)
 
-    def delete_bot(self, deployment_name: str) -> tuple[bool, str]:
+    def delete_bot(self, deployment_name: str) -> tuple[bool, str | None]:
         """Removes a bot (deployment and service)"""
         if not self.initialized:
             return False, "Kubernetes client not initialized"
@@ -274,7 +275,7 @@ class KubernetesManager:
             logger.info(
                 f"Bot {deployment_name} deleted from namespace {settings.KUBERNETES_NAMESPACE}"
             )
-            return True, None
+            return True, "Bot deleted successfully"
         except ApiException as e:
             if e.status == 404:
                 logger.warning(f"Deployment {deployment_name} not found for deletion")
@@ -330,7 +331,7 @@ class KubernetesManager:
         credentials: Credentials | None = None,
         style: str | None = None,
         applies_limit: int | None = None,
-    ) -> tuple[bool, str]:
+    ) -> tuple[bool, str | None]:
         """Updates the configuration of an existing bot"""
         if not self.initialized:
             return False, "Kubernetes client not initialized"
@@ -345,7 +346,7 @@ class KubernetesManager:
             container = deployment.spec.template.spec.containers[0]
 
             # Helper function to update env vars
-            def update_env_var(name, value):
+            def update_env_var(name: str, value: Any) -> None:
                 if value is None:
                     return
 
@@ -376,7 +377,7 @@ class KubernetesManager:
             )
 
             logger.info(f"Bot configuration {deployment_name} updated")
-            return True, None
+            return True, "Configuration updated successfully"
         except ApiException as e:
             if e.status == 404:
                 logger.warning(f"Deployment {deployment_name} not found for update")
@@ -384,7 +385,7 @@ class KubernetesManager:
             logger.error(f"Error updating bot: {str(e)}")
             return False, str(e)
 
-    def get_all_bots(self) -> list[dict]:
+    def get_all_bots(self) -> list[dict[str, Any]]:
         """Lists all bots (deployments) in the namespace"""
         if not self.initialized:
             return []
@@ -424,8 +425,8 @@ class KubernetesManager:
         method: str,
         endpoint: str,
         target_port: int = 5000,
-        data: dict | None = None,
-        headers: dict | None = None,
+        data: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
         timeout: int = 10,
     ) -> tuple[bool, str, int | None]:
         """
@@ -528,7 +529,9 @@ class KubernetesManager:
             logger.error(f"Error sending request to bot: {str(e)}")
             return False, f"Error: {str(e)}", None
 
-    def _find_available_port(self, start_port=49152, end_port=65535):
+    def _find_available_port(
+        self, start_port: int = 49152, end_port: int = 65535
+    ) -> int:
         """Find an available local port for port forwarding"""
         for port in range(start_port, end_port):
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
