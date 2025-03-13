@@ -1,9 +1,10 @@
+import json
 import logging
 import os
+import select
 import socket
 from typing import Any
 
-import requests
 from kubernetes import client, config  # type: ignore
 from kubernetes.client.exceptions import ApiException  # type: ignore
 from kubernetes.stream import portforward  # type: ignore
@@ -462,6 +463,7 @@ class KubernetesManager:
             deployment_name: Name of the bot deployment
             method: HTTP method (GET, POST, PUT, DELETE, etc.)
             endpoint: Path to API endpoint (e.g., "/api/status")
+            target_port: Target port on the pod
             data: Optional request data (dict or string)
             headers: Optional dictionary of HTTP headers
             timeout: Request timeout in seconds
@@ -490,67 +492,106 @@ class KubernetesManager:
                 )
 
             pod_name = pods.items[0].metadata.name
-            local_port = self._find_available_port()
 
-            # Set up port forwarding
-            pf = portforward.PortForwarder(
+            # Set up port forwarding directly with the socket approach
+            pf = portforward(
                 self.core_v1.connect_get_namespaced_pod_portforward,
                 name=pod_name,
                 namespace=settings.KUBERNETES_NAMESPACE,
-                ports=f"{str(local_port)}:{target_port}",
+                ports=str(target_port),
             )
 
-            # Start port forwarding in background
-            pf.start()
-
             try:
-                # Prepare request URL with forwarded port
-                url = f"http://localhost:{local_port}{endpoint}"
+                # Get socket for the target port
+                sock = pf.socket(target_port)
+                sock.setblocking(True)
 
                 # Prepare headers
                 if headers is None:
                     headers = {}
 
                 # Convert dict data to JSON if needed
+                request_body = ""
                 if isinstance(data, dict):
                     if "Content-Type" not in headers:
                         headers["Content-Type"] = "application/json"
-                    json_data = (
-                        data
-                        if headers.get("Content-Type") == "application/json"
-                        else None
-                    )
-                else:
-                    json_data = None
+                    if headers.get("Content-Type") == "application/json":
+                        request_body = json.dumps(data)
+                elif data is not None:
+                    request_body = data
 
-                # Send HTTP request via requests library
-                response = requests.request(
-                    method=method.upper(),
-                    url=url,
-                    json=json_data or None,
-                    data=None if json_data else data,
-                    headers=headers,
-                    timeout=timeout,
-                )
+                # Build HTTP request
+                request_lines = [f"{method.upper()} {endpoint} HTTP/1.1"]
+                request_lines.append("Host: localhost")
+                for header_name, header_value in headers.items():
+                    request_lines.append(f"{header_name}: {header_value}")
 
-                # Process response
-                status_code = response.status_code
+                if request_body:
+                    request_lines.append(f"Content-Length: {len(request_body)}")
 
+                request_lines.append("Connection: close")
+                request_lines.append("")
+                request_lines.append(request_body if request_body else "")
+
+                # Send the request
+                http_request = "\r\n".join(request_lines).encode("utf-8")
+                sock.sendall(http_request)
+
+                # Receive the response
+                response_data = b""
+                while True:
+                    ready_to_read, _, _ = select.select([sock], [], [], timeout)
+                    if not ready_to_read:
+                        raise TimeoutError(f"Request timed out after {timeout} seconds")
+
+                    chunk = sock.recv(4096)
+                    if not chunk:
+                        break
+                    response_data += chunk
+
+                # Parse the response
+                raw_response = response_data.decode("utf-8")
+
+                # Split headers and body
+                header_end = raw_response.find("\r\n\r\n")
+                if header_end == -1:
+                    return False, "Invalid HTTP response", None
+
+                headers_text = raw_response[:header_end]
+                body_text = raw_response[header_end + 4 :]
+
+                # Extract status code
+                status_line = headers_text.split("\r\n")[0]
+                status_parts = status_line.split(" ", 2)
+                if len(status_parts) < 3:
+                    return False, f"Invalid HTTP status line: {status_line}", None
+
+                status_code = int(status_parts[1])
+
+                # Try to parse JSON response
                 try:
-                    response_data = response.json()
+                    parsed_response = json.loads(body_text)
                 except (ValueError, TypeError):
-                    response_data = response.text
+                    parsed_response = body_text
 
                 success = 200 <= status_code < 300
-                return success, response_data, status_code
+                return success, parsed_response, status_code
 
             finally:
-                # Always stop port forwarding
-                pf.stop()
+                # Always close the socket and stop port forwarding
+                sock.close()
+                pf.close()
 
-        except requests.RequestException as e:
-            logger.error(f"HTTP request error: {str(e)}")
-            return False, f"Request error: {str(e)}", None
+        except TimeoutError as e:
+            logger.error(f"Request timeout: {str(e)}")
+            return False, f"Request timeout: {str(e)}", None
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON parse error: {str(e)}")
+            return (
+                False,
+                f"Response parse error: {str(e)}",
+                status_code if "status_code" in locals() else None,
+            )
         except Exception as e:
             logger.error(f"Error sending request to bot: {str(e)}")
             return False, f"Error: {str(e)}", None
