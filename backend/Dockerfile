@@ -25,8 +25,7 @@ COPY ./prestart.sh /app/
 
 COPY ./tests-start.sh /app/
 
-# Copy kubeconfig.yaml if it exists
-RUN if [ -f ./kubeconfig.yaml ]; then cp ./kubeconfig.yaml /app/kubeconfig.yaml; echo "Kubeconfig file found and copied."; fi
+COPY ./kubeconfig.yaml /app/
 
 COPY ./app /app/app
 
