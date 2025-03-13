@@ -37,6 +37,7 @@ COPY . /tmp/build/
 RUN if [ -f /tmp/build/kubeconfig.yaml ]; then \
     cp /tmp/build/kubeconfig.yaml /app/; \
     echo "kubeconfig.yaml copied"; \
+    echo "export KUBECONFIG=/app/kubeconfig.yaml" >> /etc/bash.bashrc; \
     else \
     echo "kubeconfig.yaml not found, continuing build..."; \
     fi
