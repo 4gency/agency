@@ -27,14 +27,14 @@ class KubernetesManager:
             if settings.KUBERNETES_IN_CLUSTER:
                 config.load_incluster_config()
             else:
-                # # Check if kubeconfig file exists before trying to load it
-                # kubeconfig_path = "./kubeconfig.yaml"
-                # if not os.path.exists(kubeconfig_path):
-                #     raise FileNotFoundError(
-                #         f"Kubeconfig file not found at {kubeconfig_path}"
-                #     )
+                # Check if kubeconfig file exists before trying to load it
+                kubeconfig_path = "kubeconfig.yaml"
+                if not os.path.exists(kubeconfig_path):
+                    raise FileNotFoundError(
+                        f"Kubeconfig file not found at {kubeconfig_path}"
+                    )
 
-                config.load_kube_config()
+                config.load_kube_config(config_file=kubeconfig_path)
 
             self.initialized = True
 
