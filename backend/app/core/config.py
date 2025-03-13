@@ -124,7 +124,7 @@ class Settings(BaseSettings):
             )
             if self.ENVIRONMENT == "production":
                 raise ValueError(message)
-            else:
+            elif self.ENVIRONMENT == "staging":
                 warnings.warn(message, stacklevel=1)
 
     @model_validator(mode="after")

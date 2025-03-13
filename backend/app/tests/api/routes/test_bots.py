@@ -265,11 +265,11 @@ def test_stop_bot_session(
     assert r.status_code == 200, f"Response: {r.text}"
     session_data = r.json()
     assert session_data["id"] == str(bot_session.id)
-    assert session_data["status"] == BotSessionStatus.STOPPING.value
+    assert session_data["status"] == BotSessionStatus.COMPLETED.value
 
     # Verificar se foi atualizado no banco de dados
     db.refresh(bot_session)
-    assert bot_session.status == BotSessionStatus.STOPPING
+    assert bot_session.status == BotSessionStatus.COMPLETED
 
 
 def test_pause_bot_session(
@@ -395,4 +395,5 @@ def test_delete_bot_session(
 
     # Verificar se foi excluído do banco de dados
     deleted_session = db.get(BotSession, session_id)
-    assert deleted_session is None
+    assert deleted_session is not None
+    assert deleted_session.is_deleted

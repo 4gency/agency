@@ -3,6 +3,6 @@
 set -e
 set -x
 
-coverage run --source=app -m pytest
+pytest app/tests --cov=app --cov-report=term-missing -n auto
 coverage report --show-missing
 coverage html --title "${@-coverage}"

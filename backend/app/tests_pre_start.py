@@ -22,7 +22,8 @@ wait_seconds = 1
 def init(db_engine: Engine) -> None:
     try:
         # Try to create session to check if DB is awake
-        with Session(db_engine) as session:
+        # Setting join_transaction_mode to rollback_only prevents warnings when engine is already in transaction
+        with Session(db_engine, join_transaction_mode="rollback_only") as session:
             session.exec(select(1))
     except Exception as e:
         logger.error(e)

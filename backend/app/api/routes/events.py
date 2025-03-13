@@ -23,9 +23,6 @@ class EventPublic(SQLModel):
     details: dict[str, Any] | None = None
     created_at: datetime
 
-    class Config:
-        from_attributes = True
-
 
 class EventsResponse(SQLModel):
     """Modelo para resposta de listagem de eventos"""

@@ -23,9 +23,6 @@ class ApplyPublic(SQLModel):
     job_url: str | None = None
     company_name: str | None = None
 
-    class Config:
-        from_attributes = True
-
 
 class AppliesResponse(SQLModel):
     """Modelo para resposta de listagem de aplicações"""

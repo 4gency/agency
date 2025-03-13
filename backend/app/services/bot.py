@@ -7,7 +7,13 @@ from fastapi import HTTPException, status
 from sqlmodel import Session, select
 
 from app.core.config import settings
-from app.models.bot import BotSession, BotSessionStatus, BotStyleChoice
+from app.integrations.kubernetes import kubernetes_manager
+from app.models.bot import (
+    BotSession,
+    BotSessionStatus,
+    BotStyleChoice,
+    KubernetesPodStatus,
+)
 from app.models.core import User
 
 logger = logging.getLogger(__name__)
@@ -42,30 +48,40 @@ class BotService:
         style: BotStyleChoice = BotStyleChoice.DEFAULT,
     ) -> BotSession:
         """Create a new bot session"""
-        # Create session
-        session = BotSession(
-            user_id=user_id,
-            credentials_id=credentials_id,
-            applies_limit=applies_limit,
-            status=BotSessionStatus.STARTING,
-            style=style,
-        )
+        try:
+            # Create session
+            session = BotSession(
+                user_id=user_id,
+                credentials_id=credentials_id,
+                applies_limit=applies_limit,
+                status=BotSessionStatus.STARTING,
+                style=style,
+            )
 
-        session = self.save_session(session)
+            session = self.save_session(session)
 
-        # Add creation event
-        session.create()
-        self.db.commit()
+            # Add creation event
+            session.create()
+
+            self.db.commit()
+        except Exception as e:
+            logger.exception(f"Error creating bot session: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error creating bot session: {str(e)}",
+            ) from e
 
         return session
 
-    def get_bot_session(self, session_id: UUID, user: User) -> BotSession:
+    def get_bot_session(
+        self, session_id: UUID, user: User, show_deleted: bool = True
+    ) -> BotSession:
         """Get a bot session with permission check"""
         session = self.db.exec(
             select(BotSession).where(BotSession.id == session_id)
         ).first()
 
-        if not session:
+        if not session or (not show_deleted and session.is_deleted):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Bot session not found"
             )
@@ -83,6 +99,7 @@ class BotService:
         user: User,
         skip: int = 0,
         limit: int = 100,
+        show_deleted: bool = True,
     ) -> tuple[list[BotSession], int]:
         """Get all bot sessions for a user with pagination and filtering"""
         # Build query
@@ -109,6 +126,10 @@ class BotService:
 
         # Apply pagination and ordering
         query = query.offset(skip).limit(limit).order_by(BotSession.created_at.desc())  # type: ignore
+
+        if not show_deleted:
+            query = query.where(BotSession.is_deleted is False)
+
         sessions = self.db.exec(query).all()
 
         return cast(list[BotSession], sessions), total
@@ -132,6 +153,15 @@ class BotService:
                 f"{settings.KUBERNETES_BOT_PREFIX}-{session.id.hex[:8]}"
             )
             session.last_heartbeat_at = datetime.now(timezone.utc)
+
+            if kubernetes_manager.initialized:
+                result, message = kubernetes_manager.create_bot_deployment(session)
+
+                if not result:
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail=f"Error creating bot deployment: {message}",
+                    )
 
             # Save changes
             return self.save_session(session)
@@ -170,6 +200,20 @@ class BotService:
             # Update session state
             session.stop()
 
+            if kubernetes_manager.initialized:
+                result, message = kubernetes_manager.delete_bot(
+                    session.kubernetes_pod_name
+                )
+
+                if not result:
+                    logger.error(f"Error deleting bot session: {message}")
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail="Error deleting bot session",
+                    )
+
+            session.complete()
+
             # Save changes
             return self.save_session(session)
 
@@ -195,6 +239,18 @@ class BotService:
         try:
             # Update session state
             session.pause()
+
+            if kubernetes_manager.initialized:
+                result, message = kubernetes_manager.pause_bot(
+                    session.kubernetes_pod_name
+                )
+
+                if not result:
+                    logger.error(f"Error pausing bot session: {message}")
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail="Error pausing bot session",
+                    )
 
             # Save changes
             return self.save_session(session)
@@ -222,6 +278,18 @@ class BotService:
             # Update session state
             session.resume()
 
+            if kubernetes_manager.initialized:
+                result, message = kubernetes_manager.resume_bot(
+                    session.kubernetes_pod_name
+                )
+
+                if not result:
+                    logger.error(f"Error resuming bot session: {message}")
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail="Error resuming bot session",
+                    )
+
             # Save changes
             return self.save_session(session)
 
@@ -242,6 +310,22 @@ class BotService:
             if not session:
                 logger.error(f"Session {session_id} not found for heartbeat update")
                 return False
+
+            if kubernetes_manager.initialized:
+                pod_status, pod_message = kubernetes_manager.get_bot_status(
+                    session.kubernetes_pod_name
+                )
+
+                if not pod_status:
+                    logger.error(f"Error getting bot status: {pod_message}")
+                    return False
+
+                if pod_status == KubernetesPodStatus.PAUSED:
+                    session.status = BotSessionStatus.PAUSED
+                elif pod_status == KubernetesPodStatus.RUNNING:
+                    session.status = BotSessionStatus.RUNNING
+                elif pod_status == KubernetesPodStatus.STARTING:
+                    session.status = BotSessionStatus.STARTING
 
             # Update heartbeat
             session.heartbeat()
@@ -322,8 +406,18 @@ class BotService:
             )
 
         try:
-            # Delete session
-            self.db.delete(session)
+            session.is_deleted = True
+
+            # ensure pod is deleted
+            if kubernetes_manager.initialized:
+                result, message = kubernetes_manager.delete_bot(
+                    session.kubernetes_pod_name
+                )
+
+                if not result:
+                    pass  # don't raise error if pod is not found
+
+            self.db.add(session)
             self.db.commit()
 
             return True

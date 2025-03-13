@@ -391,7 +391,7 @@ def test_stripe_webhook(
     ) as mock_handle_checkout:
         response = client.post(
             f"{checkout_base_url}/webhook",
-            data=fake_payload,  # type: ignore
+            content=fake_payload,  # Changed from data= to content= to fix deprecation warning
             headers={"stripe-signature": fake_signature},
         )
         assert response.status_code == 200, f"Response: {response.text}"
