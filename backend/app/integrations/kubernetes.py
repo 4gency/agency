@@ -18,6 +18,9 @@ logger = logging.getLogger(__name__)
 class KubernetesManager:
     """Manages communication with the Kubernetes API"""
 
+    core_v1 = client.CoreV1Api()
+    apps_v1 = client.AppsV1Api()  # API for managing Deployments
+
     def __init__(self) -> None:
         """Initializes the Kubernetes client"""
         try:
@@ -33,8 +36,6 @@ class KubernetesManager:
 
                 config.load_kube_config(config_file=kubeconfig_path)
 
-            self.core_v1 = client.CoreV1Api()
-            self.apps_v1 = client.AppsV1Api()  # API for managing Deployments
             self.initialized = True
 
             # Verify and create namespace if necessary
@@ -52,6 +53,12 @@ class KubernetesManager:
 
     def ensure_namespace_exists(self) -> None:
         """Checks if the namespace exists and creates it if necessary"""
+        if not self.initialized:
+            logger.warning(
+                "Cannot ensure namespace exists: Kubernetes client not initialized"
+            )
+            return
+
         try:
             self.core_v1.read_namespace(name=settings.KUBERNETES_NAMESPACE)
             logger.info(f"Namespace {settings.KUBERNETES_NAMESPACE} already exists")
