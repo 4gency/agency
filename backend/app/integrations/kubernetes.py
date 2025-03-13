@@ -23,7 +23,7 @@ class KubernetesManager:
             if settings.KUBERNETES_IN_CLUSTER:
                 config.load_incluster_config()
             else:
-                config.load_kube_config(config_file="kubeconfig.yaml")
+                config.load_kube_config(config_file="./kubeconfig.yaml")
 
             self.core_v1 = client.CoreV1Api()
             self.apps_v1 = client.AppsV1Api()  # API for managing Deployments
