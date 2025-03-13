@@ -40,7 +40,7 @@ jobs:
       - name: Decode KUBECONFIG
         run: |
           if [ -n "${{ secrets.KUBECONFIG }}" ]; then
-            echo "${{ secrets.KUBECONFIG }}" | base64 -d > kubeconfig.yaml
+            echo "${{ secrets.KUBECONFIG }}" | base64 -d > backend/kubeconfig.yaml
           fi
         
       - run: docker compose -f docker-compose.yml build
