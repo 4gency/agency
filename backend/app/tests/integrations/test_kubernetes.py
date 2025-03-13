@@ -74,7 +74,7 @@ def test_init_kube_config() -> None:
     """Test initializing with kube config file"""
     with patch("app.integrations.kubernetes.settings") as mock_settings:
         mock_settings.KUBERNETES_IN_CLUSTER = False
-        with patch("app.integrations.kubernetes.config") as mock_config:
+        with patch("app.integrations.kubernetes.config"):
             with patch("app.integrations.kubernetes.client") as mock_client:
                 mock_core_v1 = MagicMock()
                 mock_apps_v1 = MagicMock()
