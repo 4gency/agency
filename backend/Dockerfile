@@ -15,6 +15,13 @@ COPY ./pyproject.toml ./poetry.lock* /app/
 ARG INSTALL_DEV=false
 RUN bash -c "if [ $INSTALL_DEV == 'true' ] ; then poetry install --no-root ; else poetry install --no-root --only main ; fi"
 
+# Install kubectl
+RUN curl -LO "https://dl.k8s.io/release/stable.txt" && \
+    curl -LO "https://dl.k8s.io/release/$(cat stable.txt)/bin/linux/amd64/kubectl" && \
+    chmod +x kubectl && \
+    mv kubectl /usr/local/bin/ && \
+    rm stable.txt
+
 ENV PYTHONPATH=/app
 
 COPY ./scripts/ /app/
