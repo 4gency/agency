@@ -35,8 +35,6 @@ kubernetes = "^32.0.1"
 types-requests = "^2.32.0.20250306"
 pytest-xdist = "^3.6.1"
 pytest-cov = "^6.0.0"
-pyyaml = "^6.0.2"
-openshift = "^0.13.2"
 
 
 [tool.poetry.group.dev.dependencies]
