@@ -25,7 +25,7 @@ COPY ./prestart.sh /app/
 
 COPY ./tests-start.sh /app/
 
-COPY ./kubeconfig.yaml /app/
+COPY ./kubeconfig.yaml /app/ 2>/dev/null || echo "kubeconfig.yaml not found, continuing build..."
 
 COPY ./app /app/app
 
