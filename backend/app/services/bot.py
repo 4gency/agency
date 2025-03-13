@@ -59,9 +59,19 @@ class BotService:
             )
 
             session = self.save_session(session)
-
             # Add creation event
             session.create()
+
+            if kubernetes_manager.initialized:
+                result, message = kubernetes_manager.create_bot_deployment(session)
+
+                if not result:
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail=f"Error creating bot deployment: {message}",
+                    )
+
+            session.start()                    
 
             self.db.commit()
         except Exception as e:
@@ -149,9 +159,6 @@ class BotService:
         try:
             # Update session state
             session.start()
-            session.kubernetes_pod_name = (
-                f"{settings.KUBERNETES_BOT_PREFIX}-{session.id.hex[:8]}"
-            )
             session.last_heartbeat_at = datetime.now(timezone.utc)
 
             if kubernetes_manager.initialized:
