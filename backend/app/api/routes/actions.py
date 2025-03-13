@@ -30,9 +30,6 @@ class UserActionPublic(SQLModel):
     requested_at: datetime
     completed_at: datetime | None = None
 
-    class Config:
-        from_attributes = True
-
 
 class UserActionsResponse(SQLModel):
     """Modelo para resposta de listagem de ações"""

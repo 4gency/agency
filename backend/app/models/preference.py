@@ -87,9 +87,6 @@ class ConfigPublic(BaseModel):
         "Brazil",
     ]
 
-    class Config:
-        extra = "ignore"
-
 
 class Config(SQLModel, table=True):
     __tablename__: ClassVar[str] = "job_preferences"

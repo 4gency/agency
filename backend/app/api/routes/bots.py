@@ -50,9 +50,6 @@ class SessionPublic(SQLModel):
     total_paused_time: int
     last_heartbeat_at: datetime | None = None
 
-    class Config:
-        from_attributes = True
-
 
 class SessionsResponse(SQLModel):
     """Modelo para resposta de listagem de sessões"""

@@ -37,9 +37,6 @@ class Settings(BaseSettings):
         None, description="Gotenberg PDF service URL (optional)"
     )
 
-    class Config:
-        env_file = ".env"
-
 
 def load_config() -> Settings:
     """Loads and validates environment variables."""

@@ -53,9 +53,6 @@ class CredentialsPublic(SQLModel):
     email: str  # Email ofuscado exibido ao usuário
     password: str  # Senha ofuscada exibida ao usuário (geralmente asteriscos)
 
-    class Config:
-        from_attributes = True
-
 
 # Definição do modelo de resposta para a listagem de credenciais
 class CredentialsResponse(SQLModel):
