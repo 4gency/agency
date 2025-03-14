@@ -206,7 +206,7 @@ const LinkedInCredentialsForm = forwardRef<LinkedInCredentialsFormRef, LinkedInC
           <Alert status="info" borderRadius="md" bg={alertBgColor}>
             <AlertIcon />
             <Text fontSize="sm">
-              Your credentials are encrypted and securely stored. We use them only for automating job applications on your behalf.
+            Your data is protected by end-to-end encryption and zero-knowledge security protocols. Only you and our automated job application system can access your credentials.
             </Text>
           </Alert>
           

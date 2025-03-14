@@ -210,7 +210,22 @@ const OnboardingPage = () => {
     if (activeStep < steps.length - 1) {
       setActiveStep((prevStep) => prevStep + 1)
     } else {
-      handleComplete()
+      const userOnboardingKey = getUserOnboardingKey();
+      if (userOnboardingKey) {
+        localStorage.setItem(userOnboardingKey, "true");
+      }
+      
+      toast({
+        title: "Setup Skipped",
+        description: "You can complete your LinkedIn setup later from your profile settings.",
+        status: "info",
+        duration: 3000,
+        position: "bottom-right",
+        isClosable: true,
+      })
+      
+      // Redirect to dashboard
+      navigate({ to: "/" })
     }
   }
 
@@ -335,7 +350,7 @@ const OnboardingPage = () => {
         )
       case 2:
         return (
-          <Box borderWidth="1px" borderRadius="lg" borderColor={borderColor} bg={bgColor} maxW={{ base: "100%", md: "container.md" }} mx="auto" p={{ base: 4, md: 6 }}>
+          <Box borderWidth="1px" borderRadius="lg" borderColor={borderColor} bg={bgColor} maxW={{ base: "100%", md: "container.md" }} mx="auto" p={{ base: 4, md: 6 }} mb={10}>
             <VStack spacing={6} align="stretch">
               <Heading size="md">Connect Your LinkedIn Account</Heading>
               <Text color={textColor}>
@@ -475,7 +490,7 @@ const OnboardingPage = () => {
             <Button 
               onClick={handleSkip}
               variant="ghost"
-              isDisabled={activeStep === steps.length - 1 || isProcessingStep || isUpdatingUser}
+              isDisabled={isProcessingStep || isUpdatingUser}
               size={{ base: "md", md: "md" }}
             >
               Skip for now

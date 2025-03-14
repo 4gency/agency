@@ -342,10 +342,6 @@ const CredentialsManager = ({
           <ModalBody pb={6}>
             <Box borderWidth="1px" borderRadius="lg" borderColor={borderColor} bg={bgColor} p={6}>
               <VStack spacing={6} align="stretch">
-                <Text color={textColor}>
-                  To enable automated job applications, you need to connect your LinkedIn account.
-                  This allows our system to apply to jobs on your behalf.
-                </Text>
                 
                 <HStack spacing={4} mt={4}>
                   <Box 
