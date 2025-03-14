@@ -189,7 +189,10 @@ class BotSession:
         elif new_status == BotStatus.RUNNING:
             self.paused.clear()
         elif new_status == BotStatus.WAITING:
-            self.waiting_for_action.set()
+            # When entering WAITING state, we should clear the event
+            # so wait() will actually block until it's set
+            self.waiting_for_action.clear()
+            logger.info("Entering waiting state - event flag cleared")
         elif new_status in [
             BotStatus.STOPPING,
             BotStatus.COMPLETED,
@@ -220,6 +223,13 @@ class BotSession:
             logger.info("=" * 60)
             logger.info("2FA VERIFICATION REQUIRED FOR LOGIN")
             logger.info("=" * 60)
+
+            # Prepare for waiting
+            self.waiting_for_action.clear()
+            self.current_action_id = None
+            self.action_response = None
+
+            # Change status to waiting
             self._change_status(BotStatus.WAITING)
 
             # Send waiting event
@@ -229,6 +239,14 @@ class BotSession:
                 "info",
                 {"reason": "2FA required"},
             )
+
+            # First, ensure any previous action ID is cleared from the main module
+            try:
+                import main
+
+                main.set_current_action_id(None)
+            except Exception as e:
+                logger.error(f"Error clearing previous action ID: {e}")
 
             # Request user action
             response = self.api_client.request_user_action(
@@ -240,11 +258,65 @@ class BotSession:
             # Store the current action ID
             self.current_action_id = response["id"]
 
-            # Wait for user response
+            # Register the action ID with the main module
+            try:
+                import main
+
+                main.set_current_action_id(self.current_action_id)
+                logger.info(
+                    f"Registered action ID {self.current_action_id} with main module"
+                )
+
+                # Check immediately if this action is already in the pending queue
+                if main.get_pending_action(self.current_action_id):
+                    logger.info(
+                        "Action is already in the pending queue! Processing immediately..."
+                    )
+                    main.process_pending_actions(provided_bot_session=self)
+
+            except Exception as e:
+                logger.error(f"Error registering action ID with main module: {e}")
+
+            # Wait for user response with periodic checking for pending actions
             logger.info(
                 f"Waiting for user response for action {self.current_action_id}"
             )
-            self.waiting_for_action.wait(timeout=300)  # 5 minute timeout
+            logger.info("Waiting for up to 5 minutes for user to provide 2FA code...")
+
+            # Use a shorter timeout and check periodically instead of one long wait
+            timeout_expiry = time.time() + 300  # 5 minutes from now
+
+            # Reset this event flag before waiting (make sure we're in waiting state)
+            self.waiting_for_action.clear()
+
+            # Wait with periodic checks
+            wait_complete = False
+            while not wait_complete and time.time() < timeout_expiry:
+                # Wait for a short time (10 seconds)
+                wait_result = self.waiting_for_action.wait(timeout=10)
+
+                if wait_result:
+                    # Event was set, we have a response
+                    logger.info("Wait completed with result: True")
+                    wait_complete = True
+                else:
+                    # Timeout occurred, check for pending actions
+                    logger.info("Checking for pending actions...")
+                    # Call into the main module to check pending actions
+                    try:
+                        # Import main module directly instead of using sys.modules
+                        import main
+
+                        result = main.process_pending_actions(provided_bot_session=self)
+                        if result:
+                            logger.info("Successfully processed a pending action!")
+                            # If an action was processed, we can exit the wait loop
+                            if self.action_response:
+                                wait_complete = True
+                    except Exception as e:
+                        logger.error(
+                            f"Error checking pending actions: {e}", exc_info=True
+                        )
 
             if not self.action_response:
                 logger.warning("Time limit exceeded for user action")
@@ -476,6 +548,13 @@ class BotSession:
                 if needs_captcha:
                     # Request CAPTCHA solution
                     logger.info("CAPTCHA detected in application process")
+
+                    # Prepare for waiting
+                    self.waiting_for_action.clear()
+                    self.current_action_id = None
+                    self.action_response = None
+
+                    # Change status to waiting
                     self._change_status(BotStatus.WAITING)
 
                     # Send waiting event
@@ -485,6 +564,14 @@ class BotSession:
                         "info",
                         {"reason": "captcha_detected"},
                     )
+
+                    # First, ensure any previous action ID is cleared from the main module
+                    try:
+                        import main
+
+                        main.set_current_action_id(None)
+                    except Exception as e:
+                        logger.error(f"Error clearing previous action ID: {e}")
 
                     # Request user action
                     response = self.api_client.request_user_action(
@@ -496,11 +583,74 @@ class BotSession:
                     # Store the current action ID
                     self.current_action_id = response["id"]
 
+                    # Register the action ID with the main module
+                    try:
+                        import main
+
+                        main.set_current_action_id(self.current_action_id)
+                        logger.info(
+                            f"Registered CAPTCHA action ID {self.current_action_id} with main module"
+                        )
+
+                        # Check immediately if this action is already in the pending queue
+                        if main.get_pending_action(self.current_action_id):
+                            logger.info(
+                                "CAPTCHA action is already in the pending queue! Processing immediately..."
+                            )
+                            main.process_pending_actions(provided_bot_session=self)
+
+                    except Exception as e:
+                        logger.error(
+                            f"Error registering CAPTCHA action ID with main module: {e}"
+                        )
+
                     # Wait for user response
                     logger.info(
                         f"Waiting for CAPTCHA solution from user for action {self.current_action_id}"
                     )
-                    self.waiting_for_action.wait(timeout=300)  # 5 minute timeout
+                    logger.info(
+                        "Waiting for up to 5 minutes for user to solve CAPTCHA..."
+                    )
+
+                    # Use a shorter timeout and check periodically instead of one long wait
+                    timeout_expiry = time.time() + 300  # 5 minutes from now
+
+                    # Reset this event flag before waiting
+                    self.waiting_for_action.clear()
+
+                    # Wait with periodic checks
+                    wait_complete = False
+                    while not wait_complete and time.time() < timeout_expiry:
+                        # Wait for a short time (10 seconds)
+                        wait_result = self.waiting_for_action.wait(timeout=10)
+
+                        if wait_result:
+                            # Event was set, we have a response
+                            logger.info("CAPTCHA wait completed with result: True")
+                            wait_complete = True
+                        else:
+                            # Timeout occurred, check for pending actions
+                            logger.info("Checking for pending actions...")
+                            # Call into the main module to check pending actions
+                            try:
+                                # Import main module directly instead of using sys.modules
+                                import main
+
+                                result = main.process_pending_actions(
+                                    provided_bot_session=self
+                                )
+                                if result:
+                                    logger.info(
+                                        "Successfully processed a pending action!"
+                                    )
+                                    # If an action was processed, we can exit the wait loop
+                                    if self.action_response:
+                                        wait_complete = True
+                            except Exception as e:
+                                logger.error(
+                                    f"Error checking pending actions: {e}",
+                                    exc_info=True,
+                                )
 
                     if not self.action_response:
                         logger.warning("Time limit exceeded for CAPTCHA solution")
@@ -748,12 +898,43 @@ class BotSession:
 
         Args:
             action_id: Action ID
-            data: User response data
+            data: User response data (contains input or user_input field)
         """
+        logger.info(f"Resolving user action: {action_id}")
+
+        # If current_action_id is None but we received an action, this might be a race condition
+        # where the bot is waiting for an action but hasn't stored the ID yet
+        if self.current_action_id is None:
+            logger.warning(
+                f"Received action {action_id} but no action was being waited for"
+            )
+            logger.warning(
+                "Setting this as the current action to fix potential race condition"
+            )
+            self.current_action_id = action_id
+            # Update the main module
+            try:
+                import main
+
+                main.set_current_action_id(action_id)
+            except Exception as e:
+                logger.error(f"Error setting action ID in main module: {e}")
+
         if self.current_action_id == action_id:
             logger.info(f"User action resolved: {action_id}")
+            logger.info(f"Action data received: {data}")
+
+            # Store the action response
             self.action_response = data
 
+            # Log a warning if expected input field isn't present
+            if "input" not in data and "user_input" in data:
+                logger.warning("Received data with user_input instead of input field")
+                # This shouldn't happen anymore since we transform in main.py, but just in case
+
+            logger.info(
+                "Setting waiting_for_action event to unblock the waiting thread"
+            )
             # Unblock the waiting thread
             self.waiting_for_action.set()
 
@@ -765,9 +946,37 @@ class BotSession:
                 {"action_id": action_id},
             )
 
+            # Clear current action ID in the main module
+            try:
+                import main
+
+                main.set_current_action_id(None)
+                logger.info("Cleared current_action_id in main module")
+            except Exception as e:
+                logger.error(f"Error clearing action ID in main module: {e}")
+
             # Return to running status
             self._change_status(BotStatus.RUNNING)
         else:
             logger.warning(
                 f"Received response for action {action_id}, but current action is {self.current_action_id}"
+            )
+            # We'll still try to handle this case - maybe the action changed or there's a race condition
+            logger.info("Attempting to handle the mismatched action ID")
+
+            # Store the response anyway in case it helps
+            self.action_response = data
+
+            # Signal the event in case something is waiting
+            self.waiting_for_action.set()
+
+            # Send an event so there's a record of what happened
+            self.api_client.create_event(
+                "action_mismatch",
+                f"Received action {action_id} but was waiting for {self.current_action_id}",
+                "warning",
+                {
+                    "received_action_id": action_id,
+                    "expected_action_id": self.current_action_id,
+                },
             )
