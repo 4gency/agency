@@ -314,6 +314,7 @@ export class BotsService {
       errors: {
         401: "Authentication error",
         403: "Permission error",
+        406: "Not acceptable",
         422: "Validation Error",
       },
     })
