@@ -4,6 +4,7 @@
 
 ### Features
 
+* feat: create validations for user create configs. PR [#64](https://github.com/4gency/agency/pull/64) by [@gustavosett](https://github.com/gustavosett).
 * Kube feature. PR [#62](https://github.com/4gency/agency/pull/62) by [@gustavosett](https://github.com/gustavosett).
 * Add mock bot feature and webhook API endpoints. PR [#61](https://github.com/4gency/agency/pull/61) by [@gustavosett](https://github.com/gustavosett).
 * Bot webhook feature. PR [#60](https://github.com/4gency/agency/pull/60) by [@gustavosett](https://github.com/gustavosett).
