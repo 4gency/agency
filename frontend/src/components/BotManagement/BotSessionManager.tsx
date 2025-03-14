@@ -51,10 +51,11 @@ import {
   FiStopCircle,
   FiTrash2,
 } from "react-icons/fi"
-import { BotsService, type SessionPublic } from "../../client"
+import { BotsService, type SessionPublic, ApiError } from "../../client"
 import DeleteAlert from "../Common/DeleteAlert"
 import useSessionsData from "../../hooks/useSessionsData"
 import useCredentialsData from "../../hooks/useCredentialsData"
+import { handleError } from "../../utils"
 
 type SessionStatusBadgeProps = {
   status: string
@@ -149,6 +150,7 @@ const BotSessionManager = ({
   const [formData, setFormData] = useState<SessionFormData>({
     credentials_id: "",
     applies_limit: 200,
+    style: "Default",
   })
 
   // Fetch sessions and credentials on component mount
@@ -186,6 +188,20 @@ const BotSessionManager = ({
     })
   }
 
+  // Create a wrapper for handleError to adapt it to our toast configuration
+  const adaptedHandleError = (err: ApiError) => {
+    handleError(err, (title: string, message: string, status: string) => {
+      toast({
+        title,
+        description: message,
+        status: status as any,
+        duration: 3000,
+        position: "bottom-right",
+        isClosable: true,
+      })
+    })
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoadingAction(true)
@@ -198,24 +214,38 @@ const BotSessionManager = ({
       setFormData({
         credentials_id: credentials.length > 0 ? credentials[0].id : "",
         applies_limit: 200,
+        style: "Default",
       })
       toast({
         title: "Success",
         description: "Bot session created successfully",
         status: "success",
         duration: 3000,
+        position: "bottom-right",
         isClosable: true,
       })
       refetchSessions()
     } catch (err) {
       console.error("Error creating session:", err)
-      toast({
-        title: "Error",
-        description: "Failed to create bot session",
-        status: "error",
-        duration: 3000,
-        isClosable: true,
-      })
+      
+      // Check if it's an API error and handle it accordingly
+      const apiError = err as ApiError
+      
+      // Handle 406 error specifically
+      if (apiError.status === 406) {
+        const errorDetail = (apiError.body as any)?.detail || "Missing configuration requirements"
+        toast({
+          title: "Configuration Error",
+          description: errorDetail,
+          status: "error",
+          duration: 5000,
+          position: "bottom-right",
+          isClosable: true,
+        })
+      } else {
+        // Use the adapted handleError function
+        adaptedHandleError(apiError)
+      }
     } finally {
       setIsLoadingAction(false)
     }
@@ -236,18 +266,13 @@ const BotSessionManager = ({
         description: "Bot session deleted successfully",
         status: "success",
         duration: 3000,
+        position: "bottom-right",
         isClosable: true,
       })
       refetchSessions()
     } catch (err) {
       console.error("Error deleting session:", err)
-      toast({
-        title: "Error",
-        description: "Failed to delete bot session",
-        status: "error",
-        duration: 3000,
-        isClosable: true,
-      })
+      adaptedHandleError(err as ApiError)
     } finally {
       setIsLoadingAction(false)
     }
@@ -264,18 +289,13 @@ const BotSessionManager = ({
         description: "Bot session started successfully",
         status: "success",
         duration: 3000,
+        position: "bottom-right",
         isClosable: true,
       })
       refetchSessions()
     } catch (err) {
       console.error("Error starting session:", err)
-      toast({
-        title: "Error",
-        description: "Failed to start bot session",
-        status: "error",
-        duration: 3000,
-        isClosable: true,
-      })
+      adaptedHandleError(err as ApiError)
     } finally {
       setIsLoadingAction(false)
     }
@@ -292,26 +312,63 @@ const BotSessionManager = ({
         description: "Bot session stopped successfully",
         status: "success",
         duration: 3000,
+        position: "bottom-right",
         isClosable: true,
       })
       refetchSessions()
     } catch (err) {
       console.error("Error stopping session:", err)
-      toast({
-        title: "Error",
-        description: "Failed to stop bot session",
-        status: "error",
-        duration: 3000,
-        isClosable: true,
-      })
+      adaptedHandleError(err as ApiError)
     } finally {
       setIsLoadingAction(false)
     }
   }
 
-  // Para evitar erros, vamos definir versões temporárias das funções faltantes
-  const handlePauseSession = handleStopSession; // Usando handleStopSession como substituto
-  const handleResumeSession = handleStartSession; // Usando handleStartSession como substituto
+  const handlePauseSession = async (sessionId: string) => {
+    setIsLoadingAction(true)
+    try {
+      await BotsService.pauseBotSession({
+        sessionId,
+      })
+      toast({
+        title: "Success",
+        description: "Bot session paused successfully",
+        status: "success",
+        duration: 3000,
+        position: "bottom-right",
+        isClosable: true,
+      })
+      refetchSessions()
+    } catch (err) {
+      console.error("Error pausing session:", err)
+      adaptedHandleError(err as ApiError)
+    } finally {
+      setIsLoadingAction(false)
+    }
+  }
+
+  const handleResumeSession = async (sessionId: string) => {
+    setIsLoadingAction(true)
+    try {
+      await BotsService.resumeBotSession({
+        sessionId,
+      })
+      toast({
+        title: "Success",
+        description: "Bot session resumed successfully",
+        status: "success",
+        duration: 3000,
+        position: "bottom-right",
+        isClosable: true,
+      })
+      refetchSessions()
+    } catch (err) {
+      console.error("Error resuming session:", err)
+      adaptedHandleError(err as ApiError)
+    } finally {
+      setIsLoadingAction(false)
+    }
+  }
 
   const handleOpenDeleteModal = (sessionId: string) => {
     setSessionToDelete(sessionId)
@@ -442,6 +499,7 @@ const BotSessionManager = ({
     setFormData({
       credentials_id: credentials.length > 0 ? credentials[0].id : "",
       applies_limit: 200,
+      style: "Default",
     });
     onCreateOpenOriginal();
   }
