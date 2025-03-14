@@ -70,7 +70,7 @@ export type BotSessionManagerProps = {
 interface SessionFormData {
   credentials_id: string
   applies_limit: number
-  style?: string
+  style: string
 }
 
 const SessionStatusBadge = ({ status }: SessionStatusBadgeProps) => {
@@ -163,7 +163,8 @@ const BotSessionManager = ({
     if (credentials && credentials.length > 0 && !formData.credentials_id) {
       setFormData(prev => ({
         ...prev,
-        credentials_id: credentials[0].id
+        credentials_id: credentials[0].id,
+        style: prev.style || "Default"
       }));
     }
     
@@ -190,16 +191,20 @@ const BotSessionManager = ({
 
   // Create a wrapper for handleError to adapt it to our toast configuration
   const adaptedHandleError = (err: ApiError) => {
-    handleError(err, (title: string, message: string, status: string) => {
+    // Define a type-safe toast callback
+    const toastCallback = (title: string, message: string, status: "info" | "warning" | "success" | "error" | "loading") => {
       toast({
         title,
         description: message,
-        status: status as any,
+        status,
         duration: 3000,
         position: "bottom-right",
         isClosable: true,
-      })
-    })
+      });
+    };
+    
+    // Pass the typed callback to handleError
+    handleError(err, toastCallback);
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
