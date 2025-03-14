@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, status
 from sqlmodel import SQLModel
 
 from app.api.deps import (
@@ -93,6 +93,34 @@ router = APIRouter()
                 }
             },
         },
+        406: {
+            "model": ErrorMessage,
+            "description": "Not acceptable",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "not_job_preferences": {
+                            "summary": "User has not created job preferences",
+                            "value": {
+                                "detail": "The user has not created job preferences"
+                            },
+                        },
+                        "not_resume_settings": {
+                            "summary": "User has not created resume settings",
+                            "value": {
+                                "detail": "The user has not created resume settings"
+                            },
+                        },
+                        "not_job_preferences_and_resume_settings": {
+                            "summary": "User has not created job preferences and resume settings",
+                            "value": {
+                                "detail": "The user has not created job preferences and resume settings"
+                            },
+                        },
+                    }
+                }
+            },
+        },
     },
 )
 def create_bot_session(
@@ -101,6 +129,23 @@ def create_bot_session(
     """
     Create a new bot session.
     """
+    # Check if user has created job preferences and resume settings first
+    if not user.config and not user.plain_text_resume:
+        raise HTTPException(
+            status_code=status.HTTP_406_NOT_ACCEPTABLE,
+            detail="You cannot create a session without creating job preferences and resume settings first.",
+        )
+    elif not user.config:
+        raise HTTPException(
+            status_code=status.HTTP_406_NOT_ACCEPTABLE,
+            detail="You cannot create a session without creating job preferences first.",
+        )
+    elif not user.plain_text_resume:
+        raise HTTPException(
+            status_code=status.HTTP_406_NOT_ACCEPTABLE,
+            detail="You cannot create a session without creating resume settings first.",
+        )
+
     bot_service = BotService(session)
     bot_session = bot_service.create_bot_session(
         user_id=user.id,

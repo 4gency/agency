@@ -104,11 +104,11 @@ function CheckoutSuccess() {
                 opacity: 0.9,
               }}
               onClick={() => {
-                // Use window.location para forçar um recarregamento completo
-                window.location.href = "/";
+                // Redirect to onboarding flow instead of dashboard
+                window.location.href = "/onboarding";
               }}
             >
-              Your dashboard
+              Complete Account Setup
             </Button>
           </VStack>
         </AnimatedCard>

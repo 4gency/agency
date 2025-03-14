@@ -12,7 +12,7 @@ import {
 } from "@chakra-ui/react"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import type React from "react"
-import { useEffect, useState, useMemo } from "react"
+import { useEffect, useState, useMemo, forwardRef, useImperativeHandle } from "react"
 import { useForm } from "react-hook-form"
 import { ConfigsService, SubscriptionsService } from "../../client/sdk.gen"
 import type { GetPlainTextResumeResponse } from "../../client/types.gen"
@@ -682,14 +682,55 @@ export const ResumePage: React.FC = () => {
     },
     onError: (error: Error) => {
       console.error("Resume mutation error:", error)
-      const apiError = error as ApiError
-      const errorDetail = apiError.body ? 
-        (apiError.body as any).detail || apiError.message : 
-        "An unexpected error occurred."
+      
+      // Melhor tratamento para garantir que o erro seja sempre uma string
+      let errorMessage = "An unexpected error occurred."
+      
+      // Tenta extrair detalhes do erro em diferentes formatos
+      try {
+        const apiError = error as ApiError
+        
+        if (apiError.body) {
+          const errorBody = apiError.body as any
+          
+          if (errorBody.detail) {
+            // Se detail for um objeto (validation_error), extrair apenas as mensagens
+            if (typeof errorBody.detail === 'object') {
+              if (Array.isArray(errorBody.detail)) {
+                // Se for um array de erros
+                errorMessage = errorBody.detail
+                  .map((err: any) => {
+                    if (typeof err === 'object' && err.msg) {
+                      return String(err.msg)
+                    }
+                    return String(err)
+                  })
+                  .join(", ")
+              } else if (errorBody.detail.msg) {
+                // Se for um único objeto de erro com a propriedade msg
+                errorMessage = String(errorBody.detail.msg)
+              } else {
+                // Para outros objetos, tente obter uma representação de string
+                errorMessage = JSON.stringify(errorBody.detail)
+              }
+            } else {
+              // Se detail for uma string ou outro valor primitivo
+              errorMessage = String(errorBody.detail)
+            }
+          } else if (errorBody.message) {
+            errorMessage = String(errorBody.message)
+          }
+        } else if (apiError.message) {
+          errorMessage = String(apiError.message)
+        }
+      } catch (formatError) {
+        console.error("Error formatting error message:", formatError)
+        // Manter a mensagem padrão em caso de erro ao extrair detalhes
+      }
       
       showToast(
         "Error saving resume",
-        errorDetail,
+        errorMessage,
         "error",
       )
     },
@@ -938,4 +979,416 @@ export const ResumePage: React.FC = () => {
   )
 }
 
+// Forwardable version for use in Onboarding
+interface ResumeSettingsProps {
+  onComplete?: () => void
+  isOnboarding?: boolean
+  hideSubmitButton?: boolean
+}
+
+const ResumeSettings = forwardRef<{ submit: () => Promise<boolean> }, ResumeSettingsProps>(
+  ({ onComplete, isOnboarding = false, hideSubmitButton = false }, ref) => {
+    const showToast = useCustomToast()
+    const [_scrollPosition] = useState<number>(0)
+    const [isCreatingNew, setIsCreatingNew] = useState<boolean>(false)
+    const [hasShownNotFoundMessage, setHasShownNotFoundMessage] = useState<boolean>(false)
+
+    // Form setup
+    const {
+      register,
+      handleSubmit,
+      control,
+      setValue,
+      getValues,
+      reset,
+      formState: { errors, isSubmitting },
+      watch,
+    } = useForm<ResumeForm>({
+      defaultValues,
+    })
+
+    // Fetch user subscriptions
+    const { data: subscriptions, isLoading: isLoadingSubscriptions } = useQuery({
+      queryKey: ["subscriptions"],
+      queryFn: async () => {
+        return await SubscriptionsService.getUserSubscriptions({
+          onlyActive: true,
+        })
+      }
+    })
+
+    // Check if user has an active subscription
+    const hasActiveSubscription = useMemo(() => {
+      const hasSubscription = subscriptions && subscriptions.length > 0;
+      return hasSubscription;
+    }, [subscriptions]);
+
+    // Fetch resume data with better error handling
+    const { data: resumeData, isLoading: isLoadingResume, error: resumeError } = useQuery({
+      queryKey: ["plainTextResume"],
+      queryFn: async () => {
+        try {
+          const result = await ConfigsService.getPlainTextResume();
+          return result;
+        } catch (error) {
+          const apiError = error as ApiError;
+          if (apiError.status === 404) {
+            setIsCreatingNew(true);
+            // Não mostrar toast aqui, deixar para o useEffect
+          }
+          throw error;
+        }
+      },
+      // Don't condition the query on subscription status to avoid race conditions
+      enabled: true,
+      retry: false, // Não tentar novamente automaticamente
+      refetchOnWindowFocus: false,
+      staleTime: 60000, // 1 minuto
+    });
+
+    // Reset form data when resume data is loaded or cleared
+    useEffect(() => {
+      if (resumeData) {
+        // If we successfully load data, we're editing an existing resume
+        setIsCreatingNew(false);
+        
+        // Transform API data to form format
+        const formData = transformApiResponseToFormData(resumeData);
+        reset(formData);
+      }
+    }, [resumeData, reset]);
+
+    // Handle resume fetch error - only show actual errors, not 404
+    useEffect(() => {
+      // If loading or data exists, do nothing
+      if (isLoadingResume || resumeData) return;
+      
+      // If we have an active subscription but no resume data
+      if (hasActiveSubscription && !resumeData) {
+        const apiError = resumeError as ApiError;
+        
+        // Show message for 404 only if we haven't shown it already
+        if (apiError && apiError.status === 404) {
+          if (!hasShownNotFoundMessage) {
+            setIsCreatingNew(true);
+            setHasShownNotFoundMessage(true);
+            
+            // Only show toast if not in onboarding mode
+            if (!isOnboarding) {
+              showToast(
+                "Resume not found",
+                "Please fill out the form to create your resume.",
+                "success"
+              )
+            }
+          }
+        } else if (apiError) {
+          // Real errors
+          console.error("Resume fetch error:", apiError);
+          showToast(
+            "Error fetching resume",
+            apiError.message || "An error occurred while fetching your resume.",
+            "error"
+          )
+        }
+      }
+    }, [hasActiveSubscription, isLoadingResume, resumeData, resumeError, showToast, isCreatingNew, hasShownNotFoundMessage, isOnboarding]);
+
+    // Update resume mutation with better error handling
+    const updateResumeMutation = useMutation({
+      mutationFn: async (data: ResumeForm) => {
+        if (!hasActiveSubscription) {
+          throw new Error("No active subscription available")
+        }
+        
+        try {
+          const apiData = transformFormToApiData(data)
+          const result = await ConfigsService.updatePlainTextResume({
+            requestBody: apiData,
+          })
+          
+          // If we were creating a new resume, we're now editing
+          if (isCreatingNew) {
+            setIsCreatingNew(false)
+          }
+          
+          return result
+        } catch (error) {
+          console.error("Error saving resume:", error)
+          throw error
+        }
+      },
+      onSuccess: () => {
+        // Show toast only if not in onboarding mode
+        if (!isOnboarding) {
+          showToast(
+            isCreatingNew ? "Resume created" : "Resume updated",
+            isCreatingNew 
+              ? "Your resume has been successfully created." 
+              : "Your resume has been successfully updated.",
+            "success",
+          )
+        }
+        
+        // Call onComplete callback if provided
+        if (onComplete) {
+          onComplete()
+        }
+      },
+      onError: (error: Error) => {
+        console.error("Resume mutation error:", error)
+        
+        // Melhor tratamento para garantir que o erro seja sempre uma string
+        let errorMessage = "An unexpected error occurred."
+        
+        // Tenta extrair detalhes do erro em diferentes formatos
+        try {
+          const apiError = error as ApiError
+          
+          if (apiError.body) {
+            const errorBody = apiError.body as any
+            
+            if (errorBody.detail) {
+              // Se detail for um objeto (validation_error), extrair apenas as mensagens
+              if (typeof errorBody.detail === 'object') {
+                if (Array.isArray(errorBody.detail)) {
+                  // Se for um array de erros
+                  errorMessage = errorBody.detail
+                    .map((err: any) => {
+                      if (typeof err === 'object' && err.msg) {
+                        return String(err.msg)
+                      }
+                      return String(err)
+                    })
+                    .join(", ")
+                } else if (errorBody.detail.msg) {
+                  // Se for um único objeto de erro com a propriedade msg
+                  errorMessage = String(errorBody.detail.msg)
+                } else {
+                  // Para outros objetos, tente obter uma representação de string
+                  errorMessage = JSON.stringify(errorBody.detail)
+                }
+              } else {
+                // Se detail for uma string ou outro valor primitivo
+                errorMessage = String(errorBody.detail)
+              }
+            } else if (errorBody.message) {
+              errorMessage = String(errorBody.message)
+            }
+          } else if (apiError.message) {
+            errorMessage = String(apiError.message)
+          }
+        } catch (formatError) {
+          console.error("Error formatting error message:", formatError)
+          // Manter a mensagem padrão em caso de erro ao extrair detalhes
+        }
+        
+        showToast(
+          "Error saving resume",
+          errorMessage,
+          "error",
+        )
+      },
+    })
+
+    // Expose the submit method to parent components through ref
+    useImperativeHandle(ref, () => ({
+      submit: async () => {
+        try {
+          const formData = getValues();
+          
+          // Validar campos obrigatórios manualmente
+          const formErrors = Object.keys(errors);
+          const hasErrors = formErrors.length > 0;
+          
+          if (hasErrors) {
+            // Identifique os campos com erro para mensagem mais específica
+            const errorFields = formErrors.join(", ");
+            console.error(`Form validation failed for fields: ${errorFields}`);
+            
+            // Throw a structured error to be caught by parent component
+            throw new Error(`Resume form validation failed for fields: ${errorFields}`);
+          }
+          
+          // Submit form if valid
+          await updateResumeMutation.mutateAsync(formData);
+          return true;
+        } catch (error) {
+          // Propagate the error to be handled by the parent component
+          console.error("Error in ResumeSettings submit method:", error);
+          
+          // Certifique-se de que o erro seja tratável pelo componente pai
+          if (error instanceof Error) {
+            throw error;
+          } else {
+            throw new Error("Error submitting resume");
+          }
+        }
+      }
+    }))
+
+    // Helper to update fields that don't work well with direct register
+    const updateField = (field: string, value: any) => {
+      setValue(field as any, value, {
+        shouldDirty: true,
+        shouldTouch: true,
+        shouldValidate: true,
+      })
+    }
+
+    // Submit handler
+    const onSubmit = async (data: ResumeForm) => {
+      try {
+        await updateResumeMutation.mutateAsync(data)
+      } catch (error) {
+        // Error handling is done in mutation onError
+        console.log("Submit handler caught error, already handled in mutation")
+      }
+    }
+
+    // Compute loading state
+    const isLoading = isLoadingSubscriptions || isLoadingResume
+
+    // Return with the form key to force re-renders when needed
+    return (
+      <Container maxW="full">
+        {!isOnboarding && (
+          <Heading size="lg" textAlign={{ base: "center", md: "left" }} py={12}>
+            Resume
+          </Heading>
+        )}
+        {!hasActiveSubscription && !isOnboarding ? (
+          <Alert status="warning" mb={4}>
+            <AlertIcon />
+            <AlertDescription>
+              You need an active subscription to create or edit your resume.
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
+        {isLoading ? (
+          <LoadingSkeleton />
+        ) : (
+          <form onSubmit={handleSubmit(onSubmit)} style={{ marginBottom: '3rem' }}>
+            <Stack spacing={8}>
+              <Card variant="outline" p={4}>
+                <PersonalInformationSection register={register} errors={errors} />
+              </Card>
+
+              <Card variant="outline" p={4}>
+                <SelfIdentificationSection
+                  register={register}
+                />
+              </Card>
+
+              <Card variant="outline" p={4}>
+                <EducationSection
+                  register={register}
+                  errors={errors}
+                  control={control}
+                  watch={watch}
+                  setValue={setValue}
+                />
+              </Card>
+
+              <Card variant="outline" p={4}>
+                <WorkExperienceSection
+                  register={register}
+                  errors={errors}
+                  control={control}
+                  watch={watch}
+                  setValue={setValue}
+                />
+              </Card>
+
+              <Card variant="outline" p={4}>
+                <ProjectsSection
+                  register={register}
+                  errors={errors}
+                  control={control}
+                />
+              </Card>
+
+              <Card variant="outline" p={4}>
+                <SkillsSection
+                  setValue={updateField}
+                  getValues={getValues}
+                  watch={watch}
+                />
+              </Card>
+
+              <Card variant="outline" p={4}>
+                <LanguagesSection
+                  register={register}
+                  errors={errors}
+                  control={control}
+                />
+              </Card>
+
+              <Card variant="outline" p={4}>
+                <AvailabilitySection register={register} />
+              </Card>
+
+              <Card variant="outline" p={4}>
+                <SalaryExpectationSection register={register} />
+              </Card>
+
+              <Card variant="outline" p={4}>
+                <WorkPreferenceSection register={register} />
+              </Card>
+
+              <Card variant="outline" p={4}>
+                <InterestsSection
+                  setValue={updateField}
+                  getValues={getValues}
+                  watch={watch}
+                />
+              </Card>
+
+              <Card variant="outline" p={4}>
+                <AchievementsSection
+                  register={register}
+                  errors={errors}
+                  control={control}
+                />
+              </Card>
+
+              <Card variant="outline" p={4}>
+                <CertificationsSection
+                  register={register}
+                  errors={errors}
+                  control={control}
+                />
+              </Card>
+
+              <Card variant="outline" p={4}>
+                <LegalAuthorizationSection
+                  register={register}
+                />
+              </Card>
+            </Stack>
+            
+            {!hideSubmitButton && (
+              <ButtonGroup spacing={4} mt={4}>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  isLoading={isSubmitting || updateResumeMutation.isPending}
+                  isDisabled={!hasActiveSubscription}
+                >
+                  {isCreatingNew ? "Create Resume" : "Save Resume"}
+                </Button>
+              </ButtonGroup>
+            )}
+          </form>
+        )}
+      </Container>
+    )
+  }
+)
+
+// Display name for debugging
+ResumeSettings.displayName = "ResumeSettings"
+
 export default ResumePage
+export { ResumeSettings }
