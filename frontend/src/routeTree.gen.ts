@@ -18,6 +18,8 @@ import { Route as LoginImport } from './routes/login'
 import { Route as CheckoutSuccessImport } from './routes/checkout-success'
 import { Route as CheckoutFailedImport } from './routes/checkout-failed'
 import { Route as LayoutImport } from './routes/_layout'
+import { Route as OnboardingIndexImport } from './routes/onboarding/index'
+import { Route as CheckoutSuccessIndexImport } from './routes/checkout-success/index'
 import { Route as LayoutIndexImport } from './routes/_layout/index'
 import { Route as LayoutSettingsImport } from './routes/_layout/settings'
 import { Route as LayoutResumeImport } from './routes/_layout/resume'
@@ -63,6 +65,16 @@ const CheckoutFailedRoute = CheckoutFailedImport.update({
 const LayoutRoute = LayoutImport.update({
   id: '/_layout',
   getParentRoute: () => rootRoute,
+} as any)
+
+const OnboardingIndexRoute = OnboardingIndexImport.update({
+  path: '/onboarding/',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const CheckoutSuccessIndexRoute = CheckoutSuccessIndexImport.update({
+  path: '/',
+  getParentRoute: () => CheckoutSuccessRoute,
 } as any)
 
 const LayoutIndexRoute = LayoutIndexImport.update({
@@ -168,6 +180,14 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutIndexImport
       parentRoute: typeof LayoutImport
     }
+    '/checkout-success/': {
+      preLoaderRoute: typeof CheckoutSuccessIndexImport
+      parentRoute: typeof CheckoutSuccessImport
+    }
+    '/onboarding/': {
+      preLoaderRoute: typeof OnboardingIndexImport
+      parentRoute: typeof rootRoute
+    }
     '/_layout/settings/': {
       preLoaderRoute: typeof LayoutSettingsIndexImport
       parentRoute: typeof LayoutSettingsImport
@@ -199,11 +219,12 @@ export const routeTree = rootRoute.addChildren([
     LayoutIndexRoute,
   ]),
   CheckoutFailedRoute,
-  CheckoutSuccessRoute,
+  CheckoutSuccessRoute.addChildren([CheckoutSuccessIndexRoute]),
   LoginRoute,
   RecoverPasswordRoute,
   ResetPasswordRoute,
   SignupRoute,
+  OnboardingIndexRoute,
 ])
 
 /* prettier-ignore-end */
