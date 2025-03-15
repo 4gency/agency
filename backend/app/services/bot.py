@@ -243,9 +243,6 @@ class BotService:
             )
 
         try:
-            # Update session state
-            session.pause()
-
             if kubernetes_manager.initialized:
                 result, message = kubernetes_manager.pause_bot(
                     session.kubernetes_pod_name
@@ -257,6 +254,9 @@ class BotService:
                         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                         detail="Error pausing bot session",
                     )
+
+            # Update session state
+            session.pause()
 
             # Save changes
             return self.save_session(session)
@@ -281,9 +281,6 @@ class BotService:
             )
 
         try:
-            # Update session state
-            session.resume()
-
             if kubernetes_manager.initialized:
                 result, message = kubernetes_manager.resume_bot(
                     session.kubernetes_pod_name
@@ -295,6 +292,9 @@ class BotService:
                         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                         detail="Error resuming bot session",
                     )
+
+            # Update session state
+            session.resume()
 
             # Save changes
             return self.save_session(session)
