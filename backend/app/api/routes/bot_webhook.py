@@ -87,7 +87,7 @@ def register_apply(
     apply_service = ApplyService(session)
 
     bot_apply = apply_service.create_apply(
-        session_id=bot_session.id,
+        session=bot_session,
         total_time=apply_data.total_time,
         job_title=apply_data.job_title,
         job_url=apply_data.job_url,
@@ -131,7 +131,7 @@ def create_event(
 
     # Create a new event
     event = event_service.add_event(
-        session_id=bot_session.id,
+        session=bot_session,
         event_type=event_data.type,
         message=event_data.message,
         severity=event_data.severity,
@@ -177,7 +177,10 @@ def create_event(
             if old_status == BotSessionStatus.STARTING:
                 bot_session.started_at = event.created_at
             elif old_status == BotSessionStatus.PAUSED:
-                bot_session.resumed_at = event.created_at
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="A bot cannot be resumed by itself",
+                )
         elif new_status == BotSessionStatus.PAUSED:
             bot_session.paused_at = event.created_at
         elif new_status == BotSessionStatus.COMPLETED:
@@ -288,9 +291,23 @@ def request_user_action(
     # Create the user action service
     action_service = UserActionService(session)
 
+    cannot_request_action_statuses = [
+        BotSessionStatus.COMPLETED,
+        BotSessionStatus.FAILED,
+        BotSessionStatus.STOPPING,
+        BotSessionStatus.PAUSED,
+        BotSessionStatus.STOPPED,
+    ]
+
+    if bot_session.status in cannot_request_action_statuses:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot request an action from a bot in this status",
+        )
+
     # Create a new user action request
     user_action = action_service.create_user_action(
-        session_id=bot_session.id,
+        session=bot_session,
         action_type=action_data.action_type,
         description=action_data.description,
         input_field=action_data.input_field,
@@ -305,7 +322,7 @@ def request_user_action(
     # Add an event for this action request
     event_service = EventService(session)
     event_service.add_event(
-        session_id=bot_session.id,
+        session=bot_session,
         event_type="user_action",
         message=f"User action requested: {action_data.description}",
         severity="info",

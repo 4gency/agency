@@ -22,25 +22,16 @@ class UserActionService:
 
     def create_user_action(
         self,
-        session_id: UUID,
+        session: BotSession,
         action_type: UserActionType,
         description: str,
         input_field: str | None = None,
     ) -> BotUserAction | None:
         """Create a new user action for a bot session"""
         try:
-            # Check if session exists
-            session = self.db.exec(
-                select(BotSession).where(BotSession.id == session_id)
-            ).first()
-
-            if not session:
-                logger.error(f"Session {session_id} not found for user action")
-                return None
-
             # Create user action
             action = BotUserAction(
-                bot_session_id=session_id,
+                bot_session_id=session.id,
                 action_type=action_type,
                 description=description,
                 input_field=input_field,

@@ -23,7 +23,7 @@ class ApplyService:
 
     def create_apply(
         self,
-        session_id: UUID,
+        session: BotSession,
         total_time: int = 0,
         job_title: str | None = None,
         job_url: str | None = None,
@@ -33,18 +33,9 @@ class ApplyService:
     ) -> BotApply | None:
         """Create a new job application record"""
         try:
-            # Check if session exists
-            session = self.db.exec(
-                select(BotSession).where(BotSession.id == session_id)
-            ).first()
-
-            if not session:
-                logger.error(f"Session {session_id} not found for apply record")
-                return None
-
             # Create apply record
             apply = BotApply(
-                bot_session_id=session_id,
+                bot_session_id=session.id,
                 total_time=total_time,
                 job_title=job_title,
                 job_url=job_url,

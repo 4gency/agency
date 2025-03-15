@@ -794,7 +794,7 @@ def test_create_custom_bot_events(
     db.commit()
 
 
-def test_resume_paused_session(
+def test_bot_cannot_resume_paused_session(
     client: TestClient, bot_session_with_api_key: tuple[BotSession, str], db: Session
 ) -> None:
     """Test resuming a paused session with a running event."""
@@ -821,12 +821,12 @@ def test_resume_paused_session(
     )
 
     # Check response
-    assert response.status_code == 200, f"Response: {response.text}"
+    assert response.status_code == 400, f"Response: {response.text}"
 
     # Verify the event was created and session status was updated
     db.refresh(bot_session)
-    assert bot_session.status == BotSessionStatus.RUNNING
-    assert bot_session.resumed_at is not None
+    assert bot_session.status == BotSessionStatus.PAUSED
+    assert bot_session.resumed_at is None
 
     # Clean up the created event
     events = db.exec(

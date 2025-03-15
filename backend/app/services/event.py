@@ -21,7 +21,7 @@ class EventService:
 
     def add_event(
         self,
-        session_id: UUID,
+        session: BotSession,
         event_type: str,
         message: str,
         severity: str = "info",
@@ -29,18 +29,9 @@ class EventService:
     ) -> BotEvent | None:
         """Add a new event to a bot session"""
         try:
-            # Check if session exists
-            session = self.db.exec(
-                select(BotSession).where(BotSession.id == session_id)
-            ).first()
-
-            if not session:
-                logger.error(f"Session {session_id} not found for event")
-                return None
-
             # Create event
             event = BotEvent(
-                bot_session_id=session_id,
+                bot_session_id=session.id,
                 type=event_type,
                 message=message,
                 severity=severity,
