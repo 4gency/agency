@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
 
 from app.api import deps
+from app.integrations.kubernetes import kubernetes_manager
 from app.models.bot import (
     BotApplyStatus,
     BotSessionStatus,
@@ -192,6 +193,16 @@ def create_event(
         # Save the session changes
         session.add(bot_session)
         session.commit()
+
+        if kubernetes_manager.initialized:
+            events_that_should_stop_pod = [
+                BotSessionStatus.COMPLETED,
+                BotSessionStatus.FAILED,
+                # BotSessionStatus.STOPPING, # TODO: Check if this is needed
+            ]
+
+            if new_status in events_that_should_stop_pod:
+                kubernetes_manager.delete_bot(bot_session.kubernetes_pod_name)
 
     return {
         "id": str(event.id),
