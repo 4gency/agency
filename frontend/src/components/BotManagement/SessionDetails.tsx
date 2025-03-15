@@ -43,6 +43,7 @@ import {
   VStack,
   useDisclosure,
   useToast,
+  useColorModeValue,
 } from "@chakra-ui/react"
 import { useEffect, useState } from "react"
 import { FiExternalLink, FiRefreshCw } from "react-icons/fi"
@@ -325,10 +326,15 @@ const PendingActions = ({
     return null
   }
 
+  // Usar o useColorModeValue para definir cores diferentes para modo claro e escuro
+  const bgColor = useColorModeValue("purple.50", "purple.900")
+  const headingColor = useColorModeValue("inherit", "white")
+  const textColor = useColorModeValue("gray.600", "gray.300")
+
   return (
-    <Card mb={6} variant="outline" bg="purple.50">
+    <Card mb={6} variant="outline" bg={bgColor}>
       <CardBody>
-        <Heading size="sm" mb={4}>
+        <Heading size="sm" mb={4} color={headingColor}>
           Actions Requiring Your Input
         </Heading>
         <VStack spacing={3} align="stretch">
@@ -345,7 +351,7 @@ const PendingActions = ({
                         </Badge>
                         <Text fontWeight="bold">{action.description}</Text>
                       </HStack>
-                      <Text fontSize="sm" color="gray.600">
+                      <Text fontSize="sm" color={textColor}>
                         Requested at {formatDate(action.requested_at)}
                       </Text>
                     </Box>
