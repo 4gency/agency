@@ -206,7 +206,12 @@ class BotSession(SQLModel, table=True):
 
         # Calculate pause duration
         if self.paused_at:
-            pause_duration = int((self.resumed_at - self.paused_at).total_seconds())
+            # Ensure paused_at has timezone info before calculation
+            paused_at_aware = self.paused_at
+            if paused_at_aware.tzinfo is None:
+                paused_at_aware = paused_at_aware.replace(tzinfo=timezone.utc)
+
+            pause_duration = int((self.resumed_at - paused_at_aware).total_seconds())
             self.total_paused_time = (self.total_paused_time or 0) + pause_duration
         self.add_event("system", "Bot session resumed")
 
