@@ -187,10 +187,17 @@ def create_event(
                 detail="A bot cannot start by itself",
             )
         elif new_status == BotSessionStatus.WAITING_INPUT:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="This status only can be create by user action request endpoint",
-            )
+            if old_status in [
+                BotSessionStatus.COMPLETED,
+                BotSessionStatus.FAILED,
+                BotSessionStatus.STOPPED,
+                BotSessionStatus.STOPPING,
+                BotSessionStatus.PAUSED,
+            ]:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Cannot create waiting input in this status.",
+                )
         elif new_status == BotSessionStatus.PAUSED:
             bot_session.paused_at = event.created_at
         elif new_status == BotSessionStatus.COMPLETED:
