@@ -211,9 +211,10 @@ def create_event(
         # Update last status message
         bot_session.last_status_message = event_data.message
 
-        # Save the session changes
-        session.add(bot_session)
-        session.commit()
+        is_completed = bot_session.total_applied >= bot_session.applies_limit
+
+        if is_completed:
+            bot_session.complete()
 
         if kubernetes_manager.initialized:
             events_that_should_stop_pod = [
@@ -222,8 +223,12 @@ def create_event(
                 # BotSessionStatus.STOPPING, # TODO: Check if this is needed
             ]
 
-            if new_status in events_that_should_stop_pod:
+            if new_status in events_that_should_stop_pod or is_completed:
                 kubernetes_manager.delete_bot(bot_session.kubernetes_pod_name)
+
+        # Save the session changes
+        session.add(bot_session)
+        session.commit()
 
     return {
         "id": str(event.id),
