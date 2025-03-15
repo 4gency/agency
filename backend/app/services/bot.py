@@ -235,11 +235,17 @@ class BotService:
         # Get session with permission check
         session = self.get_bot_session(session_id, user)
 
+        pausable_statuses = [
+            BotSessionStatus.RUNNING,
+            BotSessionStatus.STARTING,
+            BotSessionStatus.WAITING_INPUT,
+        ]
+
         # Verify session is running
-        if session.status != BotSessionStatus.RUNNING:
+        if session.status not in pausable_statuses:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Session is not running (current status: {session.status})",
+                detail=f"Session is not in a pausable state: {session.status}",
             )
 
         try:
