@@ -174,40 +174,6 @@ const StatusBadge = ({ status }: { status?: string }) => {
 
 // Session Overview Component
 const SessionOverview = ({ session }: { session: SessionPublic }) => {
-  // Calculate running time
-  const calculateRunningTime = () => {
-    if (!session) return "N/A"
-
-    if (session.finished_at) {
-      const startTime = session.started_at
-        ? new Date(session.started_at).getTime()
-        : 0
-      const endTime = new Date(session.finished_at).getTime()
-      const pausedTime = session.total_paused_time || 0
-
-      const totalSeconds = Math.round((endTime - startTime) / 1000) - pausedTime
-      return formatDuration(totalSeconds)
-    }
-
-    if (session.started_at) {
-      const startTime = new Date(session.started_at).getTime()
-      const currentTime = new Date().getTime()
-      const pausedTime = session.total_paused_time || 0
-
-      // If currently paused, don't count time since paused
-      const pauseOffset =
-        session.status === "paused" && session.paused_at
-          ? (currentTime - new Date(session.paused_at).getTime()) / 1000
-          : 0
-
-      const totalSeconds =
-        Math.round((currentTime - startTime) / 1000) - pausedTime - pauseOffset
-      return formatDuration(totalSeconds)
-    }
-
-    return "Not started"
-  }
-
   return (
     <Card mb={6} variant="outline">
       <CardBody>
@@ -250,15 +216,6 @@ const SessionOverview = ({ session }: { session: SessionPublic }) => {
                     ((session.total_failed || 0) / session.total_applied) * 100,
                   )}%`
                 : "0%"}
-            </StatHelpText>
-          </Stat>
-          <Stat>
-            <StatLabel>Running Time</StatLabel>
-            <StatNumber>{calculateRunningTime()}</StatNumber>
-            <StatHelpText>
-              {session.paused_at && !session.resumed_at
-                ? "Currently Paused"
-                : ""}
             </StatHelpText>
           </Stat>
         </StatGroup>
