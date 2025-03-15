@@ -181,6 +181,16 @@ def create_event(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="A bot cannot be resumed by itself",
                 )
+        elif new_status == BotSessionStatus.STARTING:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="A bot cannot start by itself",
+            )
+        elif new_status == BotSessionStatus.WAITING_INPUT:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="This status only can be create by user action request endpoint",
+            )
         elif new_status == BotSessionStatus.PAUSED:
             bot_session.paused_at = event.created_at
         elif new_status == BotSessionStatus.COMPLETED:

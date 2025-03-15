@@ -672,7 +672,7 @@ def test_create_event_status_failed(
     db.commit()
 
 
-def test_create_event_status_waiting(
+def test_cannot_create_event_status_waiting(
     client: TestClient, bot_session_with_api_key: tuple[BotSession, str], db: Session
 ) -> None:
     """Test creating an event that changes session status to WAITING_INPUT."""
@@ -694,14 +694,14 @@ def test_create_event_status_waiting(
     )
 
     # Check response
-    assert response.status_code == 200, f"Response: {response.text}"
+    assert response.status_code == 400, f"Response: {response.text}"
     data = response.json()
-    assert data["status_updated"] is True
+    assert isinstance(data["detail"], str)
 
     # Verify the event was created and session status was updated
     db.refresh(bot_session)
-    assert bot_session.status == BotSessionStatus.WAITING_INPUT
-    assert bot_session.last_status_message == "Bot is waiting for user action"
+    assert bot_session.status != BotSessionStatus.WAITING_INPUT
+    assert bot_session.last_status_message != "Bot is waiting for user action"
 
     # Clean up the created event
     events = db.exec(
