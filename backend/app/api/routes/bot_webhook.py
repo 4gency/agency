@@ -16,6 +16,7 @@ from app.models.resume import generate_plain_text_resume_yaml
 from app.services.action import UserActionService
 from app.services.apply import ApplyService
 from app.services.event import EventService
+from app.utils import generate_waiting_input_email, send_email
 
 
 class BotConfigResponse(BaseModel):
@@ -152,6 +153,32 @@ def create_event(
         old_status = bot_session.status
         new_status = BotSessionStatus.WAITING_INPUT
         status_updated = True
+
+        # Send email notification to the user when bot is waiting for input
+        try:
+            # Get user email
+            user_email = (
+                bot_session.user.email if hasattr(bot_session, "user") else None
+            )
+
+            if user_email:
+                # Generate email content
+                email_data = generate_waiting_input_email(
+                    session_id=str(bot_session.id),
+                    message=event_data.message,
+                )
+
+                # Send the email
+                send_email(
+                    email_to=user_email,
+                    subject=email_data.subject,
+                    html_content=email_data.html_content,
+                )
+        except Exception as e:
+            # Log error but continue - don't fail the API call if email sending fails
+            import logging
+
+            logging.error(f"Failed to send waiting input email: {str(e)}")
     else:
         try:
             # Try to convert event type to BotSessionStatus enum

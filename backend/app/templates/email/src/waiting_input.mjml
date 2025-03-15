@@ -1,0 +1,28 @@
+<mjml>
+  <mj-body background-color="#fafbfc">
+    <mj-section background-color="#fff" padding="40px 20px">
+      <mj-column vertical-align="middle" width="100%">
+        <mj-text align="center" padding="35px" font-size="20px" font-family="Arial, Helvetica, sans-serif" color="#333">{{ project_name }}</mj-text>
+        <mj-text align="center" font-size="24px" padding-left="25px" padding-right="25px" font-family="Arial, Helvetica, sans-serif" color="#333"><strong>Your Bot Needs Your Attention</strong></mj-text>
+        <mj-text align="center" font-size="16px" padding-left="25px" padding-right="25px" font-family="Arial, Helvetica, sans-serif" color="#555">
+          Your bot is waiting for your input.
+        </mj-text>
+        <mj-text align="left" font-size="16px" padding-left="25px" padding-right="25px" font-family="Arial, Helvetica, sans-serif" color="#555">
+          <p>Details:</p>
+          <ul>
+            <li><strong>Message:</strong> {{ message }}</li>
+            <li><strong>Session Status:</strong> Waiting for input</li>
+            <li><strong>Time:</strong> {{ current_time }}</li>
+          </ul>
+        </mj-text>
+        <mj-button background-color="#4A6CF7" color="white" href="{{ dashboard_url }}" font-family="Arial, Helvetica, sans-serif" font-size="16px" border-radius="4px">
+          Go to Dashboard
+        </mj-button>
+        <mj-divider border-color="#ccc" border-width="2px" padding-top="15px"></mj-divider>
+        <mj-text align="center" font-size="12px" padding-left="25px" padding-right="25px" font-family="Arial, Helvetica, sans-serif" color="#999">
+          This is an automated message. Please do not reply to this email.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml> 

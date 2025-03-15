@@ -96,6 +96,24 @@ def generate_new_account_email(
     return EmailData(html_content=html_content, subject=subject)
 
 
+def generate_waiting_input_email(session_id: str, message: str) -> EmailData:
+    project_name = settings.PROJECT_NAME
+    current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+    dashboard_url = f"{settings.FRONTEND_HOST}/bot/{session_id}"
+    subject = f"{project_name} - Bot Waiting for Input"
+    html_content = render_email_template(
+        template_name="waiting_input.html",
+        context={
+            "project_name": settings.PROJECT_NAME,
+            "session_id": session_id,
+            "message": message,
+            "current_time": current_time,
+            "dashboard_url": dashboard_url,
+        },
+    )
+    return EmailData(html_content=html_content, subject=subject)
+
+
 def generate_password_reset_token(email: str) -> str:
     delta = timedelta(hours=settings.EMAIL_RESET_TOKEN_EXPIRE_HOURS)
     now = datetime.now(timezone.utc)
