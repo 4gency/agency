@@ -99,7 +99,7 @@ def generate_new_account_email(
 def generate_waiting_input_email(session_id: str, message: str) -> EmailData:
     project_name = settings.PROJECT_NAME
     current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
-    dashboard_url = f"{settings.FRONTEND_HOST}/bot/{session_id}"
+    dashboard_url = settings.FRONTEND_HOST # TODO: redirect to session page
     subject = f"{project_name} - Bot Waiting for Input"
     html_content = render_email_template(
         template_name="waiting_input.html",
